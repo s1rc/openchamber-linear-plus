@@ -1,0 +1,14 @@
+[
+  { "name": "p3-connect", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/repo" }, "width": 1100, "height": 560, "port": 4701 },
+  { "name": "p3-error", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/repo", "connected": "1" }, "width": 1100, "height": 560, "port": 4703 },
+  { "name": "p3-project-name", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/repo", "connected": "1" }, "width": 1100, "height": 700, "port": 4702 },
+  { "name": "p3-team-name", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/engineering-api", "connected": "1" }, "width": 1100, "height": 800, "port": 4702 },
+  { "name": "p3-team-name-rail", "query": { "page": "panel/index.html", "surface": "panel", "dir": "/work/engineering-api", "connected": "1" }, "width": 360, "height": 900, "port": 4702 },
+  { "name": "p3-team-pinned", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/engineering-api", "connected": "1" }, "width": 1100, "height": 800, "port": 4702, "steps": [{ "click": "Pin" }, { "wait": 400 }] },
+  { "name": "p3-team-project", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/engineering-api", "connected": "1" }, "width": 1100, "height": 800, "port": 4702, "steps": [{ "click": "Checkout" }, { "wait": 400 }] },
+  { "name": "p3-picker", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/engineering-api", "connected": "1" }, "width": 1100, "height": 900, "port": 4702, "steps": [{ "click": "Change" }, { "wait": 400 }] },
+  { "name": "p3-picker-rail", "query": { "page": "panel/index.html", "surface": "panel", "dir": "/work/engineering-api", "connected": "1" }, "width": 360, "height": 900, "port": 4702, "steps": [{ "click": "Change" }, { "wait": 400 }] },
+  { "name": "p3-nomatch", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/zzz", "connected": "1" }, "width": 1100, "height": 600, "port": 4702 },
+  { "name": "p3-nomatch-inbox", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/zzz", "connected": "1" }, "width": 1100, "height": 600, "port": 4702, "steps": [{ "click": "Inbox" }, { "wait": 300 }] },
+  { "name": "p3-nomatch-settings", "query": { "page": "panel/index.html", "surface": "page", "dir": "/work/zzz", "connected": "1" }, "width": 1100, "height": 700, "port": 4702, "steps": [{ "click": "Settings" }, { "wait": 300 }] }
+]

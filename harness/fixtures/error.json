@@ -1,0 +1,9 @@
+{
+ "service": {},
+ "request": {
+  "POST /graphql *": {
+   "status": 200,
+   "body": "{\"errors\":[{\"message\":\"Linear is having trouble right now.\"}]}"
+  }
+ }
+}

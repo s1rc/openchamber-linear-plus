@@ -1,0 +1,74 @@
+[
+ {
+  "name": "p5d-cycles",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 6
+   }
+  ]
+ },
+ {
+  "name": "p5d-list-empty",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "Show empty groups"
+   },
+   {
+    "click": "Close"
+   }
+  ]
+ },
+ {
+  "name": "p5d-board-empty",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "Show empty columns"
+   },
+   {
+    "click": "Close"
+   }
+  ]
+ }
+]

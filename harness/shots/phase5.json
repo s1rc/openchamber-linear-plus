@@ -1,0 +1,267 @@
+[
+ {
+  "name": "p5-board",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   }
+  ]
+ },
+ {
+  "name": "p5-board-open",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p5-board-from-list",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Board"
+   }
+  ]
+ },
+ {
+  "name": "p5-board-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 4
+   }
+  ]
+ },
+ {
+  "name": "p5-cycles",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 6
+   }
+  ]
+ },
+ {
+  "name": "p5-cycles-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 6
+   }
+  ]
+ },
+ {
+  "name": "p5-cycles-upcoming",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 6
+   },
+   {
+    "click": "Cycle 42"
+   },
+   {
+    "click": "Cycle 43"
+   }
+  ]
+ },
+ {
+  "name": "p5-inbox",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p5-inbox-unread",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 600,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 0
+   },
+   {
+    "click": "Unread only"
+   }
+  ]
+ },
+ {
+  "name": "p5-inbox-all",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 0
+   },
+   {
+    "click": "Show all"
+   }
+  ]
+ },
+ {
+  "name": "p5-inbox-open",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 0
+   },
+   {
+    "css": ".lin-notification",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p5-inbox-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p5-triage",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 600,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 8
+   }
+  ]
+ }
+]

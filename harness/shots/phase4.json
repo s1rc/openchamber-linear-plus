@@ -1,0 +1,238 @@
+[
+ {
+  "name": "p4-my-issues",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 1
+   }
+  ]
+ },
+ {
+  "name": "p4-folder-issues",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   }
+  ]
+ },
+ {
+  "name": "p4-issue-view",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p4-group-assignee",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Group: status"
+   },
+   {
+    "click": "Group: assignee"
+   }
+  ]
+ },
+ {
+  "name": "p4-projects",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 600,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   }
+  ]
+ },
+ {
+  "name": "p4-project-detail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p4-project-issues",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   },
+   {
+    "click": "Issues"
+   }
+  ]
+ },
+ {
+  "name": "p4-rail-issues",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   }
+  ]
+ },
+ {
+  "name": "p4-rail-detail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1600,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p4-issue-view-panel-wide",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1000,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p4-panel-wide-list",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1000,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   }
+  ]
+ }
+]

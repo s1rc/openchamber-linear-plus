@@ -1,0 +1,70 @@
+// Inbox: your notifications, newest first. Reading only for now; marking read comes with the edits.
+import { Dot } from '@openchamber-ext/shared-ui/preact';
+import { useContext, useState } from 'preact/hooks';
+import { useQuery } from '../../shared/cache.ts';
+import { relativeTime } from '../../shared/format.ts';
+import { Avatar, StatusGlyph } from '../../shared/glyphs.tsx';
+import { host } from '../../shared/host.ts';
+import { Banner, Empty, Spinner, Switch } from '../../shared/kit.tsx';
+import { gql } from '../../shared/linear.ts';
+import { NOTIFICATIONS } from '../../shared/queries.ts';
+import { inScope } from '../../shared/inbox.ts';
+import type { Notification, NotificationsResult } from '../../shared/types.ts';
+import type { DetectionState } from '../../shared/use-detection.ts';
+import { IssueDetail } from '../components/issue-detail.tsx';
+import { openIssueFor, PlaceKey, saveOpenIssue } from '../view-state.ts';
+
+type Props = { state: DetectionState; scoped: boolean };
+
+export const Inbox = ({ state, scoped }: Props) => {
+  const placeKey = useContext(PlaceKey);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [openId, setOpenIdState] = useState<string | null>(() => openIssueFor(placeKey, 'inbox'));
+  const setOpenId = (id: string | null) => { setOpenIdState(id); saveOpenIssue(placeKey, 'inbox', id); };
+  const list = useQuery('notifications', async () => (await gql<NotificationsResult>(NOTIFICATIONS, { after: null })).notifications);
+
+  if (openId) return <IssueDetail id={openId} stacked onClose={() => setOpenId(null)} onOpenIssue={setOpenId} />;
+
+  const all = list.data?.nodes ?? [];
+  const scopedOn = scoped && state.mapped;
+  const shown = all.filter((n) => (!unreadOnly || !n.readAt) && (!scopedOn || inScope(n, state.detection.teamIds, state.detection.projectIds)));
+  const unread = all.filter((n) => !n.readAt).length;
+
+  const open = (n: Notification) => {
+    if (n.issue) setOpenId(n.issue.identifier);
+    else void host.openUrl(n.url);
+  };
+
+  return (
+    <div class="lin-stack">
+      <div class="sui-row">
+        <Switch label="Unread only" checked={unreadOnly} onChange={setUnreadOnly} />
+        <span class="sui-grow" />
+        <span class="sui-muted sui-small">{unread} unread of {all.length}{list.data?.pageInfo.hasNextPage ? ' (latest 50)' : ''}</span>
+      </div>
+      {list.error && !list.data && <Banner tone="error" title="Could not load your inbox" action={{ label: 'Retry', onClick: () => list.refresh() }} />}
+      {list.loading && !list.data && <div class="lin-center"><Spinner label="Loading inbox" /></div>}
+      {list.data && !all.length && <Empty title="Inbox zero" body="You have no notifications." />}
+      {list.data && all.length > 0 && !shown.length && (
+        <Empty title={unreadOnly ? 'Nothing unread' : 'Nothing for this folder'} body={scopedOn ? 'Use Show all to see every notification.' : 'You are all caught up.'} />
+      )}
+      <div class="lin-inbox">
+        {shown.map((n) => (
+          <button type="button" class="lin-notification" key={n.id} data-unread={n.readAt ? 'false' : 'true'} onClick={() => open(n)}>
+            <span class="lin-notification-dot">{!n.readAt && <Dot tone="info" />}</span>
+            <Avatar name={n.actor?.name ?? 'Linear'} url={n.actor?.avatarUrl} size={22} />
+            <span class="lin-notification-main">
+              <span class="lin-notification-title">
+                {n.issue && <StatusGlyph type={n.issue.state.type} color={n.issue.state.color} teamId={n.issue.team.id} stateId={n.issue.state.id} />}
+                {n.issue && <span class="sui-mono sui-muted sui-small">{n.issue.identifier}</span>}
+                <span class="lin-ellipsis">{n.issue?.title ?? n.title}</span>
+              </span>
+              <span class="sui-muted sui-small lin-ellipsis">{n.subtitle || n.title}{n.comment?.body ? `: ${n.comment.body.replace(/\s+/g, ' ').slice(0, 140)}` : ''}</span>
+            </span>
+            <span class="sui-muted sui-small lin-nowrap">{relativeTime(n.createdAt)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};

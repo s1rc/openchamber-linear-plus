@@ -1,0 +1,300 @@
+[
+ {
+  "name": "p5b-board",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-options",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "Options"
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-empty-shown",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1700,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "Show empty columns"
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-hide",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "css": ".lin-column-head button",
+    "nth": 2
+   },
+   {
+    "click": "Hide column"
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-rows",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 1000,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "No grouping"
+   },
+   {
+    "click": "Priority"
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-views",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1500,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "All Bugs"
+   }
+  ]
+ },
+ {
+  "name": "p5b-list-reverse",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "Reverse order"
+   }
+  ]
+ },
+ {
+  "name": "p5b-list-subgroup",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1000,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "No grouping"
+   },
+   {
+    "click": "Assignee"
+   }
+  ]
+ },
+ {
+  "name": "p5b-list-props",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "Options"
+   },
+   {
+    "click": "Updated"
+   },
+   {
+    "click": "Creator"
+   },
+   {
+    "click": "SLA"
+   }
+  ]
+ },
+ {
+  "name": "p5b-list",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   }
+  ]
+ },
+ {
+  "name": "p5b-board-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 4
+   }
+  ]
+ },
+ {
+  "name": "p5b-options-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1400,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 4
+   },
+   {
+    "click": "Options"
+   }
+  ]
+ },
+ {
+  "name": "p5b-cycles",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 6
+   }
+  ]
+ }
+]
