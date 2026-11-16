@@ -204,6 +204,26 @@ export const CHILD_STATES = `
   }
 `;
 
+/** The Work Status section's counts: only the status of each open issue in scope, 250 a page. */
+export const STATUS_COUNTS = `
+  query StatusCounts($filter: IssueFilter, $after: String) {
+    issues(first: 250, after: $after, filter: $filter) {
+      nodes { state { ${STATE} } team { id } }
+      ${PAGE}
+    }
+  }
+`;
+
+/** The Work Status section's "my issues": a short row, no labels, relations or attachments. */
+export const STATUS_MINE = `
+  query StatusMine($filter: IssueFilter) {
+    issues(first: 50, filter: $filter) {
+      nodes { id identifier title url priority updatedAt state { ${STATE} } team { id key } project { id name } }
+      ${PAGE}
+    }
+  }
+`;
+
 /** Several issues by identifier (`ENG-123`). Built per call with one alias per identifier. */
 export const issuesByIdentifier = (identifiers: readonly string[]): string => `
   query IssuesByIdentifier {
@@ -335,6 +355,7 @@ export const markReadMany = (ids: readonly string[]): string => `
 /** Every static document, for validation. */
 export const ALL_DOCUMENTS: Record<string, string> = {
   VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
+  STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT,
   ISSUE_UPDATE, ISSUE_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,

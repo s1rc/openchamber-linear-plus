@@ -272,10 +272,47 @@ const READ_AT = '2026-11-09T12:00:00.000Z';
 workspace[key(Q.markReadMany(['n1', 'n2']), { readAt: READ_AT })] = ok({ n0: { success: true }, n1: { success: true } });
 workspace[key(Q.NOTIFICATION_MARK_READ, { id: 'n1', readAt: READ_AT })] = ok({ notificationUpdate: { success: true } });
 
+// Phase 7: the Work Status section. Counts and "my issues" for each folder the shots open, and a
+// finish-comment draft the service would hold. Detection picks the scope from the folder name.
+const statusRow = (i: (typeof engIssues)[number]) => ({
+  id: i.id, identifier: i.identifier, title: i.title, url: i.url, priority: i.priority, updatedAt: i.updatedAt, state: i.state, team: i.team,
+  project: i.project ? { id: i.project.id, name: i.project.name } : null,
+});
+// A realistic spread: the sample issues stand for many in the same status.
+const STATUS_WEIGHT: Record<string, number> = { 'In Progress': 3, 'In Review': 2, 'In Staging': 1, 'Needs Grooming': 2, Todo: 5, Triage: 2, Backlog: 14 };
+const statusFixtures = (scope: Record<string, unknown>, list: typeof engIssues) => {
+  const nodes = list.filter((i) => i.state.type !== 'backlog').flatMap((i) => Array.from({ length: STATUS_WEIGHT[i.state.name] ?? 1 }, () => ({ state: i.state, team: i.team })));
+  workspace[key(Q.STATUS_COUNTS, { filter: all({ state: { type: { in: ['triage', 'unstarted', 'started'] } } }, scope), after: null })] = ok({ issues: page(nodes) });
+  workspace[key(Q.STATUS_MINE, { filter: all(OPEN, MY_FILTERS.assigned, scope) })] = ok({ issues: page(list.filter((i) => i.assignee === matt).map(statusRow)) });
+};
+statusFixtures(scopeFilter(['t-eng'], [])!, engIssues);
+statusFixtures(scopeFilter([], ['p-repo'])!, engIssues.filter((i) => i.project?.id === 'p-repo'));
+statusFixtures(scopeFilter([], ['p-checkout'])!, engIssues.filter((i) => i.project?.id === 'p-checkout'));
+// /work/checkout has no team of that name, so detection finds the Checkout project by search.
+workspace[key(Q.SEARCH_PROJECTS, { term: 'checkout' })] = ok({ searchProjects: { nodes: [projects[1]] } });
+
+// Three projects pinned to one folder (/work/multi), for the compact lines. Needs a saved mapping, so
+// it is shot through a harness that keeps extension storage (the shared one answers none).
+workspace[key(Q.PROJECTS, { after: null, filter: { id: { in: ['p-checkout', 'p-mobile', 'p-repo'] } } })] = ok({ projects: page([projects[0], projects[1], projects[2]]) });
+statusFixtures(scopeFilter([], ['p-checkout', 'p-mobile', 'p-repo'])!, engIssues.filter((i) => i.project));
+
+const draft = {
+  id: 'd1', directory: '/work/engineering-api', sessionId: 'ses_1', identifier: 'ENG-11', sessionTitle: 'Batch the tax lookups',
+  body: '**OpenChamber session: Batch the tax lookups**\n\nTax lookups now run once per cart instead of once per line. Pricing a 60 item cart takes 1.9 s, down from 31 s. Tests cover the batch path and the empty cart.',
+  createdAt: Date.parse('2026-11-09T11:00:00Z'),
+};
+const service: Record<string, Saved> = {
+  'GET /drafts?directory=/work/engineering-api ': { status: 200, body: JSON.stringify({ drafts: [draft] }) },
+  [`POST /drafts ${JSON.stringify({ id: 'd1', action: 'posted' })}`]: { status: 200, body: JSON.stringify({ ok: true }) },
+  [`POST /drafts ${JSON.stringify({ id: 'd1', action: 'discard' })}`]: { status: 200, body: JSON.stringify({ ok: true }) },
+};
+workspace[key(Q.issuesByIdentifier(['ENG-11']))] = ok({ i0: engIssues[0] });
+workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: draft.body } })] = ok({ commentCreate: { success: true, comment: { id: 'cm4', body: draft.body, createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
+
 const error: Record<string, Saved> = {
   'POST /graphql *': { status: 200, body: JSON.stringify({ errors: [{ message: 'Linear is having trouble right now.' }] }) },
 };
 
-await Bun.write('harness/fixtures/workspace.json', JSON.stringify({ service: {}, request: workspace }, null, 1));
+await Bun.write('harness/fixtures/workspace.json', JSON.stringify({ service, request: workspace }, null, 1));
 await Bun.write('harness/fixtures/error.json', JSON.stringify({ service: {}, request: error }, null, 1));
 console.log(`wrote ${Object.keys(workspace).length} workspace fixtures and the error fixture`);

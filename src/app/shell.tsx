@@ -6,7 +6,8 @@ import { host } from '../shared/host.ts';
 import { Banner, Button, Empty, List, Select, Spinner } from '../shared/kit.tsx';
 import { LinearError } from '../shared/linear.ts';
 import { getLastView } from '../shared/storage.ts';
-import { loadViewState, PlaceKey, saveRoute, setViewStateScope } from './view-state.ts';
+import { takeOpenTarget } from '../shared/open-target.ts';
+import { loadViewState, PlaceKey, saveOpenIssue, saveRoute, saveTab, setViewStateScope } from './view-state.ts';
 import { useDetection, type DetectionState } from '../shared/use-detection.ts';
 import { loadWorkspace, useWorkspace, type Workspace } from '../shared/workspace.ts';
 import { PROJECT_VIEWS, REMEMBERED, TITLES, parseRouteId, routeId, type Route, type View } from './routes.ts';
@@ -276,6 +277,8 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   const [scoped, setScoped] = useState(true);
   const landedFor = useRef<string | null>(null);
   const [landed, setLanded] = useState<string | null>(null);
+  // Bumped to show a note from the Work Status section on a fresh view.
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => { setViewStateScope(Boolean(ctx.features?.deviceStorage)); }, [ctx.features?.deviceStorage]);
 
@@ -319,6 +322,32 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
     setActiveId(id);
     state.setActive(id);
   };
+
+  // The Work Status section asks for an issue or the picker through extension storage. Read it once the
+  // folder has landed, and again every few seconds while the rail panel is on screen (it may already be open).
+  useEffect(() => {
+    const key = state.place?.key;
+    if (!key || landed !== key) return;
+    let alive = true;
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const target = await takeOpenTarget(key);
+      if (!alive || !target) return;
+      if (target.view === 'picker') {
+        onRoute({ view: 'picker' });
+      } else if (target.issue) {
+        saveTab(key, 'my-issues', 'assigned');
+        saveOpenIssue(key, 'my-issues:assigned', target.issue);
+        setScoped(state.mapped);
+        onRoute({ view: 'my-issues' });
+        setNonce((n) => n + 1);
+      }
+    };
+    void check();
+    if (ctx.surface !== 'panel') return () => { alive = false; };
+    const timer = setInterval(() => { void check(); }, 3000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [landed, state.place?.key, state.mapped, ctx.surface]);
 
   // Linear data changes under you: reload what is on screen once a minute while the frame is visible.
   useEffect(() => {
@@ -377,6 +406,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
         </header>
         <div class="lin-content">
           <Content
+            key={nonce}
             ctx={ctx}
             workspace={data}
             state={state}

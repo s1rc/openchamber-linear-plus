@@ -1,0 +1,12 @@
+[
+  { "name": "p7-team", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/engineering-api", "connected": "1" }, "width": 360, "height": 600, "port": 4702 },
+  { "name": "p7-team-wide", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/engineering-api", "connected": "1" }, "width": 1100, "height": 600, "port": 4702 },
+  { "name": "p7-draft-open", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/engineering-api", "connected": "1" }, "width": 360, "height": 600, "port": 4702, "steps": [{ "css": ".lin-status-draft .lin-status-line" }, { "wait": 400 }] },
+  { "name": "p7-project", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/repo", "connected": "1" }, "width": 360, "height": 600, "port": 4702 },
+  { "name": "p7-project-risk", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/checkout", "connected": "1" }, "width": 360, "height": 600, "port": 4702 },
+  { "name": "p7-project-risk-wide", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/checkout", "connected": "1" }, "width": 1100, "height": 600, "port": 4702 },
+  { "name": "p7-unmapped", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/zzz", "connected": "1" }, "width": 360, "height": 600, "port": 4702 },
+  { "name": "p7-unmapped-wide", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/zzz", "connected": "1" }, "width": 1100, "height": 600, "port": 4702 },
+  { "name": "p7-connect", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/repo" }, "width": 360, "height": 600, "port": 4701 },
+  { "name": "p7-error", "query": { "page": "status/index.html", "surface": "status", "dir": "/work/repo", "connected": "1" }, "width": 360, "height": 600, "port": 4703 }
+]

@@ -3,12 +3,11 @@
 import { toast } from '@openchamber-ext/shared-ui';
 import { useEffect, useState } from 'preact/hooks';
 import { host } from '../../shared/host.ts';
-import { issueContext } from '../../shared/issue-context.ts';
 import { Banner, Button, Switch } from '../../shared/kit.tsx';
 import { startedStateOf } from '../../shared/moves.ts';
+import { startSessionFor } from '../../shared/start-session.ts';
 import { getStartMoves } from '../../shared/storage.ts';
 import type { IssueDetail } from '../../shared/types.ts';
-import { updateIssue, writeErrorText } from '../../shared/writes.ts';
 import { Modal } from './modal.tsx';
 
 export const StartSessionDialog = ({ issue, onClose }: { issue: IssueDetail; onClose: () => void }) => {
@@ -23,31 +22,13 @@ export const StartSessionDialog = ({ issue, onClose }: { issue: IssueDetail; onC
   const start = async () => {
     setBusy(true);
     try {
-      const result = await host.startSession({
-        providerId: 'linear-dashboard',
-        id: issue.identifier,
-        title: `${issue.identifier} ${issue.title}`,
-        url: issue.url,
-        kind: 'issue',
-        text: issueContext(issue),
-        data: { issueId: issue.id, identifier: issue.identifier },
-        worktree: made ? { kind: 'existing', directory: made } : worktree ? { kind: 'new', name: issue.branchName } : false,
-        navigation: 'open',
-      });
-      if (result.sessionId === null) {
-        setMade(result.directory);
+      const outcome = await startSessionFor(issue, { worktree, move, existing: made });
+      if (!outcome.started) {
+        setMade(outcome.directory);
         return;
       }
-      let moved = false;
-      if (move && target) {
-        try {
-          await updateIssue(issue, { input: { stateId: target.id }, patch: { state: target } });
-          moved = true;
-        } catch (error) {
-          await toast(host, 'error', `Session started, but ${issue.identifier} was not moved: ${writeErrorText(error)}`);
-        }
-      }
-      await toast(host, 'success', `Started a session for ${issue.identifier}${moved ? ` and moved it to ${target!.name}` : ''}`);
+      if (outcome.moveError) await toast(host, 'error', `Session started, but ${issue.identifier} was not moved: ${outcome.moveError}`);
+      await toast(host, 'success', `Started a session for ${issue.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}`);
       onClose();
     } catch (error) {
       await toast(host, 'error', `Could not start a session: ${error instanceof Error ? error.message : String(error)}`);

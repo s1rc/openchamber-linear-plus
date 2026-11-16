@@ -327,3 +327,18 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-card-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; opacity: 0.92; box-shadow: 0 12px 28px color-mix(in srgb, var(--oc-fg) 25%, transparent); cursor: grabbing; }
 .lin-dragging, .lin-dragging * { user-select: none; cursor: grabbing; }
 .lin-card { touch-action: pan-x pan-y; }
+
+/* Work Status section. */
+.lin-status { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; min-width: 0; }
+.lin-status-block { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lin-status-project { display: flex; align-items: center; gap: 8px; min-height: 22px; min-width: 0; }
+.lin-status-date { flex: none; width: 48px; text-align: right; }
+.lin-status-line { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 4px; margin: 0 -4px; border-radius: var(--oc-radius, 6px); cursor: pointer; min-width: 0; }
+.lin-status-line:hover, .lin-status-line:focus-within { background: var(--oc-hover); }
+.lin-status-line:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-status-key { flex: none; font-size: 0.78rem; }
+.lin-status-actions { flex: none; display: inline-flex; gap: 4px; }
+.lin-status-draft { display: flex; flex-direction: column; gap: 4px; }
+.lin-status-refresh { display: flex; justify-content: flex-end; }
+.lin-status-hint { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lin-status-ref { font-size: 0.85em; }

@@ -232,6 +232,21 @@ export type IssueExtras = {
   stateHistory: Connection<{ startedAt: string }>;
 };
 export type IssueExtrasResult = { issues: Page<IssueExtras> };
+/** One open issue as the Work Status counts see it. */
+export type StatusCountNode = { state: WorkflowState; team: { id: string } };
+export type StatusCountsResult = { issues: Page<StatusCountNode> };
+export type StatusMineIssue = {
+  id: string;
+  identifier: string;
+  title: string;
+  url: string;
+  priority: Priority;
+  updatedAt: string;
+  state: WorkflowState;
+  team: { id: string; key: string };
+  project: { id: string; name: string } | null;
+};
+export type StatusMineResult = { issues: Page<StatusMineIssue> };
 export type ChildIssuesResult = { issues: Page<IssueRow> };
 export type NotificationsResult = { notificationsUnreadCount: number; notifications: Page<Notification> };
 export type RepoAttachmentsResult = {

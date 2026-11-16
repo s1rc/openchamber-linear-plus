@@ -76,7 +76,7 @@ Use `statusSection.entry` (a frame), not `statusSection.source`. Reason: a frame
 | Create issue / dialog | Tabs (Create / Attach), TextField, Select, List (project and document results), Spinner (drafting) | `KV` for the property grid | |
 | Start session dialog | Switch (worktree, Move to In Progress), Button | `KV` | |
 | Settings | Select (mappings), Select (finish-comments Off / Draft), Button | `Section` per group, `KV` (API key: set or not set) | |
-| Work Status section (160px) | Progress (project), Button `xs` (Start, Post, Discard) | `sui-row`, `Chip` (counts by status), `Dot` (health), `sui-small`, `sui-muted` | issue line `lin-status-line` |
+| Work Status section (160px) | Progress (project), Button `xs` (Post, Discard, Pin, Pick) | `sui-row`, `Chip` (counts by status), `Dot` (health), `sui-small`, `sui-muted` | issue line `lin-status-line` |
 | Block `LinearIssue` | Button (Open, Start session) | `Card` (static), `KV` (status, assignee, priority) | glyphs |
 | Block `LinearIssueList` | Button | `Section` (title as heading) | issue rows |
 | Block `LinearPickIssue` | Button per issue, or List with `onSelect` | `Section` (question as heading) | |
@@ -177,15 +177,18 @@ Linear's rule: on a board holding several teams, columns merge only when state n
 
 ## 4. Work Status section (`status/index.html`)
 
-`requiresProject: true`, `height: 160`, call `setHeight` from a `ResizeObserver`. Rows, top to bottom (hide a row with no data):
+`requiresProject: true`, `height: 160`, `setHeight` from a `ResizeObserver` on the content wrapper (not on `#root`, whose `min-height` would stop the frame shrinking). The frame is `src/status/section.tsx` (reads in `src/status/data.ts`, pure rules in `src/shared/status.ts`). It uses the same detection and mapping as the dashboard (`useDetection`) and the same active team or project (`mapping.activeProjectId`, else the first). Rows, top to bottom (a row with no data is hidden):
 
-1. Project progress bar: name, percent, health badge, target date. With several mapped projects, one compact line each (max 3).
-2. Current cycle: "Cycle 42 · 60% · 4 days left".
-3. Counts by status as chips: "3 In Progress · 5 Todo · 2 In Review".
-4. My issues in this project, started first (max 5): status glyph, identifier, title; click opens the dashboard page on that issue (`host.openSurface` cannot open pages, so open the rail panel with the issue; store the target in `host.storage` key `open-target` and have the panel read it on ready). Hover button **Start**.
-5. Pending finish-comments from the service (`GET /drafts?directory=`): "Summary ready for ENG-123" with **Post** and **Discard**. Post runs `commentCreate` through `host.request` (works without a key), then `POST /drafts { id, action: 'posted' }`. Clicking the row expands an editable preview before posting.
+1. Detected hint: only for an inferred mapping, "Engineering (detected from ...)" with **Pin** (saves the mapping, as the dashboard's banner does).
+2. Project progress: one mapped project shows the kit Progress (name, percent, tinted by health) and a line "On track · target Nov 28". Several mapped projects show one compact line each (health dot, name, percent, target date; max 3). A team-only mapping has no project row.
+3. Current cycle: "Cycle 42 · 60% · 4 days left", for the mapped teams and the teams of the mapped projects that have an active cycle (max 2, then each line starts with the team key).
+4. Counts by status as chips (status glyph, "3 In Progress"), active issues in scope only (triage, unstarted and started; the backlog and closed work are not counted, because a backlog of thousands made the counts partial): started statuses first, then unstarted, triage; at most 6 chips, then "+N more" (hover lists them). Same name and type in two teams count together. Read with `STATUS_COUNTS` (250 a page, at most 1,000 issues, then "first 1,000").
+5. My issues in scope, started first, then by priority, then newest (max 5, read with `STATUS_MINE`, first 50): status glyph, identifier, title. Click opens the rail panel on that issue. There is no Start button here (decided with the user: Start lives in the issue view); `src/shared/start-session.ts` stays shared code for the dialog.
+6. Pending finish-comments (`GET /drafts?directory=`, answer `{ drafts: [{ id, directory, sessionId, identifier, sessionTitle, body, createdAt }] }`): "Summary ready for ENG-123" with **Post** and **Discard**; clicking the row opens an editable preview. Post looks the issue up, runs `commentCreate` through `host.request` (works without a key), then `POST /drafts { id, action: 'posted' }`; Discard sends `{ id, action: 'discard' }`. The frame side is done in phase 7 (`src/shared/drafts.ts`); the service routes are phase 10, and until then the call fails quietly and no draft rows show.
 
-No project mapped: one line "Pick a Linear project" that opens the panel's picker. Header controls via `setStatusControls` (feature-gated on `features.statusControls`): Refresh button.
+**Opening the panel.** `host.openSurface` cannot open pages, so a click opens the rail panel: surface id `ext:linear-dashboard` (OpenChamber names guest surfaces `ext:<id>`). The frame first stores a note under the extension storage key `open-target`: `{ placeKey, issue | view: 'picker', at }`. The panel (`src/app/shell.tsx`) takes the note when the folder has landed, and again every 3 s while it is the visible rail panel (it may already be open), ignores notes for another folder or older than 10 minutes (`src/shared/open-target.ts`), then shows My issues (Assigned, folder scope) with that issue open, or the picker. If the panel cannot be opened, a toast says to open it by hand; the note stays and is used when the panel next loads.
+
+States: no project mapped is one line "Pick a Linear project" with a **Pick** button (opens the panel's picker); Linear not connected is "Linear is not connected." with **Connect** (`host.oauthStart`); a load failure is a banner with Retry; nothing open in scope says so. Refresh: a header control through `setStatusControls` when `features.statusControls`, republished on `onDirectory`; a body button shows until that succeeds. Data reloads every 60 s while the frame is visible.
 
 ## 5. Actions and the `+` dialog
 
@@ -353,6 +356,8 @@ Phases 3 to 9 are also done only when:
 
 Fixtures, shot lists and screenshots stay in this folder or a temp dir: nothing is written into `../shared-ui` (it is another project). The harness answers `storage`, `listProjects` and `readFile` with empty results, so the app must treat a missing answer as "nothing there".
 
+Work Status shots use `"page": "status/index.html", "surface": "status"` and widths 360 and 1100. The shared harness keeps no extension storage and no status controls, so a folder with a saved mapping (several projects), a click that stores a note, and the panel reading a note are checked with a temp-dir copy of the harness that keeps storage (`harness.html` and `server.ts` copied from `../shared-ui/harness`, plus a seeded `storage` query and a `controls=1` flag), driven by a Playwright script. The copy lives in the temp dir, never in `../shared-ui`.
+
 The harness also gives a safe preview of write flows: fixture the mutation responses instead of testing writes on the real workspace.
 
 | # | Phase | Done when | Estimate |
@@ -363,7 +368,7 @@ The harness also gives a safe preview of write flows: fixture the mutation respo
 | 4 | Views: My issues, Issue list, Issue detail (read-only first), Projects list, Project overview | Navigable dashboard on page and panel | 2 to 3 h (ran longer: Linear-style issue detail and view-state persistence added) |
 | 5 | Board, Cycles (burn-up SVG), Inbox, Triage | All views render. Done: list/board toggle, cycles with burn-up and issues, inbox with scope filter, triage list; periodic reload of what is on screen (60 s while visible). Mark read, Accept and Decline are phase 6 | 2 h (ran well over: the view options panel, saved views, extra properties, nesting and the burn-up rebuild were added during the phase) |
 | 6 | Writes: property edits, drag on board (with team moves, 3.2), comments, create issue, post update, inbox mark read, triage accept/decline, Start session | Each write optimistic with rollback. **Do not test writes on the real workspace without asking the user**. Done: issue detail edits every property, title and description in place, with comments, triage Accept and Decline, Start session (3.1) and Link to this session; New issue (button and `c`); board drag between columns, cells and hidden columns, with team moves (3.2), done with pointer events and not HTML5 drag-and-drop, which did not work in the real sandboxed frame (`src/app/components/use-card-drag.ts`, rules in `src/shared/drag.ts`: a 5 px threshold, the board scrolls while the pointer rests near its edge, Escape cancels, a drag never counts as a click); inbox marks read on open and Mark all read in one aliased request; project Post update; Settings default for Start session. All writes live in `src/shared/writes.ts` (optimistic with rollback through `patchEntries`), the rules in `src/shared/moves.ts`. Checked against fake mutation answers only (harness fixtures, and a temp-dir Playwright script for drag and toasts) | 3 h |
-| 7 | Status section | Rows render for a mapped folder; empty state for unmapped | 45 min |
+| 7 | Status section | Rows render for a mapped folder; empty state for unmapped. Done: project, cycle, status chips, my issues, finish-comment draft rows (service side in phase 10), header Refresh, open-panel notes (`open-target`), unmapped, not connected and error states. Checked in the harness with fake data only (page shots, plus a temp-dir Playwright script for click, Post, Discard and the panel reading a note) | 1.5 h |
 | 8 | Dialog + 5 actions with Small Model drafting | Each action opens a prefilled form | 1.5 h |
 | 9 | Blocks | Each block renders from a hand-written `openui-lang` call; PickIssue answers | 1 h |
 | 10 | Service: config, snapshot, instructions, mentions, session events, drafts; draft rows in section and Settings | `curl` each route per SKILL Step 5 | 2 h |
@@ -382,6 +387,7 @@ Total: about 15 to 17 hours of build time as planned; phases 3 to 5 ran over, so
 7. **shared-ui drift**: `bun install --silent` in `build.sh` refreshes the copy, but a shared-ui change can still move Linear pixels. Any change to shared-ui follows USAGE section 3 and re-shoots Linear from `linear.json`.
 8. **Sub-issues on a team move**: Linear's app moves sub-issues along when they all belong to the same team; unknown whether `issueUpdate(teamId)` through the API does the same. Check on the first approved real team move and say what happened in the confirm dialog.
 9. **Sub-teams that inherit workflows**: answered (read-only check, Nov 10): in this workspace Strength & Conditioning, GM and NIL Ops each have their own state ids, different from their parent teams'. A drop between a parent and a sub-team is therefore a team move, with the confirm.
+10. **Panel surface id for `openSurface`**: `ext:linear-dashboard`, read from the app's bundle (`ext:` plus the extension id); the SDK docs do not list it. If the first real click on a status row only shows a toast, the id is wrong: the note still reaches the panel when the user opens it. Check by hand on real data.
 
 ## 12. Out of scope (later ideas)
 

@@ -23,6 +23,8 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   CHILD_STATES: [{ ids: ['i1', 'i2'], after: null }],
   CHILD_ISSUES: [{ ids: ['i1', 'i2'], after: null }],
   ISSUE_EXTRAS: [{ ids: ['i1', 'i2'], after: null }],
+  STATUS_COUNTS: [{ filter: { state: { type: { in: ['triage', 'unstarted', 'started'] } }, team: { id: { in: ['t1'] } } }, after: null }],
+  STATUS_MINE: [{ filter: { and: [{ state: { type: { nin: ['completed', 'canceled', 'duplicate'] } } }, { assignee: { isMe: { eq: true } } }] } }],
   REPO_ATTACHMENTS: [{ url: 'gitlab.com/acme/group/repo/' }],
   DOCUMENTS: [{ filter: { project: { id: { eq: 'p1' } } } }],
   ISSUES: [
