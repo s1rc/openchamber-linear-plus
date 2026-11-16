@@ -1,20 +1,27 @@
 // One issue in Linear's layout: title, description, sub-issues and activity on the left; merge requests,
 // properties, labels, project and relations on the right. A narrow frame stacks the side column under
-// the title, as Linear does on small screens. Read-only until phase 6.
+// the title, as Linear does on small screens. Every property, the title and the description edit in
+// place; comments post from the composer under the activity.
 import { toast } from '@openchamber-ext/shared-ui';
 import { Chip } from '@openchamber-ext/shared-ui/preact';
 import { useState } from 'preact/hooks';
+import { issueContext } from '../../shared/issue-context.ts';
 import { changeOf, estimateLabel, relativeTime, shortDate } from '../../shared/format.ts';
-import {
-  Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, CycleGlyph, EstimateGlyph, PriorityGlyph, ProgressRing, ProjectIcon, StatusGlyph,
-} from '../../shared/glyphs.tsx';
+import { Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, ProgressRing, StatusGlyph } from '../../shared/glyphs.tsx';
 import { host } from '../../shared/host.ts';
 import { useIssueDetail } from '../../shared/issues.ts';
-import { Banner, Button, Menu, Spinner } from '../../shared/kit.tsx';
+import { Banner, Button, Menu, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
+import { acceptStateOf, declineStateOf } from '../../shared/moves.ts';
+import { addComment, writeErrorText } from '../../shared/writes.ts';
+import { useWorkspace } from '../../shared/workspace.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import type { Comment, HistoryEvent, IssueDetail as Detail, RelatedIssue } from '../../shared/types.ts';
 import { teamEstimateType } from '../../shared/workspace.ts';
-import { IssueRow, LabelChip } from './issue-row.tsx';
+import { IssueRow } from './issue-row.tsx';
+import {
+  AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
+} from './property-editors.tsx';
+import { StartSessionDialog } from './start-session.tsx';
 
 const PRIORITY_NAME = ['No priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
 
@@ -25,23 +32,6 @@ const copy = async (text: string, what: string) => {
   } catch {
     await toast(host, 'error', `Could not copy ${what}`);
   }
-};
-
-/** What an agent reads when the issue is attached to a message. */
-export const issueContext = (issue: Detail): string => {
-  const lines = [
-    `${issue.identifier}: ${issue.title}`,
-    `Status: ${issue.state.name}. Priority: ${PRIORITY_NAME[issue.priority]}. Team: ${issue.team.name}.`,
-    issue.project ? `Project: ${issue.project.name}.` : '',
-    issue.assignee ? `Assignee: ${issue.assignee.name}.` : '',
-    `Link: ${issue.url}`,
-    `Branch: ${issue.branchName}`,
-    '',
-    issue.description?.trim() ?? '',
-  ];
-  const comments = issue.comments.nodes.slice(-5).map((c) => `${c.user?.name ?? 'Someone'} (${shortDate(c.createdAt)}): ${c.body}`);
-  const text = [...lines, ...(comments.length ? ['', 'Latest comments:', ...comments] : [])].filter((l, i, a) => l || a[i - 1]).join('\n');
-  return text.length > 15_000 ? `${text.slice(0, 15_000)}\n[cut]` : text;
 };
 
 type Relation = { key: string; issue: RelatedIssue };
@@ -94,6 +84,92 @@ const SideSection = ({ title, children }: { title: string; children: preact.Comp
 const Property = ({ icon, value, empty }: { icon: preact.ComponentChildren; value: preact.ComponentChildren | null | undefined; empty: string }) => (
   <div class={value ? 'lin-prop' : 'lin-prop lin-prop--empty'}>{icon}<span class="lin-ellipsis">{value || empty}</span></div>
 );
+
+/** Typing in a field must not reach the list's shortcuts: Escape there closes the issue. */
+const keepKeys = (onKey: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
+  event.stopPropagation();
+  onKey(event);
+};
+
+const TitleEdit = ({ issue }: { issue: Detail }) => {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = async () => {
+    const title = draft?.trim();
+    if (title && title !== issue.title && !(await save(issue, { input: { title }, patch: { title } }))) return;
+    setDraft(null);
+  };
+  if (draft === null) {
+    return <h1 class="lin-issue-heading lin-editable" title="Edit the title" onClick={() => setDraft(issue.title)}>{issue.title}</h1>;
+  }
+  return (
+    <div class="lin-stack lin-stack--tight" onKeyDown={keepKeys((e) => { if (e.key === 'Enter') { e.preventDefault(); void commit(); } if (e.key === 'Escape') setDraft(null); })}>
+      <TextField value={draft} onChange={setDraft} label="Title" />
+      <div class="sui-row">
+        <Button label="Save" size="xs" disabled={!draft.trim()} onClick={() => { void commit(); }} />
+        <Button label="Cancel" variant="ghost" size="xs" onClick={() => setDraft(null)} />
+      </div>
+    </div>
+  );
+};
+
+const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (id: string) => void }) => {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [tab, setTab] = useState<'write' | 'preview'>('write');
+  const [busy, setBusy] = useState(false);
+  if (draft === null) {
+    return (
+      <div class="lin-description">
+        <Markdown source={issue.description} empty="No description." onOpenIssue={onOpenIssue} />
+        <div><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={() => { setDraft(issue.description ?? ''); setTab('write'); }} /></div>
+      </div>
+    );
+  }
+  const commit = async () => {
+    setBusy(true);
+    const ok = draft === (issue.description ?? '') || (await save(issue, { input: { description: draft }, patch: { description: draft } }));
+    setBusy(false);
+    if (ok) setDraft(null);
+  };
+  return (
+    <div class="lin-stack lin-stack--tight" onKeyDown={keepKeys((e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void commit(); if (e.key === 'Escape') setDraft(null); })}>
+      <Tabs items={[{ id: 'write', label: 'Write' }, { id: 'preview', label: 'Preview' }]} activeId={tab} onChange={(id) => setTab(id as 'write' | 'preview')} />
+      {tab === 'write'
+        ? <TextField value={draft} onChange={setDraft} multiline rows={12} placeholder="Markdown. Cmd+Enter saves." />
+        : <div class="lin-description-preview"><Markdown source={draft} empty="Nothing to preview." onOpenIssue={onOpenIssue} /></div>}
+      <div class="sui-row">
+        <Button label={busy ? 'Saving...' : 'Save'} size="xs" disabled={busy} onClick={() => { void commit(); }} />
+        <Button label="Cancel" variant="ghost" size="xs" disabled={busy} onClick={() => setDraft(null)} />
+      </div>
+    </div>
+  );
+};
+
+const CommentComposer = ({ issue }: { issue: Detail }) => {
+  const [body, setBody] = useState('');
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    const text = body.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      await addComment(issue, text);
+      setBody('');
+    } catch (error) {
+      await toast(host, 'error', writeErrorText(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div class="lin-composer" onKeyDown={keepKeys((e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void send(); })}>
+      <TextField value={body} onChange={setBody} multiline rows={3} placeholder="Leave a comment... Cmd+Enter sends." disabled={busy} />
+      <div class="sui-row">
+        <span class="sui-grow" />
+        <Button label={busy ? 'Sending...' : 'Comment'} size="xs" disabled={busy || !body.trim()} onClick={() => { void send(); }} />
+      </div>
+    </div>
+  );
+};
 
 const CommentCard = ({ comment, replies, onOpenIssue }: { comment: Comment; replies: Comment[]; onOpenIssue: (id: string) => void }) => {
   const one = (c: Comment, reply: boolean) => (
@@ -167,6 +243,7 @@ const Activity = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (id: str
           return <li key={item.comment.id}><CommentCard comment={item.comment} replies={item.replies} onOpenIssue={onOpenIssue} /></li>;
         })}
       </ol>
+      <CommentComposer issue={issue} />
     </section>
   );
 };
@@ -176,6 +253,9 @@ type Props = { id: string; stacked?: boolean; onClose: () => void; onOpenIssue: 
 
 export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
   const detail = useIssueDetail(id);
+  const workspace = useWorkspace();
+  const [starting, setStarting] = useState(false);
+  const [triaging, setTriaging] = useState(false);
   const issue = detail.data;
 
   if (!issue) {
@@ -191,24 +271,44 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
     );
   }
 
+  const team = workspace.data?.teamsById.get(issue.team.id);
+  const chip = {
+    providerId: 'linear-dashboard', id: issue.identifier, title: `${issue.identifier} ${issue.title}`, url: issue.url, kind: 'issue' as const,
+    text: issueContext(issue), data: { issueId: issue.id, identifier: issue.identifier },
+  };
   const attach = async () => {
     try {
-      await host.attach({
-        providerId: 'linear-dashboard', id: issue.identifier, title: `${issue.identifier} ${issue.title}`, url: issue.url, kind: 'issue',
-        text: issueContext(issue), data: { issueId: issue.id, identifier: issue.identifier },
-      });
+      await host.attach(chip);
       await toast(host, 'success', `Attached ${issue.identifier} to your message`);
     } catch {
       await toast(host, 'error', 'Open a chat to attach the issue.');
     }
+  };
+  const link = async () => {
+    try {
+      await host.sessionLink(chip);
+      await toast(host, 'success', `Linked ${issue.identifier} to this session`);
+    } catch {
+      await toast(host, 'error', 'Open a session to link the issue to it.');
+    }
+  };
+  const triage = async (to: 'accept' | 'decline') => {
+    const state = to === 'accept' ? acceptStateOf(team, issue.team.states.nodes) : declineStateOf(issue.team.states.nodes);
+    if (!state) {
+      await toast(host, 'error', `${issue.team.name} has no ${to === 'accept' ? 'backlog or unstarted' : 'canceled'} status.`);
+      return;
+    }
+    setTriaging(true);
+    if (await save(issue, { input: { stateId: state.id }, patch: { state } })) await toast(host, 'success', `${issue.identifier} moved to ${state.name}`);
+    setTriaging(false);
   };
 
   const changes = issue.links.nodes.map((a) => ({ a, change: changeOf(a) }));
   const diffs = changes.filter((c) => c.change);
   const otherLinks = changes.filter((c) => !c.change);
   const done = issue.children.nodes.filter((c) => ['completed', 'canceled', 'duplicate'].includes(c.state.type)).length;
-  const estimate = estimateLabel(issue.estimate, teamEstimateType(issue.team.id));
   const relations = relationGroups(issue);
+  const editorProps = { issue, team };
 
   return (
     <article class="lin-issue-view">
@@ -217,19 +317,30 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
         <span class="sui-muted sui-small lin-ellipsis lin-issue-crumb">{issue.team.name} ›</span>
         <span class="sui-mono sui-small lin-nowrap">{issue.identifier}</span>
         <span class="sui-grow" />
+        {issue.state.type === 'triage' && (
+          <>
+            <Button label="Accept" variant="outline" size="xs" disabled={triaging} onClick={() => { void triage('accept'); }} />
+            <Button label="Decline" variant="ghost" size="xs" disabled={triaging} onClick={() => { void triage('decline'); }} />
+          </>
+        )}
+        <Button label={stacked ? 'Start' : 'Start session'} size="xs" onClick={() => setStarting(true)} />
         <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
         <Menu
-          label="Copy"
+          label="More"
           variant="ghost"
           size="xs"
-          items={[{ id: 'key', label: `Key (${issue.identifier})` }, { id: 'branch', label: 'Branch name' }, { id: 'url', label: 'Link' }]}
+          items={[
+            { id: 'key', label: `Copy key (${issue.identifier})` }, { id: 'branch', label: 'Copy branch name' }, { id: 'url', label: 'Copy link' },
+            { separator: true }, { id: 'link', label: 'Link to this session' }, { id: 'open', label: 'Open in Linear' },
+          ]}
           onSelect={(what) => {
             if (what === 'key') void copy(issue.identifier, issue.identifier);
             if (what === 'branch') void copy(issue.branchName, 'the branch name');
             if (what === 'url') void copy(issue.url, 'the link');
+            if (what === 'link') void link();
+            if (what === 'open') void host.openUrl(issue.url);
           }}
         />
-        <Button label={stacked ? 'Open' : 'Open in Linear'} variant="ghost" size="xs" onClick={() => { void host.openUrl(issue.url); }} />
       </header>
 
       <div class="lin-issue-grid">
@@ -237,7 +348,7 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
           {issue.parent && (
             <button type="button" class="lin-link sui-small" onClick={() => onOpenIssue(issue.parent!.identifier)}>Sub-issue of {issue.parent.identifier}</button>
           )}
-          <h1 class="lin-issue-heading">{issue.title}</h1>
+          <TitleEdit issue={issue} />
         </div>
 
         <aside class="lin-issue-side">
@@ -251,24 +362,20 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
             </SideSection>
           )}
           <SideSection title="Properties">
-            <Property icon={<StatusGlyph type={issue.state.type} color={issue.state.color} teamId={issue.team.id} stateId={issue.state.id} />} value={issue.state.name} empty="Status" />
+            <StatusEdit {...editorProps} />
             <Property icon={<span class="lin-team-dot" />} value={issue.team.name} empty="Team" />
-            <Property icon={<PriorityGlyph priority={issue.priority} />} value={issue.priority ? PRIORITY_NAME[issue.priority] : null} empty="Set priority" />
-            <Property icon={issue.assignee ? <Avatar name={issue.assignee.name} url={issue.assignee.avatarUrl} size={16} /> : <span class="lin-avatar-empty lin-avatar-empty--sm" />} value={issue.assignee?.name} empty="Assign" />
-            <Property icon={<EstimateGlyph />} value={estimate} empty="Set estimate" />
-            <Property icon={<CycleGlyph />} value={issue.cycle ? `Cycle ${issue.cycle.number}${issue.cycle.name ? `: ${issue.cycle.name}` : ''}` : null} empty="Add to cycle" />
-            {issue.dueDate && <Property icon={<span class="lin-due-dot" />} value={`Due ${shortDate(issue.dueDate)}`} empty="" />}
+            <PriorityEdit {...editorProps} />
+            <AssigneeEdit {...editorProps} />
+            <EstimateEdit {...editorProps} />
+            <CycleEdit {...editorProps} />
+            <DueDateEdit {...editorProps} />
           </SideSection>
           <SideSection title="Labels">
-            {issue.labels.nodes.length ? <div class="sui-row">{issue.labels.nodes.map((l) => <LabelChip key={l.id} label={l} />)}</div> : <div class="lin-prop lin-prop--empty">No labels</div>}
+            <LabelsEdit {...editorProps} />
           </SideSection>
           <SideSection title="Project">
-            {issue.project ? (
-              <>
-                <div class="lin-prop"><ProjectIcon icon={issue.project.icon} color={issue.project.color} /><span class="lin-ellipsis">{issue.project.name}</span></div>
-                {issue.projectMilestone && <div class="lin-prop lin-prop--sub sui-small">Milestone: {issue.projectMilestone.name}</div>}
-              </>
-            ) : <div class="lin-prop lin-prop--empty">No project</div>}
+            <ProjectEdit {...editorProps} />
+            {issue.projectMilestone && <div class="lin-prop lin-prop--sub sui-small">Milestone: {issue.projectMilestone.name}</div>}
           </SideSection>
           {relations.map(([name, list]) => (
             <SideSection title={name} key={name}>
@@ -295,7 +402,7 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
         </aside>
 
         <div class="lin-issue-body">
-          <Markdown source={issue.description} empty="No description." onOpenIssue={onOpenIssue} />
+          <DescriptionEdit issue={issue} onOpenIssue={onOpenIssue} />
           {issue.children.nodes.length > 0 && (
             <section class="lin-subissues">
               <div class="sui-row lin-subissues-head">
@@ -308,6 +415,7 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
           <Activity issue={issue} onOpenIssue={onOpenIssue} />
         </div>
       </div>
+      {starting && <StartSessionDialog issue={issue} onClose={() => setStarting(false)} />}
     </article>
   );
 };

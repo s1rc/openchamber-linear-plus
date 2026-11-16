@@ -1,0 +1,133 @@
+// Create issue, as Linear's dialog: team, title, description, then status, priority, assignee,
+// estimate, cycle, project and labels. Opened with C or the New issue button.
+import { toast } from '@openchamber-ext/shared-ui';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { estimateLabel } from '../../shared/format.ts';
+import { compareStates, PRIORITY_NAMES } from '../../shared/grouping.ts';
+import { host } from '../../shared/host.ts';
+import { Button, Select, TextField } from '../../shared/kit.tsx';
+import { acceptStateOf, estimateScale } from '../../shared/moves.ts';
+import { useTeamProjects } from '../../shared/projects.ts';
+import { useOpenCycles, useTeamPeople } from '../../shared/team-data.ts';
+import type { IssueRow, Label } from '../../shared/types.ts';
+import { useWorkspace } from '../../shared/workspace.ts';
+import { createIssue, writeErrorText } from '../../shared/writes.ts';
+import { Modal } from './modal.tsx';
+import { LabelPicker } from './property-editors.tsx';
+
+const NONE = '__none__';
+
+type Props = {
+  /** Teams to offer first, such as the folder's. The team picker lists every team. */
+  teamIds: readonly string[];
+  projectId?: string | null;
+  onClose: () => void;
+  onCreated: (issue: IssueRow) => void;
+};
+
+export const CreateIssueDialog = ({ teamIds, projectId = null, onClose, onCreated }: Props) => {
+  const workspace = useWorkspace().data;
+  const ordered = useMemo(() => {
+    const teams = workspace?.teams ?? [];
+    const first = new Set([...teamIds, ...(workspace?.myTeamIds ?? [])]);
+    return [...teams.filter((t) => first.has(t.id)), ...teams.filter((t) => !first.has(t.id))];
+  }, [workspace, teamIds]);
+  const [teamId, setTeamId] = useState<string>(teamIds[0] ?? ordered[0]?.id ?? '');
+  const team = workspace?.teamsById.get(teamId);
+  const states = useMemo(() => [...(workspace?.statesByTeam.get(teamId) ?? [])].sort(compareStates), [workspace, teamId]);
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [stateId, setStateId] = useState<string>(NONE);
+  const [priority, setPriority] = useState('0');
+  const [assigneeId, setAssigneeId] = useState<string>(NONE);
+  const [estimate, setEstimate] = useState<string>(NONE);
+  const [cycleId, setCycleId] = useState<string>(NONE);
+  const [project, setProject] = useState<string>(projectId ?? NONE);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  // A new team brings its own states, people, labels and cycles.
+  useEffect(() => {
+    setStateId(acceptStateOf(team, states)?.id ?? states[0]?.id ?? NONE);
+    setAssigneeId(NONE);
+    setEstimate(NONE);
+    setCycleId(NONE);
+    setLabels([]);
+  }, [teamId, states.length]);
+
+  const people = useTeamPeople(teamId || null);
+  const cycles = useOpenCycles(team?.cyclesEnabled ? teamId : null, team?.activeCycle?.number);
+  const projects = useTeamProjects(teamId ? [teamId] : []);
+  const scale = estimateScale(team);
+
+  const create = async () => {
+    if (!title.trim() || !teamId || busy) return;
+    setBusy(true);
+    try {
+      const issue = await createIssue({
+        teamId,
+        title: title.trim(),
+        ...(description.trim() ? { description } : {}),
+        ...(stateId !== NONE ? { stateId } : {}),
+        priority: Number(priority),
+        ...(assigneeId !== NONE ? { assigneeId } : {}),
+        ...(estimate !== NONE ? { estimate: Number(estimate) } : {}),
+        ...(cycleId !== NONE ? { cycleId } : {}),
+        ...(project !== NONE ? { projectId: project } : {}),
+        ...(labels.length ? { labelIds: labels.map((l) => l.id) } : {}),
+      });
+      await toast(host, 'success', `Created ${issue.identifier}`);
+      onCreated(issue);
+    } catch (error) {
+      await toast(host, 'error', writeErrorText(error));
+      setBusy(false);
+    }
+  };
+
+  const projectOptions = [
+    { id: NONE, label: 'No project' },
+    ...(projectId && !(projects.data ?? []).some((p) => p.id === projectId) ? [{ id: projectId, label: 'This folder\'s project' }] : []),
+    ...(projects.data ?? []).map((p) => ({ id: p.id, label: p.name })),
+  ];
+
+  return (
+    <Modal
+      wide
+      title="New issue"
+      onClose={onClose}
+      footer={(
+        <>
+          <Button label="Cancel" variant="ghost" size="sm" onClick={onClose} />
+          <Button label={busy ? 'Creating...' : 'Create issue'} size="sm" disabled={busy || !title.trim() || !teamId} onClick={() => { void create(); }} />
+        </>
+      )}
+    >
+      <div onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void create(); if (e.key === 'Escape') onClose(); }} class="lin-stack">
+        <div class="lin-field-row">
+          <Select value={teamId} searchable={ordered.length > 8} options={ordered.map((t) => ({ id: t.id, label: t.name, hint: t.key }))} onChange={setTeamId} />
+        </div>
+        <TextField value={title} onChange={setTitle} placeholder="Issue title" label="Title" />
+        <TextField value={description} onChange={setDescription} multiline rows={6} placeholder="Add a description. Markdown works. Cmd+Enter creates." label="Description" />
+        <div class="lin-field-row">
+          <Select value={stateId} options={states.map((s) => ({ id: s.id, label: s.name }))} onChange={setStateId} />
+          <Select value={priority} options={[0, 1, 2, 3, 4].map((p) => ({ id: String(p), label: p ? PRIORITY_NAMES[p]! : 'No priority' }))} onChange={setPriority} />
+          <Select
+            value={assigneeId}
+            searchable
+            options={[{ id: NONE, label: 'No assignee' }, ...(people.data?.members ?? []).map((m) => ({ id: m.id, label: m.name }))]}
+            onChange={setAssigneeId}
+          />
+          {scale.length > 0 && (
+            <Select value={estimate} options={[{ id: NONE, label: 'No estimate' }, ...scale.map((v) => ({ id: String(v), label: estimateLabel(v, team?.issueEstimationType) ?? String(v) }))]} onChange={setEstimate} />
+          )}
+          {team?.cyclesEnabled && (
+            <Select value={cycleId} options={[{ id: NONE, label: 'No cycle' }, ...(cycles.data ?? []).map((c) => ({ id: c.id, label: `Cycle ${c.number}`, hint: c.isActive ? 'Current' : 'Upcoming' }))]} onChange={setCycleId} />
+          )}
+          <Select value={project} searchable options={projectOptions} onChange={setProject} />
+        </div>
+        {teamId && <LabelPicker teamId={teamId} chosen={labels} onChange={setLabels} />}
+      </div>
+    </Modal>
+  );
+};

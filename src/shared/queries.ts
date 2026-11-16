@@ -48,7 +48,8 @@ export const TEAMS = `
   query Teams {
     teams(first: 100) {
       nodes {
-        id key name color icon cyclesEnabled triageEnabled issueEstimationType
+        id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
+        defaultIssueState { id }
         activeCycle { ${CYCLE_SUMMARY} }
       }
     }
@@ -324,10 +325,18 @@ export const NOTIFICATION_MARK_ALL_READ = `
   }
 `;
 
+/** Marks several notifications read in one request, one alias per notification. */
+export const markReadMany = (ids: readonly string[]): string => `
+  mutation NotificationsMarkRead($readAt: DateTime!) {
+    ${ids.map((id, index) => `n${index}: notificationUpdate(id: ${JSON.stringify(id)}, input: { readAt: $readAt }) { success }`).join('\n    ')}
+  }
+`;
+
 /** Every static document, for validation. */
 export const ALL_DOCUMENTS: Record<string, string> = {
   VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT,
   ISSUE_UPDATE, ISSUE_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

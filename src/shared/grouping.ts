@@ -54,6 +54,9 @@ const placementsOf = (issue: IssueRow, field: GroupField): Placement[] => {
   }
 };
 
+/** The keys of the groups an issue sits in for a field. An issue can sit in several label groups. */
+export const groupKeysOf = (issue: IssueRow, field: GroupField): string[] => placementsOf(issue, field).map((p) => p.key);
+
 export const PRIORITY_NAMES = ['No priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
 
 /** What an empty group can be made from: the states of the teams in scope, their people, labels and projects. */

@@ -2,6 +2,7 @@
 // Scope (team, project, mine) and a saved view are server filters; assignee, priority, label, status
 // and text filter the loaded issues in the frame, so changing them costs no Linear request.
 import type { HostReadyContext } from '@openchamber/sdk';
+import { toast } from '@openchamber-ext/shared-ui';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { splitColumns } from '../../shared/board.ts';
 import { all, BUILTIN_VIEWS, openOrRecent, type Filter } from '../../shared/filters.ts';
@@ -14,6 +15,11 @@ import { LinearError } from '../../shared/linear.ts';
 import type { IssueRow as Issue, StateType } from '../../shared/types.ts';
 import { changedOptions, EXTRA_PROPERTIES, orderIssues, resolveOptions, visibleIssues, type Mode, type ViewOptions } from '../../shared/view-options.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
+import { host } from '../../shared/host.ts';
+import { planDrop, type IssueInput, type TeamChoice } from '../../shared/moves.ts';
+import { updateIssue, writeErrorText } from '../../shared/writes.ts';
+import { CreateIssueDialog } from './create-issue.tsx';
+import { TeamMoveDialog } from './team-move.tsx';
 import {
   openIssueFor, PlaceKey, saveOpenIssue, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
 } from '../view-state.ts';
@@ -46,11 +52,13 @@ type Props = {
   defaultMode?: Mode;
   /** The team whose saved views to offer above the list. Left out where views do not apply. */
   viewTeamId?: string | null;
+  /** The project new issues go to by default, for a project's list. */
+  projectId?: string | null;
   emptyTitle: string;
   emptyBody: string;
 };
 
-export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, emptyTitle, emptyBody }: Props) => {
+export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, emptyTitle, emptyBody }: Props) => {
   const placeKey = useContext(PlaceKey);
   const workspace = useWorkspace();
   const statesByTeam = workspace.data?.statesByTeam;
@@ -95,6 +103,8 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [moving, setMoving] = useState<{ issue: Issue; choices: TeamChoice[]; extra: IssueInput } | null>(null);
   const [openId, setOpenIdState] = useState<string | null>(() => openIssueFor(placeKey, listKey));
   const [cursorId, setCursorId] = useState<string | null>(openId);
   const setOpenId = (id: string | null) => {
@@ -187,7 +197,12 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
         else if (optionsOpen) setOptionsOpen(false);
         return;
       }
-      if (typing(event.target)) return;
+      if (typing(event.target) || creating || moving) return;
+      if (event.key === 'c' && !openId) {
+        event.preventDefault();
+        setCreating(true);
+        return;
+      }
       if (event.key === '/') {
         event.preventDefault();
         root.current?.querySelector<HTMLInputElement>('.lin-toolbar input')?.focus();
@@ -209,7 +224,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [visible, cursorId, openId, optionsOpen]);
+  }, [visible, cursorId, openId, optionsOpen, creating, moving]);
 
   const wide = ctx.surface === 'page';
   const activeFilters = [assignee !== 'any', priority !== 'any', label !== 'any', status !== 'any', states === 'open' && !customActive && showClosed].filter(Boolean).length;
@@ -219,6 +234,38 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     if (next.has(key)) next.delete(key); else next.add(key);
     return next;
   });
+
+  const drop = (issueId: string, columnKey: string, rowKey: string | null) => {
+    const issue = loaded.find((i) => i.id === issueId);
+    const column = columns.find((c) => c.key === columnKey);
+    if (!issue || !column || !statesByTeam) return;
+    const plan = planDrop(issue, column, rowKey ? rows.find((r) => r.key === rowKey) ?? null : null, statesByTeam, seedTeams);
+    if (plan.kind === 'update') void updateIssue(issue, plan.change).catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+    if (plan.kind === 'team') setMoving({ issue, choices: plan.choices, extra: plan.extra.input });
+    if (plan.kind === 'refused') void toast(host, 'info', plan.reason);
+  };
+  const dialogs = (
+    <>
+      {creating && (
+        <CreateIssueDialog
+          teamIds={seedTeams}
+          projectId={projectId}
+          onClose={() => setCreating(false)}
+          onCreated={(issue) => { setCreating(false); open(issue); }}
+        />
+      )}
+      {moving && (
+        <TeamMoveDialog
+          issue={moving.issue}
+          choices={moving.choices}
+          extra={moving.extra}
+          subIssues={childCounts.data?.get(moving.issue.id)?.total ?? 0}
+          onClose={() => setMoving(null)}
+          onMoved={(issue) => { setMoving(null); setCursorId(issue.identifier); }}
+        />
+      )}
+    </>
+  );
 
   if (!scope) return <Empty title={emptyTitle} body={emptyBody} />;
 
@@ -261,6 +308,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
             />
           )}
           <Button label="Options" variant={optionsOpen ? 'secondary' : 'outline'} size="sm" onClick={() => setOptionsOpen((o) => !o)} />
+          <Button label={wide ? 'New issue' : 'New'} size="sm" onClick={() => setCreating(true)} />
         </div>
         {optionsOpen && (
           <OptionsPanel
@@ -325,6 +373,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
             onOpen={open}
             onHide={(key) => change({ columns: { ...options.columns, [key]: 'hide' } })}
             onShow={(key) => change({ columns: { ...options.columns, [key]: 'show' } })}
+            onDrop={drop}
           />
         )}
         {mode === 'list' && (
@@ -364,6 +413,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           </div>
         )}
       </div>
+      {dialogs}
     </div>
   );
 };

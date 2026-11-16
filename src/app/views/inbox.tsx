@@ -1,11 +1,14 @@
-// Inbox: your notifications, newest first. Reading only for now; marking read comes with the edits.
+// Inbox: your notifications, newest first. Opening one marks it read, as in Linear; Mark all read
+// marks every shown notification in one request.
 import { Dot } from '@openchamber-ext/shared-ui/preact';
 import { useContext, useState } from 'preact/hooks';
 import { useQuery } from '../../shared/cache.ts';
 import { relativeTime } from '../../shared/format.ts';
 import { Avatar, StatusGlyph } from '../../shared/glyphs.tsx';
 import { host } from '../../shared/host.ts';
-import { Banner, Empty, Spinner, Switch } from '../../shared/kit.tsx';
+import { toast } from '@openchamber-ext/shared-ui';
+import { Banner, Button, Empty, Spinner, Switch } from '../../shared/kit.tsx';
+import { markRead, writeErrorText } from '../../shared/writes.ts';
 import { gql } from '../../shared/linear.ts';
 import { NOTIFICATIONS } from '../../shared/queries.ts';
 import { inScope } from '../../shared/inbox.ts';
@@ -30,7 +33,11 @@ export const Inbox = ({ state, scoped }: Props) => {
   const shown = all.filter((n) => (!unreadOnly || !n.readAt) && (!scopedOn || inScope(n, state.detection.teamIds, state.detection.projectIds)));
   const unread = all.filter((n) => !n.readAt).length;
 
+  const read = (ids: string[]) => { void markRead(ids).catch((error: unknown) => toast(host, 'error', writeErrorText(error))); };
+  const shownUnread = shown.filter((n) => !n.readAt).map((n) => n.id);
+
   const open = (n: Notification) => {
+    if (!n.readAt) read([n.id]);
     if (n.issue) setOpenId(n.issue.identifier);
     else void host.openUrl(n.url);
   };
@@ -41,6 +48,7 @@ export const Inbox = ({ state, scoped }: Props) => {
         <Switch label="Unread only" checked={unreadOnly} onChange={setUnreadOnly} />
         <span class="sui-grow" />
         <span class="sui-muted sui-small">{unread} unread of {all.length}{list.data?.pageInfo.hasNextPage ? ' (latest 50)' : ''}</span>
+        {shownUnread.length > 0 && <Button label={scopedOn ? 'Mark these read' : 'Mark all read'} variant="outline" size="xs" onClick={() => read(shownUnread)} />}
       </div>
       {list.error && !list.data && <Banner tone="error" title="Could not load your inbox" action={{ label: 'Retry', onClick: () => list.refresh() }} />}
       {list.loading && !list.data && <div class="lin-center"><Spinner label="Loading inbox" /></div>}

@@ -1,6 +1,8 @@
 // The board: a column per group (status by default), scrolling sideways, optionally split into rows.
 // Empty columns are hidden and listed under "Hidden columns", as in Linear; any column can be hidden
-// from its menu and brought back from that list. Moving a card to another column comes with the edits.
+// from its menu and brought back from that list. Drop a card on a column, a cell or a hidden column to
+// move it there.
+import { useState } from 'preact/hooks';
 import { cellsOf } from '../../shared/board.ts';
 import type { Group } from '../../shared/grouping.ts';
 import type { ChildCount } from '../../shared/issues.ts';
@@ -8,7 +10,7 @@ import type { IssueExtras, IssueRow } from '../../shared/types.ts';
 import type { PropertyId } from '../../shared/view-options.ts';
 import { Menu } from '../../shared/kit.tsx';
 import { GroupIcon } from './group-icon.tsx';
-import { IssueCard } from './issue-card.tsx';
+import { DRAG_TYPE, IssueCard } from './issue-card.tsx';
 
 type Props = {
   columns: Group[];
@@ -24,9 +26,32 @@ type Props = {
   onOpen: (issue: IssueRow) => void;
   onHide: (key: string) => void;
   onShow: (key: string) => void;
+  /** A card dropped on a column, and the row of the cell it landed in. */
+  onDrop: (issueId: string, columnKey: string, rowKey: string | null) => void;
 };
 
-export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hideProject, childCounts, extras, onOpen, onHide, onShow }: Props) => {
+export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hideProject, childCounts, extras, onOpen, onHide, onShow, onDrop }: Props) => {
+  const [over, setOver] = useState<string | null>(null);
+  // Drop targets: a cell (column and row) or a hidden column.
+  const target = (id: string, columnKey: string, rowKey: string | null) => ({
+    'data-drop': over === id ? 'true' : undefined,
+    onDragOver: (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      if (over !== id) setOver(id);
+    },
+    onDragLeave: (event: DragEvent) => {
+      if (!(event.currentTarget as Node).contains(event.relatedTarget as Node | null)) setOver((o) => (o === id ? null : o));
+    },
+    onDrop: (event: DragEvent) => {
+      const issueId = event.dataTransfer?.getData(DRAG_TYPE);
+      setOver(null);
+      if (!issueId) return;
+      event.preventDefault();
+      onDrop(issueId, columnKey, rowKey);
+    },
+  });
   const template = { gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, 272px)` };
   const bands = rows.length ? rows : [null];
 
@@ -41,6 +66,7 @@ export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hid
       subIssues={childCounts?.get(issue.id)}
       extras={extras?.get(issue.id)}
       onOpen={onOpen}
+      draggable
     />
   ));
 
@@ -71,7 +97,7 @@ export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hid
               )}
               <div class="lin-board-grid" style={template}>
                 {cells.map((cell) => (
-                  <div class="lin-column-body" key={cell.key} data-column={cell.key}>
+                  <div class="lin-column-body" key={cell.key} data-column={cell.key} {...target(`${band?.key ?? ''}>${cell.key}`, cell.key, band?.key ?? null)}>
                     {cards(cell.issues)}
                     {cell.issues.length === 0 && <div class="lin-column-empty sui-muted sui-small">No issues</div>}
                   </div>
@@ -86,7 +112,7 @@ export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hid
         <aside class="lin-hidden-cols" aria-label="Hidden columns">
           <div class="lin-hidden-title">Hidden columns</div>
           {hidden.map((column) => (
-            <button type="button" class="lin-hidden-col" key={column.key} onClick={() => onShow(column.key)} title="Show this column">
+            <button type="button" class="lin-hidden-col" key={column.key} onClick={() => onShow(column.key)} title="Show this column, or drop a card here" {...target(`hidden>${column.key}`, column.key, null)}>
               <GroupIcon group={column} />
               <span class="lin-ellipsis">{column.title}</span>
               <span class="sui-muted sui-small">{column.issues.length || ''}</span>

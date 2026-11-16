@@ -1,5 +1,7 @@
 import { KV, Section } from '@openchamber-ext/shared-ui/preact';
-import { Button } from '../../shared/kit.tsx';
+import { useEffect, useState } from 'preact/hooks';
+import { Button, Switch } from '../../shared/kit.tsx';
+import { getStartMoves, setStartMoves } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 import type { Workspace } from '../../shared/workspace.ts';
 import { ProbeSection } from './probe-section.tsx';
@@ -12,6 +14,20 @@ const SOURCE_WORDS = {
   name: 'Detected from a name',
   none: 'Nothing detected',
 } as const;
+
+const StartMovesSwitch = () => {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { void getStartMoves().then(setOn); }, []);
+  if (on === null) return null;
+  return (
+    <Switch
+      label="Start session moves the issue to In Progress"
+      description="The default in the Start session dialog: the team's first started status. You can still change it each time."
+      checked={on}
+      onChange={(next) => { setOn(next); void setStartMoves(next); }}
+    />
+  );
+};
 
 export const Settings = ({ workspace, state, onChange }: { workspace: Workspace; state: DetectionState; onChange: () => void }) => {
   const { detection, place } = state;
@@ -36,6 +52,9 @@ export const Settings = ({ workspace, state, onChange }: { workspace: Workspace;
         ) : (
           <div class="sui-muted">Open a project in OpenChamber to map it to Linear.</div>
         )}
+      </Section>
+      <Section title="Sessions">
+        <StartMovesSwitch />
       </Section>
       <Section title="Account">
         <KV items={[

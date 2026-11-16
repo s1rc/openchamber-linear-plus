@@ -291,3 +291,35 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-notification-main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .lin-notification-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .lin-option-field .oc-sdk-trigger { align-self: stretch; width: 100%; }
+
+/* Dialogs. */
+.lin-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 12px 12px; background: color-mix(in srgb, var(--oc-bg) 55%, transparent); }
+.lin-modal { width: min(520px, 100%); max-height: 84vh; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); box-shadow: 0 16px 40px color-mix(in srgb, var(--oc-fg) 22%, transparent); }
+.lin-modal--wide { width: min(720px, 100%); }
+.lin-modal-title { margin: 0; font-size: 1rem; font-weight: 600; }
+.lin-modal-body { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0; }
+.lin-modal-foot { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.lin-modal-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.lin-field-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Editing an issue. */
+.lin-prop-edit { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lin-prop-edit-field { flex: 1 1 auto; min-width: 0; }
+.lin-prop-edit .oc-sdk-select { gap: 0; }
+.lin-prop-edit .oc-sdk-trigger { align-self: stretch; width: 100%; background: transparent; box-shadow: none; padding: 0 6px; }
+.lin-prop-edit .oc-sdk-trigger:hover { background: var(--oc-hover); }
+.lin-prop-edit .oc-sdk-field-label:empty { display: none; }
+.lin-date { font: inherit; font-size: 0.8125rem; color: var(--oc-fg); background: transparent; border: 1px solid transparent; border-radius: var(--oc-radius, 6px); padding: 3px 6px; min-width: 0; flex: 1 1 auto; color-scheme: light dark; }
+.lin-date:hover { background: var(--oc-hover); }
+.lin-date:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-editable { cursor: text; border-radius: var(--oc-radius, 6px); }
+.lin-editable:hover { background: var(--oc-hover); }
+.lin-stack--tight { gap: 6px; }
+.lin-description { display: flex; flex-direction: column; gap: 6px; }
+.lin-description-preview { min-height: 120px; padding: 8px 10px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }
+.lin-composer { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.lin-label-picker { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }
+.lin-label-list { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+.lin-label-option { display: flex; align-items: center; gap: 6px; }
+.lin-column-body[data-drop="true"], .lin-hidden-col[data-drop="true"] { outline: 2px dashed var(--oc-focus); outline-offset: -2px; background: var(--oc-hover); }
+.lin-card[draggable="true"] { cursor: grab; }

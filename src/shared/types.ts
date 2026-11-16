@@ -43,6 +43,10 @@ export type Team = {
   triageEnabled: boolean;
   /** notUsed, exponential, fibonacci, linear or tShirt. */
   issueEstimationType: string;
+  issueEstimationAllowZero: boolean;
+  issueEstimationExtended: boolean;
+  /** Where new issues land, and where Accept moves a triage issue. */
+  defaultIssueState: { id: string } | null;
   activeCycle: CycleSummary | null;
 };
 

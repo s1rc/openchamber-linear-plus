@@ -65,6 +65,10 @@ export const setRepo = async (placeKey: string, repo: StoredRepo): Promise<void>
   if (current?.host !== repo.host || current.path !== repo.path) await set(`repo:${placeKey}`, repo);
 };
 
+/** Whether Start session also moves the issue to its team's first started status. On unless turned off. */
+export const getStartMoves = async (): Promise<boolean> => (await get<boolean>('pref:start-moves')) !== false;
+export const setStartMoves = (on: boolean) => set('pref:start-moves', on);
+
 export const getLastView = (placeKey: string) => get<string>(`view:${placeKey}`);
 
 /** Hands every mapping to the service, which acts on them with no window open. Best effort. */

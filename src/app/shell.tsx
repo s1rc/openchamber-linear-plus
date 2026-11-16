@@ -171,6 +171,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
             subTeamScope={shownTeams.length ? scopeFilter(shownTeams, shownProjects, true) : null}
             viewerId={workspace.viewer.id}
             showProject={shownProjects.length !== 1 || shownTeams.length > 0}
+            projectId={shownProjects.length === 1 ? shownProjects[0] : null}
             emptyTitle="No open issues"
             emptyBody="Nothing open for this folder's team or projects."
           />

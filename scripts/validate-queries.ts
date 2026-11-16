@@ -35,12 +35,16 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
     { filter: { team: { or: [{ id: { in: ['t1'] } }, { ancestors: { some: { id: { in: ['t1'] } } } }] } }, after: null },
     { filter: { and: [{ or: [{ state: { type: { nin: ['completed', 'canceled', 'duplicate'] } } }, { completedAt: { gt: '-P2W' } }, { canceledAt: { gt: '-P2W' } }] }, { or: [{ team: { id: { in: ['t1'] } } }, { project: { id: { in: ['p1'] } } }] }] }, after: null },
   ],
-  ISSUE_UPDATE: [{ id: 'i1', input: { stateId: 's1', assigneeId: null, priority: 2, labelIds: ['l1'], estimate: 3, dueDate: '2026-11-20' } }],
-  ISSUE_CREATE: [{ input: { teamId: 't1', title: 'T', description: 'D', projectId: 'p1', priority: 0 } }],
+  ISSUE_UPDATE: [
+    { id: 'i1', input: { stateId: 's1', assigneeId: null, priority: 2, labelIds: ['l1'], estimate: 3, dueDate: '2026-11-20' } },
+    { id: 'i1', input: { title: 'T', description: 'D', projectId: null, cycleId: 'c1', teamId: 't2' } },
+  ],
+  ISSUE_CREATE: [{ input: { teamId: 't1', title: 'T', description: 'D', projectId: 'p1', priority: 0, stateId: 's1', assigneeId: 'u1', labelIds: ['l1'], estimate: 2, cycleId: 'c1' } }],
   COMMENT_CREATE: [{ input: { issueId: 'i1', body: 'B' } }],
   PROJECT_UPDATE_CREATE: [{ input: { projectId: 'p1', body: 'B', health: 'onTrack' } }],
   NOTIFICATION_MARK_READ: [{ id: 'n1', readAt: '2026-11-09T00:00:00Z' }],
   NOTIFICATION_MARK_ALL_READ: [{ input: { issueId: 'i1' }, readAt: '2026-11-09T00:00:00Z' }],
+  NOTIFICATIONS_MARK_READ: [{ readAt: '2026-11-09T00:00:00Z' }],
 };
 
 // Linear rejects any single query above 10,000 points. Keep a margin, since lists grow with real data.

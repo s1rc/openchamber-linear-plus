@@ -1,0 +1,304 @@
+[
+ {
+  "name": "p6-detail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p6-detail-status",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "css": ".lin-prop-edit .oc-sdk-trigger",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p6-detail-labels",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1000,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "click": "Edit labels"
+   }
+  ]
+ },
+ {
+  "name": "p6-detail-refused",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "css": ".lin-prop-edit .oc-sdk-trigger",
+    "nth": 1
+   },
+   {
+    "click": "High"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p6-detail-title",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1000,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "css": ".lin-issue-heading"
+   },
+   {
+    "click": "Edit description"
+   }
+  ]
+ },
+ {
+  "name": "p6-create",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "New issue"
+   }
+  ]
+ },
+ {
+  "name": "p6-start",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "click": "Start session"
+   }
+  ]
+ },
+ {
+  "name": "p6-triage",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 700,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-15\"]"
+   }
+  ]
+ },
+ {
+  "name": "p6-inbox",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 600,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p6-project-update",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1300,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 2
+   },
+   {
+    "click": "Checkout"
+   },
+   {
+    "click": "Post update"
+   }
+  ]
+ },
+ {
+  "name": "p6-settings",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4702,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 9
+   }
+  ]
+ },
+ {
+  "name": "p6-detail-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1800,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p6-create-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1000,
+  "port": 4702,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "New"
+   }
+  ]
+ }
+]

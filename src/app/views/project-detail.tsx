@@ -10,7 +10,9 @@ import { daysUntil, HEALTH_LABEL, HEALTH_TONE, percent, relativeTime, shortDate 
 import { Avatar } from '../../shared/glyphs.tsx';
 import { host } from '../../shared/host.ts';
 import { useIssueList } from '../../shared/issues.ts';
-import { Badge, Banner, Button, Progress, Spinner, Tabs } from '../../shared/kit.tsx';
+import { toast } from '@openchamber-ext/shared-ui';
+import { Badge, Banner, Button, Progress, Select, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
+import { postProjectUpdate, writeErrorText, type Health } from '../../shared/writes.ts';
 import { gql } from '../../shared/linear.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import { PROJECT_DETAIL } from '../../shared/queries.ts';
@@ -26,6 +28,42 @@ const TYPE_WORD: Record<StateType, string> = {
 
 const useProjectDetail = (id: string) =>
   useQuery(`project:${id}`, async () => (await gql<ProjectDetailResult>(PROJECT_DETAIL, { id })).project);
+
+const HEALTHS: { id: Health; label: string }[] = [{ id: 'onTrack', label: 'On track' }, { id: 'atRisk', label: 'At risk' }, { id: 'offTrack', label: 'Off track' }];
+
+/** Post update, as in Linear: health and a markdown body. Starts from the last update's health. */
+const UpdateComposer = ({ project }: { project: Detail }) => {
+  const [open, setOpen] = useState(false);
+  const [body, setBody] = useState('');
+  const [health, setHealth] = useState<Health>(project.health ?? 'onTrack');
+  const [busy, setBusy] = useState(false);
+  if (!open) return <div><Button label="Post update" variant="outline" size="xs" onClick={() => setOpen(true)} /></div>;
+  const post = async () => {
+    if (!body.trim() || busy) return;
+    setBusy(true);
+    try {
+      await postProjectUpdate(project.id, body.trim(), health);
+      await toast(host, 'success', `Posted an update to ${project.name}`);
+      setBody('');
+      setOpen(false);
+    } catch (error) {
+      await toast(host, 'error', writeErrorText(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div class="lin-composer" onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void post(); }}>
+      <Select value={health} options={HEALTHS} onChange={(id) => setHealth(id as Health)} />
+      <TextField value={body} onChange={setBody} multiline rows={5} placeholder="What changed since the last update? Markdown works. Cmd+Enter posts." disabled={busy} />
+      <div class="sui-row">
+        <span class="sui-grow" />
+        <Button label="Cancel" variant="ghost" size="xs" disabled={busy} onClick={() => setOpen(false)} />
+        <Button label={busy ? 'Posting...' : 'Post update'} size="xs" disabled={busy || !body.trim()} onClick={() => { void post(); }} />
+      </div>
+    </div>
+  );
+};
 
 const Overview = ({ project }: { project: Detail }) => {
   const open = useIssueList(all(OPEN, scopeFilter([], [project.id])));
@@ -76,6 +114,7 @@ const Overview = ({ project }: { project: Detail }) => {
         </Section>
       )}
       <Section title="Latest updates">
+        <UpdateComposer project={project} />
         {project.projectUpdates.nodes.length === 0 && <div class="sui-muted sui-small">No project updates yet.</div>}
         {project.projectUpdates.nodes.map((u) => (
           <div class="lin-comment" key={u.id}>
@@ -130,7 +169,7 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
         <Button label="Open in Linear" variant="ghost" size="xs" onClick={() => { void host.openUrl(project.url); }} />
       </div>
       {tab === 'issues' && withIssues ? (
-        <IssueBrowser ctx={ctx} listKey={`project:${project.id}`} scope={scopeFilter([], [project.id])} viewerId={viewerId} showProject={false} emptyTitle="No open issues" emptyBody={`${project.name} has no open issues.`} />
+        <IssueBrowser ctx={ctx} listKey={`project:${project.id}`} scope={scopeFilter([], [project.id])} viewerId={viewerId} showProject={false} projectId={project.id} teamIds={project.teams.nodes.map((t) => t.id)} emptyTitle="No open issues" emptyBody={`${project.name} has no open issues.`} />
       ) : (
         <Overview project={project} />
       )}

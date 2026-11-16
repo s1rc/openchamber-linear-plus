@@ -20,8 +20,8 @@ const ada = user('u-ada', 'Ada Park');
 const cycle = { id: 'c-42', number: 42, name: null, startsAt: '2026-11-02T12:00:00Z', endsAt: '2026-11-16T12:00:00Z', progress: 0.6, isActive: true, isFuture: false, isPast: false, completedAt: null };
 
 const teams = [
-  { id: 't-eng', key: 'ENG', name: 'Engineering', color: '#5e6ad2', icon: null, cyclesEnabled: true, triageEnabled: true, issueEstimationType: 'tShirt', activeCycle: cycle },
-  { id: 't-mob', key: 'MOB', name: 'Mobile', color: '#26b5ce', icon: null, cyclesEnabled: false, triageEnabled: false, issueEstimationType: 'fibonacci', activeCycle: null },
+  { id: 't-eng', key: 'ENG', name: 'Engineering', color: '#5e6ad2', icon: null, cyclesEnabled: true, triageEnabled: true, issueEstimationType: 'tShirt', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-eng-backlog' }, activeCycle: cycle },
+  { id: 't-mob', key: 'MOB', name: 'Mobile', color: '#26b5ce', icon: null, cyclesEnabled: false, triageEnabled: false, issueEstimationType: 'fibonacci', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-mob-todo' }, activeCycle: null },
 ];
 
 // Positions run into the thousands and overlap between types, as in a long-lived workspace.
@@ -35,6 +35,8 @@ const stateSet = (teamId: string) => [
   { id: `${teamId}-staging`, name: 'In Staging', type: 'started', color: '#4db6d4', position: 1700 },
   { id: `${teamId}-done`, name: 'Done', type: 'completed', color: '#5e6ad2', position: 3000 },
   { id: `${teamId}-canceled`, name: 'Canceled', type: 'canceled', color: '#95a2b3', position: 3100 },
+  // Mobile, a sub-team of Engineering, has a status Engineering lacks, so a board drag can move team.
+  ...(teamId === 't-mob' ? [{ id: 't-mob-qa', name: 'In QA', type: 'started', color: '#bb87fc', position: 1650 }] : []),
 ].map((s) => ({ ...s, team: { id: teamId } }));
 
 const project = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
@@ -84,6 +86,14 @@ const engIssues = [
   issue('Verify refunds on the staging gateway', 'In Staging', { priority: 2, estimate: 2, startedAt: '2026-11-05T09:00:00Z', creator: matt }),
   issue('Split the order service read model', 'Backlog', { priority: 0, assignee: ada, labels: { nodes: [labelPerf, labelApi, labelBug] } }),
 ];
+// A Mobile issue in the sub-team's own status, listed with Engineering's.
+const mobStates = Object.fromEntries(stateSet('t-mob').map(({ team: _team, ...st }) => [st.name, st]));
+const mobIssue = {
+  ...issue('Offline banner overlaps the tab bar', 'Todo'),
+  id: 'i-mob-5', identifier: 'MOB-5', number: 5, url: 'https://linear.app/acme/issue/MOB-5', branchName: 'ada/mob-5-offline-banner',
+  state: mobStates['In QA'], team: { id: 't-mob', key: 'MOB' }, assignee: ada, project: null, cycle: null, estimate: 2,
+};
+engIssues.push(mobIssue);
 const mine = engIssues.filter((i) => i.assignee === matt);
 
 const detail = {
@@ -228,6 +238,39 @@ workspace[key(Q.ISSUE_EXTRAS, { ids: engIssues.map((i) => i.id), after: null })]
 const parentsInList = engIssues.filter((i) => i.id === 'i-eng-11' || i.id === 'i-eng-17').map((i) => i.id);
 const leftOut = issue('Write the tax cache migration', 'Done', { parent: { id: 'i-eng-11', identifier: 'ENG-11' }, completedAt: '2026-11-06T10:00:00Z' });
 workspace[key(Q.CHILD_ISSUES, { ids: parentsInList, after: null })] = ok({ issues: page([engIssues[1], leftOut]) });
+
+// Phase 6: what the pickers offer, and Linear's answers to writes. The shoot clock is fixed, so every
+// write has an exact key. Only fake data: no write ever reaches a real workspace.
+const sam = user('u-sam', 'Sam Lee');
+workspace[key(Q.TEAM_PEOPLE, { teamId: 't-eng' })] = ok({ team: {
+  id: 't-eng',
+  members: page([{ ...ada, active: true }, { ...matt, active: true }, { ...sam, active: true }, { ...user('u-old', 'Former Member'), active: false }]),
+  labels: page([labelBug, labelApi, labelPerf, { id: 'l-ux', name: 'UX', color: '#bb87fc' }]),
+} });
+workspace[key(Q.WORKSPACE_LABELS)] = ok({ issueLabels: page([{ id: 'l-security', name: 'Security', color: '#eb5757', team: null }, { ...labelBug, team: { id: 't-eng' } }]) });
+workspace[key(Q.TEAM_CYCLES, { teamId: 't-eng', minNumber: 42 })] = ok({ team: { id: 't-eng', key: 'ENG', name: 'Engineering', cycles: { nodes: cycles.slice(2) } } });
+const updated = (row: Record<string, unknown>) => ok({ issueUpdate: { success: true, issue: row } });
+const refused = { status: 200, body: JSON.stringify({ errors: [{ message: 'Invalid scope: `write` required', extensions: { code: 'FORBIDDEN' } }] }) };
+const update = (id: string, input: Record<string, unknown>) => key(Q.ISSUE_UPDATE, { id, input });
+const [eng11, , eng13, , eng15] = engIssues;
+workspace[update('i-eng-11', { stateId: 't-eng-review' })] = updated({ ...eng11, state: engStates['In Review'] });
+// A connection that can only read: the change shows, then rolls back with a toast.
+workspace[update('i-eng-11', { priority: 2 })] = refused;
+workspace[update('i-eng-13', { stateId: 't-eng-progress' })] = updated({ ...eng13, state: engStates['In Progress'] });
+workspace[update('i-eng-13', { teamId: 't-mob', stateId: 't-mob-qa' })] = updated({ ...eng13, id: 'i-eng-13', identifier: 'MOB-6', team: { id: 't-mob', key: 'MOB' }, state: mobStates['In QA'], cycle: null });
+workspace[update('i-eng-15', { stateId: 't-eng-backlog' })] = updated({ ...eng15, state: engStates['Backlog'] });
+workspace[update('i-eng-15', { stateId: 't-eng-progress' })] = updated({ ...eng15, state: engStates['In Progress'] });
+workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-15' })] = ok({ issue: {
+  ...detail, ...eng15, description: 'Reported by support: euro prices show a dollar sign.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
+  relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
+} });
+workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Cache exchange rates', stateId: 't-eng-backlog', priority: 2 } })] = ok({ issueCreate: { success: true, issue: {
+  ...issue('Cache exchange rates', 'Backlog', { priority: 2, assignee: null, project: null, cycle: null }), id: 'i-eng-30', identifier: 'ENG-30',
+} } });
+workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: 'Batching shipped in !42.' } })] = ok({ commentCreate: { success: true, comment: { id: 'cm3', body: 'Batching shipped in !42.', createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
+const READ_AT = '2026-11-09T12:00:00.000Z';
+workspace[key(Q.markReadMany(['n1', 'n2']), { readAt: READ_AT })] = ok({ n0: { success: true }, n1: { success: true } });
+workspace[key(Q.NOTIFICATION_MARK_READ, { id: 'n1', readAt: READ_AT })] = ok({ notificationUpdate: { success: true } });
 
 const error: Record<string, Saved> = {
   'POST /graphql *': { status: 200, body: JSON.stringify({ errors: [{ message: 'Linear is having trouble right now.' }] }) },

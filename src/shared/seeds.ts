@@ -1,10 +1,9 @@
 // The people, labels and projects of the teams in scope, for list groups and board columns that
 // are empty. Loaded only while "Show empty" is on and the grouping needs them.
 import { load, useQuery } from './cache.ts';
-import { gql } from './linear.ts';
 import { fetchTeamProjects } from './projects.ts';
-import { TEAM_PEOPLE } from './queries.ts';
-import type { Label, ProjectSummary, TeamPeopleResult, User } from './types.ts';
+import { fetchTeamPeople } from './team-data.ts';
+import type { Label, ProjectSummary, User } from './types.ts';
 import type { GroupField } from './view-options.ts';
 
 export type SeedData = { people: User[]; labels: Label[]; projects: ProjectSummary[] };
@@ -21,7 +20,7 @@ export const fetchSeedData = async (field: GroupField, teamIds: string[]): Promi
     const lists = await Promise.all(teamIds.map((id) => load(`team-projects:${id}`, () => fetchTeamProjects(id))));
     return { people: [], labels: [], projects: uniqueBy(lists.flat()).sort(byName) };
   }
-  const teams = await Promise.all(teamIds.map((teamId) => load(`team-people:${teamId}`, async () => (await gql<TeamPeopleResult>(TEAM_PEOPLE, { teamId })).team)));
+  const teams = await Promise.all(teamIds.map(fetchTeamPeople));
   return {
     people: uniqueBy(teams.flatMap((t) => t.members.nodes.filter((m) => m.active))).sort(byName),
     labels: uniqueBy(teams.flatMap((t) => t.labels.nodes)).sort(byName),
