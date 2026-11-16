@@ -274,4 +274,8 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-label-list { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
 .lin-label-option { display: flex; align-items: center; gap: 6px; }
 .lin-column-body[data-drop="true"], .lin-hidden-col[data-drop="true"] { outline: 2px dashed var(--oc-focus); outline-offset: -2px; background: var(--oc-hover); }
-.lin-card[draggable="true"] { cursor: grab; }
+/* Dragging a card: a copy follows the pointer, the original dims, text does not select. */
+.lin-card[data-dragging="true"] { opacity: 0.35; }
+.lin-card-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; opacity: 0.92; box-shadow: 0 12px 28px color-mix(in srgb, var(--oc-fg) 25%, transparent); cursor: grabbing; }
+.lin-dragging, .lin-dragging * { user-select: none; cursor: grabbing; }
+.lin-card { touch-action: pan-x pan-y; }

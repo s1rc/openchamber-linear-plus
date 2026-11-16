@@ -8,9 +8,6 @@ import type { IssueExtras, IssueRow } from '../../shared/types.ts';
 import type { PropertyId } from '../../shared/view-options.ts';
 import { IssueChips } from './issue-chips.tsx';
 
-/** The drag payload: the issue's id. */
-export const DRAG_TYPE = 'application/x-linear-issue';
-
 type Props = {
   issue: IssueRow;
   properties: ReadonlySet<PropertyId>;
@@ -20,11 +17,11 @@ type Props = {
   subIssues?: ChildCount;
   extras?: IssueExtras;
   onOpen: (issue: IssueRow) => void;
-  /** Cards can be dragged to another column. */
-  draggable?: boolean;
+  /** Pressing the card and moving the pointer starts a drag. */
+  onDragStart?: (event: PointerEvent) => void;
 };
 
-export const IssueCard = ({ issue, properties: p, selected, cursor, hideProject, subIssues, extras, onOpen, draggable }: Props) => {
+export const IssueCard = ({ issue, properties: p, selected, cursor, hideProject, subIssues, extras, onOpen, onDragStart }: Props) => {
   const hasTop = p.has('id') || p.has('assignee');
   const dates = [p.has('created') && `Created ${shortDate(issue.createdAt)}`, p.has('updated') && `Updated ${shortDate(issue.updatedAt)}`].filter(Boolean);
   return (
@@ -35,11 +32,8 @@ export const IssueCard = ({ issue, properties: p, selected, cursor, hideProject,
       data-issue-id={issue.id}
       aria-selected={selected ? 'true' : 'false'}
       data-cursor={cursor ? 'true' : 'false'}
-      draggable={draggable}
-      onDragStart={draggable ? (event) => {
-        event.dataTransfer?.setData(DRAG_TYPE, issue.id);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-      } : undefined}
+      onPointerDown={onDragStart}
+      onDragStart={(event) => event.preventDefault()}
       onClick={() => onOpen(issue)}
     >
       {hasTop && (

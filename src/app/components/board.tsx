@@ -10,7 +10,8 @@ import type { IssueExtras, IssueRow } from '../../shared/types.ts';
 import type { PropertyId } from '../../shared/view-options.ts';
 import { Menu } from '../../shared/kit.tsx';
 import { GroupIcon } from './group-icon.tsx';
-import { DRAG_TYPE, IssueCard } from './issue-card.tsx';
+import { IssueCard } from './issue-card.tsx';
+import { useCardDrag } from './use-card-drag.ts';
 
 type Props = {
   columns: Group[];
@@ -32,25 +33,13 @@ type Props = {
 
 export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hideProject, childCounts, extras, onOpen, onHide, onShow, onDrop }: Props) => {
   const [over, setOver] = useState<string | null>(null);
-  // Drop targets: a cell (column and row) or a hidden column.
+  const drag = useCardDrag({ onOver: setOver, onDrop: (issueId, target) => onDrop(issueId, target.column, target.row) });
+  // A cell (column and row) or a hidden column: where a dragged card can land.
   const target = (id: string, columnKey: string, rowKey: string | null) => ({
+    'data-drop-id': id,
+    'data-drop-column': columnKey,
+    'data-drop-row': rowKey ?? '',
     'data-drop': over === id ? 'true' : undefined,
-    onDragOver: (event: DragEvent) => {
-      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'move';
-      if (over !== id) setOver(id);
-    },
-    onDragLeave: (event: DragEvent) => {
-      if (!(event.currentTarget as Node).contains(event.relatedTarget as Node | null)) setOver((o) => (o === id ? null : o));
-    },
-    onDrop: (event: DragEvent) => {
-      const issueId = event.dataTransfer?.getData(DRAG_TYPE);
-      setOver(null);
-      if (!issueId) return;
-      event.preventDefault();
-      onDrop(issueId, columnKey, rowKey);
-    },
   });
   const template = { gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, 272px)` };
   const bands = rows.length ? rows : [null];
@@ -66,7 +55,7 @@ export const Board = ({ columns, hidden, rows, properties, openId, cursorId, hid
       subIssues={childCounts?.get(issue.id)}
       extras={extras?.get(issue.id)}
       onOpen={onOpen}
-      draggable
+      onDragStart={drag.start(issue.id)}
     />
   ));
 
