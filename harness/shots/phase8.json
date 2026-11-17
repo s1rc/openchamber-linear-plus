@@ -1,0 +1,442 @@
+[
+ {
+  "name": "p8-message",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "genKey": "message"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-message-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "genKey": "message"
+  },
+  "width": 360,
+  "height": 1000,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-drafting",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "gen": "slow"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 300
+   }
+  ]
+ },
+ {
+  "name": "p8-selection",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"selection\",\"action\":\"issue-from-selection\",\"sessionId\":\"ses_one\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m2\",\"text\":\"Tax (8%): $4.20\\nTotal: EUR 58.20\\n\\nThe tax line shows a dollar sign on a euro order.\"}",
+   "genKey": "selection"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-session",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"session\",\"action\":\"issue-from-session\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messages\":[{\"id\":\"a\",\"role\":\"user\",\"text\":\"Pricing a 60 item cart takes 31 s. Why?\",\"createdAt\":1},{\"id\":\"b\",\"role\":\"assistant\",\"text\":\"priceCart calls TaxService.lookup once per line. I can batch them into one call per cart.\",\"createdAt\":2},{\"id\":\"c\",\"role\":\"user\",\"text\":\"Do it, and add a test for the empty cart.\",\"createdAt\":3},{\"id\":\"d\",\"role\":\"assistant\",\"text\":\"Batching shipped in !42. The empty cart path still needs a test.\",\"createdAt\":4}]}",
+   "genKey": "session"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-session-nomessages",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"session\",\"action\":\"issue-from-session\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\"}"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-diff",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"diff\",\"action\":\"issue-from-diff\",\"directory\":\"/work/engineering-api\",\"path\":\"src/pricing.ts\",\"startLine\":12,\"endLine\":15,\"side\":\"additions\"}",
+   "genKey": "diff",
+   "files": "{\"src/pricing.ts\":\"  // pricing line 1\\n  // pricing line 2\\n  // pricing line 3\\n  // pricing line 4\\n  // pricing line 5\\n  // pricing line 6\\n  // pricing line 7\\n  // pricing line 8\\n  // pricing line 9\\n  // pricing line 10\\n  // pricing line 11\\n  // pricing line 12\\n  // pricing line 13\\n  const average = total / cart.lines.length;\\n  // pricing line 15\\n  // pricing line 16\\n  // pricing line 17\\n  // pricing line 18\\n  // pricing line 19\\n  // pricing line 20\\n  // pricing line 21\\n  // pricing line 22\\n  // pricing line 23\\n  // pricing line 24\\n  // pricing line 25\\n  // pricing line 26\\n  // pricing line 27\\n  // pricing line 28\\n  // pricing line 29\\n  // pricing line 30\"}"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-nomodel",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "gen": "nomodel"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-failed",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "gen": "fail"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-unreadable",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "gen": "junk"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-comment-one",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"comment-on-issue\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Batching shipped in !42. Pricing a 60 item cart now takes 1.9 s.\"}"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-comment-many",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"comment-on-issue\",\"sessionId\":\"ses_two\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Batching shipped in !42. Pricing a 60 item cart now takes 1.9 s.\"}"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-comment-none",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"comment-on-issue\",\"sessionId\":\"ses_none\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Batching shipped in !42. Pricing a 60 item cart now takes 1.9 s.\"}"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-comment-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"comment-on-issue\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Batching shipped in !42. Pricing a 60 item cart now takes 1.9 s.\"}"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-plus-create",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]"
+  },
+  "width": 640,
+  "height": 860,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-plus-attach",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]"
+  },
+  "width": 640,
+  "height": 700,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1200
+   },
+   {
+    "click": "Attach"
+   },
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-plus-attach-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1200
+   },
+   {
+    "click": "Attach"
+   },
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-attached",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"providerId\":\"linear-dashboard\",\"id\":\"project:p-checkout\",\"title\":\"Checkout\",\"url\":\"https://linear.app/acme/project/checkout-sp-checkout\",\"text\":\"Linear project: Checkout\"}"
+  },
+  "width": 640,
+  "height": 300,
+  "port": 4801,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-error",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}",
+   "genKey": "message"
+  },
+  "width": 640,
+  "height": 400,
+  "port": 4802,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p8-connect",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "0",
+   "session": "{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"busy\":false}",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_one\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5}]},{\"id\":\"ses_two\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-11\",\"url\":\"https://linear.app/acme/issue/ENG-11/x\",\"kind\":\"issue\",\"linkedAt\":5},{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":8}]},{\"id\":\"ses_none\",\"title\":\"Batch the tax lookups\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":9,\"archivedAt\":null,\"worktree\":null,\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"issue-from-message\",\"sessionId\":\"ses_one\",\"sessionTitle\":\"Batch the tax lookups\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"Carts over 50 items time out. Pricing a 60 item cart takes 31 s because `priceCart` looks up tax once per line, and the payment gateway gives up after 30 s. I batched the lookups in !42, but the empty cart still returns NaN.\"}"
+  },
+  "width": 640,
+  "height": 400,
+  "port": 4803,
+  "steps": [
+   {
+    "wait": 1200
+   }
+  ]
+ }
+]

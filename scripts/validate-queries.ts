@@ -26,7 +26,7 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   STATUS_COUNTS: [{ filter: { state: { type: { in: ['triage', 'unstarted', 'started'] } }, team: { id: { in: ['t1'] } } }, after: null }],
   STATUS_MINE: [{ filter: { and: [{ state: { type: { nin: ['completed', 'canceled', 'duplicate'] } } }, { assignee: { isMe: { eq: true } } }] } }],
   REPO_ATTACHMENTS: [{ url: 'gitlab.com/acme/group/repo/' }],
-  DOCUMENTS: [{ filter: { project: { id: { eq: 'p1' } } } }],
+  DOCUMENTS: [{ filter: { project: { id: { eq: 'p1' } } } }, { filter: { project: { id: { in: ['p1', 'p2'] } } } }],
   ISSUES: [
     { filter: { assignee: { isMe: { eq: true } } } },
     { filter: { creator: { isMe: { eq: true } } } },

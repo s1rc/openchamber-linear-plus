@@ -1,0 +1,6 @@
+{
+ "message": "Here is the issue:\n```json\n{\"title\": \"Checkout times out on carts with more than 50 items\", \"description\": \"Pricing a cart with 60 items takes about 31 s and the payment gateway gives up.\\n\\n- Started after `TaxService.lookup()` moved to one call per line\\n- `priceCart(cart)` calls it once per line\\n\\nExpected: pricing a large cart finishes in under 2 s.\"}\n```",
+ "selection": "{\"title\": \"Tax line shows the wrong currency symbol\", \"description\": \"Euro orders show a dollar sign on the tax line of the receipt.\\n\\n```\\nTax (8%): $4.20\\n```\\n\\nThe receipt should use the order currency.\"}",
+ "session": "{\"title\": \"Batch tax lookups when pricing a cart\", \"description\": \"Pricing calls the tax service once per line, so a 60 item cart takes 31 s.\\n\\n- Batch the lookups into one call per cart\\n- Add a test for the empty cart\\n\\nDone in this chat: batching shipped in !42, still to do is the empty cart path.\"}",
+ "diff": "{\"title\": \"Guard against an empty cart in priceCart\", \"description\": \"`priceCart` divides by the number of lines, so an empty cart returns NaN.\"}"
+}

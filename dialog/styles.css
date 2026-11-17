@@ -342,3 +342,24 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-status-refresh { display: flex; justify-content: flex-end; }
 .lin-status-hint { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .lin-status-ref { font-size: 0.85em; }
+
+/* The host's dialog (src/dialog): create from a message, comment on an issue, attach. */
+.lin-dialog { box-sizing: border-box; display: flex; flex-direction: column; min-height: 100vh; padding: 16px; min-width: 0; }
+.lin-dialog-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* The host's dialog is taller than the form: the body fills it, and the text box takes what is left. */
+.lin-dialog > .lin-dialog-body, .lin-dialog-body > .lin-dialog-body, .lin-dialog .lin-form { flex: 1 1 auto; }
+.lin-dialog .lin-grow { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+/* The kit's wrapper sets display:block inline, so the override needs !important. */
+.lin-dialog .lin-grow > span { display: flex !important; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.lin-dialog .lin-grow .oc-sdk-field { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.lin-dialog .lin-grow .oc-sdk-input { flex: 1 1 auto; resize: none; min-height: 120px; }
+.lin-dialog-body[hidden] { display: none; }
+.lin-dialog-title { margin: 0; font-size: 1rem; font-weight: 600; }
+.lin-lead { margin: 0; color: var(--oc-muted); }
+.lin-form-foot { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.lin-source { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lin-quote { padding-left: 8px; border-left: 2px solid var(--oc-border); color: var(--oc-muted); overflow-wrap: anywhere; }
+.lin-draft-note { display: flex; align-items: center; min-height: 20px; }
+.lin-comment-target { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lin-attach-group { display: flex; flex-direction: column; gap: 4px; }
+.lin-comment-target .sui-chip { min-width: 0; }

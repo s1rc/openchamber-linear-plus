@@ -6,6 +6,8 @@
 // Output: harness/fixtures/workspace.json (a connected workspace) and harness/fixtures/error.json.
 import { graphqlBody } from '../src/shared/gql-body.ts';
 import { all, customViewsFilter, MY_FILTERS, OPEN, scopeFilter } from '../src/shared/filters.ts';
+import { commentBody } from '../src/dialog/jobs.ts';
+import { parseDraft } from '../src/shared/draft.ts';
 import * as Q from '../src/shared/queries.ts';
 
 type Saved = { status: number; body: string };
@@ -309,10 +311,54 @@ const service: Record<string, Saved> = {
 workspace[key(Q.issuesByIdentifier(['ENG-11']))] = ok({ i0: engIssues[0] });
 workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: draft.body } })] = ok({ commentCreate: { success: true, comment: { id: 'cm4', body: draft.body, createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
 
+// Phase 8: the dialog. The Small Model's answers (served by the temp-dir harness as host.generate), the
+// text a create click sends, the issues a session links to, and what Attach finds. Fake data only.
+const MODEL_ANSWERS = {
+  // A fenced answer with words around it, as small models often write.
+  message: 'Here is the issue:\n```json\n{"title": "Checkout times out on carts with more than 50 items", "description": "Pricing a cart with 60 items takes about 31 s and the payment gateway gives up.\\n\\n- Started after `TaxService.lookup()` moved to one call per line\\n- `priceCart(cart)` calls it once per line\\n\\nExpected: pricing a large cart finishes in under 2 s."}\n```',
+  selection: '{"title": "Tax line shows the wrong currency symbol", "description": "Euro orders show a dollar sign on the tax line of the receipt.\\n\\n```\\nTax (8%): $4.20\\n```\\n\\nThe receipt should use the order currency."}',
+  session: '{"title": "Batch tax lookups when pricing a cart", "description": "Pricing calls the tax service once per line, so a 60 item cart takes 31 s.\\n\\n- Batch the lookups into one call per cart\\n- Add a test for the empty cart\\n\\nDone in this chat: batching shipped in !42, still to do is the empty cart path."}',
+  diff: '{"title": "Guard against an empty cart in priceCart", "description": "`priceCart` divides by the number of lines, so an empty cart returns NaN."}',
+};
+const draftOf = (answer: string) => parseDraft(answer)!;
+const messageDraft = draftOf(MODEL_ANSWERS.message);
+workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: messageDraft.title, description: messageDraft.description, stateId: 't-eng-backlog', priority: 0 } })] = ok({ issueCreate: { success: true, issue: {
+  ...issue(messageDraft.title, 'Backlog', { priority: 0, assignee: null, project: null, cycle: null }), id: 'i-eng-31', identifier: 'ENG-31',
+} } });
+
+
+
+// The + menu's create form with only a title typed.
+workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Cache exchange rates', stateId: 't-eng-backlog', priority: 0 } })] = ok({ issueCreate: { success: true, issue: {
+  ...issue('Cache exchange rates', 'Backlog', { priority: 0, assignee: null, project: null, cycle: null }), id: 'i-eng-32', identifier: 'ENG-32',
+} } });
+
+// Sessions for the comment flows: ses_one links ENG-11 only, ses_two links ENG-11 and ENG-13, ses_none links nothing.
+workspace[key(Q.issuesByIdentifier(['ENG-11']))] = ok({ i0: engIssues[0] });
+workspace[key(Q.issuesByIdentifier(['ENG-13', 'ENG-11']))] = ok({ i0: engIssues[2], i1: engIssues[0] });
+const COMMENT_TEXT = 'Batching shipped in !42. Pricing a 60 item cart now takes 1.9 s.';
+workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: commentBody('Batch the tax lookups', COMMENT_TEXT) } })] = ok({ commentCreate: { success: true, comment: { id: 'cm5', body: commentBody('Batch the tax lookups', COMMENT_TEXT), createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
+workspace[key(Q.SEARCH_ISSUES, { term: 'tax' })] = ok({ searchIssues: { nodes: [engIssues[2], engIssues[0]] } });
+
+// Attach: this folder's projects and their documents, a search, and the text of a project and a document.
+const docs = [
+  { id: 'd1', title: 'Checkout architecture', url: 'https://linear.app/acme/document/checkout-architecture', updatedAt: '2026-11-01T10:00:00Z', project: { id: 'p-checkout', name: 'Checkout' } },
+  { id: 'd2', title: 'Payment gateway runbook', url: 'https://linear.app/acme/document/payment-gateway-runbook', updatedAt: '2026-10-20T10:00:00Z', project: { id: 'p-checkout', name: 'Checkout' } },
+  { id: 'd3', title: 'Repo onboarding', url: 'https://linear.app/acme/document/repo-onboarding', updatedAt: '2026-09-02T10:00:00Z', project: { id: 'p-repo', name: 'Repo' } },
+];
+workspace[key(Q.DOCUMENTS, { filter: { project: { id: { in: ['p-checkout', 'p-repo'] } } } })] = ok({ documents: { nodes: docs } });
+workspace[key(Q.SEARCH_PROJECTS, { term: 'check' })] = ok({ searchProjects: { nodes: [projects[1]] } });
+workspace[key(Q.SEARCH_DOCUMENTS, { term: 'check' })] = ok({ searchDocuments: { nodes: [docs[0]] } });
+workspace[key(Q.SEARCH_PROJECTS, { term: 'zzzz' })] = ok({ searchProjects: { nodes: [] } });
+workspace[key(Q.SEARCH_DOCUMENTS, { term: 'zzzz' })] = ok({ searchDocuments: { nodes: [] } });
+workspace[key(Q.DOCUMENT, { id: 'd1' })] = ok({ document: { ...docs[0], content: '# Checkout architecture\n\nPricing, tax and payment run as three steps.\n\n1. Price the cart\n2. Look up tax\n3. Charge the card', creator: ada } });
+
+await Bun.write('harness/fixtures/drafts.json', JSON.stringify(MODEL_ANSWERS, null, 1));
+
 const error: Record<string, Saved> = {
   'POST /graphql *': { status: 200, body: JSON.stringify({ errors: [{ message: 'Linear is having trouble right now.' }] }) },
 };
 
 await Bun.write('harness/fixtures/workspace.json', JSON.stringify({ service, request: workspace }, null, 1));
 await Bun.write('harness/fixtures/error.json', JSON.stringify({ service: {}, request: error }, null, 1));
-console.log(`wrote ${Object.keys(workspace).length} workspace fixtures and the error fixture`);
+console.log(`wrote ${Object.keys(workspace).length} workspace fixtures, the error fixture and the model answers`);
