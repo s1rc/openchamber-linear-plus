@@ -1,0 +1,63 @@
+[
+ {
+  "name": "w-nosession",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "projects": "[{\"id\": \"ocp1\", \"name\": \"engineering-api\", \"directory\": \"/work/engineering-api\"}]"
+  },
+  "width": 640,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 1800
+   }
+  ]
+ },
+ {
+  "name": "w-nosession-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "projects": "[{\"id\": \"ocp1\", \"name\": \"engineering-api\", \"directory\": \"/work/engineering-api\"}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 1800
+   }
+  ]
+ },
+ {
+  "name": "w-session",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "projects": "[{\"id\": \"ocp1\", \"name\": \"engineering-api\", \"directory\": \"/work/engineering-api\"}]",
+   "session": "{\"id\": \"ses_one\", \"title\": \"Batch the tax lookups\", \"busy\": false}"
+  },
+  "width": 640,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 1800
+   },
+   {
+    "click": "Attach"
+   },
+   {
+    "wait": 1500
+   }
+  ]
+ }
+]

@@ -69,6 +69,13 @@ export const setRepo = async (placeKey: string, repo: StoredRepo): Promise<void>
 export const getStartMoves = async (): Promise<boolean> => (await get<boolean>('pref:start-moves')) !== false;
 export const setStartMoves = (on: boolean) => set('pref:start-moves', on);
 
+/** The status Start session moved an issue to last on a team, by name, so the next start offers it first. */
+export const getStartState = async (teamId: string): Promise<string | null> => {
+  const value = await get<string>(`pref:start-state:${teamId}`);
+  return typeof value === 'string' ? value : null;
+};
+export const setStartState = (teamId: string, name: string) => set(`pref:start-state:${teamId}`, name);
+
 export const getLastView = (placeKey: string) => get<string>(`view:${placeKey}`);
 
 /** Hands every mapping to the service, which acts on them with no window open. Best effort. */

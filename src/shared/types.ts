@@ -221,6 +221,8 @@ export type ProjectDetailResult = { project: ProjectDetail };
 export type IssuesResult = { issues: Page<IssueRow> };
 export type IssueDetailResult = { issue: IssueDetail };
 export type IssuesByIdentifierResult = Record<string, IssueRow | null>;
+export type IssuesByKeysResult = { issues: { nodes: IssueRow[] } };
+export type BlockStatesResult = { workflowStates: { nodes: { id: string; position: number; team: { id: string } }[] } };
 export type TeamCyclesResult = { team: { id: string; key: string; name: string; cycles: Connection<CycleSummary> } };
 export type CycleDetailResult = { cycle: CycleSummary & { description: string | null } };
 /** The costly properties, loaded apart from the rows and only when shown. */

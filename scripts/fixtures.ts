@@ -6,6 +6,7 @@
 // Output: harness/fixtures/workspace.json (a connected workspace) and harness/fixtures/error.json.
 import { graphqlBody } from '../src/shared/gql-body.ts';
 import { all, customViewsFilter, MY_FILTERS, OPEN, scopeFilter } from '../src/shared/filters.ts';
+import { keysFilter } from '../src/shared/block-args.ts';
 import { commentBody } from '../src/dialog/jobs.ts';
 import { parseDraft } from '../src/shared/draft.ts';
 import * as Q from '../src/shared/queries.ts';
@@ -347,11 +348,39 @@ const docs = [
   { id: 'd3', title: 'Repo onboarding', url: 'https://linear.app/acme/document/repo-onboarding', updatedAt: '2026-09-02T10:00:00Z', project: { id: 'p-repo', name: 'Repo' } },
 ];
 workspace[key(Q.DOCUMENTS, { filter: { project: { id: { in: ['p-checkout', 'p-repo'] } } } })] = ok({ documents: { nodes: docs } });
+workspace[key(Q.SEARCH_ISSUES, { term: 'check' })] = ok({ searchIssues: { nodes: [engIssues[0]] } });
 workspace[key(Q.SEARCH_PROJECTS, { term: 'check' })] = ok({ searchProjects: { nodes: [projects[1]] } });
 workspace[key(Q.SEARCH_DOCUMENTS, { term: 'check' })] = ok({ searchDocuments: { nodes: [docs[0]] } });
+workspace[key(Q.SEARCH_ISSUES, { term: 'zzzz' })] = ok({ searchIssues: { nodes: [] } });
 workspace[key(Q.SEARCH_PROJECTS, { term: 'zzzz' })] = ok({ searchProjects: { nodes: [] } });
 workspace[key(Q.SEARCH_DOCUMENTS, { term: 'zzzz' })] = ok({ searchDocuments: { nodes: [] } });
 workspace[key(Q.DOCUMENT, { id: 'd1' })] = ok({ document: { ...docs[0], content: '# Checkout architecture\n\nPricing, tax and payment run as three steps.\n\n1. Price the cart\n2. Look up tax\n3. Charge the card', creator: ada } });
+
+// Phase 9: the chat blocks. Each block reads its issues by team key and number in one request, then the
+// started states of those issues' teams. Keyed by the same filter the blocks build, so a changed filter
+// shows up as a missing fixture.
+const blockLookup = (ids: string[], rows: typeof engIssues) => {
+  workspace[key(Q.ISSUES_BY_KEYS, { filter: keysFilter(ids) })] = ok({ issues: { nodes: rows } });
+  const teamIds = [...new Set(rows.filter((i) => i.state.type === 'started').map((i) => i.team.id))];
+  if (teamIds.length > 0) {
+    workspace[key(Q.BLOCK_STATES, { teamIds })] = ok({ workflowStates: { nodes: [...stateSet('t-eng'), ...stateSet('t-mob')]
+      .filter((s) => s.type === 'started' && teamIds.includes(s.team.id)).map((s) => ({ id: s.id, position: s.position, team: s.team })) } });
+  }
+};
+blockLookup(['ENG-11'], [engIssues[0]!]);
+blockLookup(['ENG-13'], [engIssues[2]!]);
+blockLookup(['ENG-999'], []);
+blockLookup(['ENG-11', 'ENG-12'], [engIssues[0]!, engIssues[1]!]);
+blockLookup(['ENG-11', 'ENG-12', 'ENG-13', 'MOB-5', 'ENG-999'], [engIssues[0]!, engIssues[1]!, engIssues[2]!, mobIssue]);
+blockLookup(['ENG-13', 'ENG-14', 'ENG-17'], [engIssues[2]!, engIssues[3]!, engIssues[6]!]);
+workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-14' })] = ok({ issue: {
+  ...detail, ...engIssues[3], description: 'Deliveries that fail should retry with exponential backoff.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
+  relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
+} });
+workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-13' })] = ok({ issue: {
+  ...detail, ...engIssues[2], description: 'Show the cards the customer used before first.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
+  relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
+} });
 
 await Bun.write('harness/fixtures/drafts.json', JSON.stringify(MODEL_ANSWERS, null, 1));
 

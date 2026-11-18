@@ -18,11 +18,18 @@ const MAX_PAGES = 5;
 
 let latest: Workspace | null = null;
 
+const seededFills = new Map<string, number>();
+
+/** Pie fills for frames that never load the whole workspace (the chat blocks read just the started states they need). */
+export const seedStartedFills = (fills: ReadonlyMap<string, number>) => { for (const [id, fill] of fills) seededFills.set(id, fill); };
+
 /**
  * How full a started state's pie is. Linear spaces a team's started states evenly: with three of them
  * the pies are a quarter, a half and three quarters. Unknown states read as half.
  */
 export const startedFill = (teamId: string, stateId: string): number => {
+  const seeded = seededFills.get(stateId);
+  if (seeded !== undefined) return seeded;
   const started = latest?.statesByTeam.get(teamId)?.filter((s) => s.type === 'started') ?? [];
   const at = started.findIndex((s) => s.id === stateId);
   return at < 0 ? 0.5 : (at + 1) / (started.length + 1);

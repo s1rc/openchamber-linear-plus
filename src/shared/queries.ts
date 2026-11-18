@@ -231,6 +231,26 @@ export const issuesByIdentifier = (identifiers: readonly string[]): string => `
   }
 `;
 
+/**
+ * The issues behind a chat block, found by team key and number (`ENG-123` is team ENG, number 123).
+ * One request whatever the count, and an identifier that does not exist is simply absent: an
+ * `issue(id:)` alias for a missing issue makes Linear answer with an error for the whole request.
+ */
+export const ISSUES_BY_KEYS = `
+  query IssuesByKeys($filter: IssueFilter) {
+    issues(first: 25, filter: $filter) { nodes { ${ISSUE_ROW} } }
+  }
+`;
+
+/** The started states of some teams, to draw a block's status pie as full as the dashboard does. */
+export const BLOCK_STATES = `
+  query BlockStates($teamIds: [ID!]) {
+    workflowStates(first: 100, filter: { team: { id: { in: $teamIds } }, type: { eq: "started" } }) {
+      nodes { id position team { id } }
+    }
+  }
+`;
+
 /** A team's cycles from `$minNumber` up: the recent past, the active one and every upcoming one. */
 export const TEAM_CYCLES = `
   query TeamCycles($teamId: String!, $minNumber: Float!) {
@@ -357,6 +377,7 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
+  ISSUES_BY_KEYS, BLOCK_STATES,
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT,
   ISSUE_UPDATE, ISSUE_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),

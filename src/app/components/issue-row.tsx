@@ -25,14 +25,17 @@ type Props = {
   extras?: IssueExtras;
   /** Nesting level: a sub-issue under its parent is 1. */
   depth?: number;
+  /** Not clickable: a choice that has already been made. */
+  disabled?: boolean;
   onOpen: (issue: Issue) => void;
 };
 
-export const IssueRow = ({ issue, selected, cursor, properties = ALL_PROPERTIES, hideProject, compact, subIssues, extras, depth = 0, onOpen }: Props) => (
+export const IssueRow = ({ issue, selected, cursor, properties = ALL_PROPERTIES, hideProject, compact, subIssues, extras, depth = 0, disabled, onOpen }: Props) => (
   <button
     type="button"
     class="lin-issue-row"
     aria-selected={selected ? 'true' : 'false'}
+    disabled={disabled}
     data-cursor={cursor ? 'true' : 'false'}
     data-issue={issue.identifier}
     data-depth={depth || undefined}

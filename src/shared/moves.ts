@@ -94,9 +94,33 @@ export const acceptStateOf = (team: Pick<Team, 'defaultIssueState'> | undefined,
 /** Decline moves a triage issue to the team's first canceled status. */
 export const declineStateOf = (states: readonly WorkflowState[]): WorkflowState | null => sortedStates(states).find((s) => s.type === 'canceled') ?? null;
 
-/** Start session moves the issue to the team's first started status, unless it is already started or done. */
-export const startedStateOf = (issue: Pick<IssueRow, 'state'>, states: readonly WorkflowState[]): WorkflowState | null =>
-  ['started', 'completed', 'canceled', 'duplicate'].includes(issue.state.type) ? null : (sortedStates(states).find((s) => s.type === 'started') ?? null);
+/**
+ * The statuses Start session can move an issue to, in Linear's order: the started ones, and a planning status
+ * even when the team files it before work begins (an unstarted "In Planning"), since starting a session often
+ * means planning first.
+ */
+export const startedStatesOf = (states: readonly WorkflowState[]): WorkflowState[] =>
+  sortedStates(states).filter((s) => s.type === 'started' || (s.type === 'unstarted' && /plan/i.test(s.name)));
+
+/**
+ * The status Start session moves an issue to by default. The status you used last on this team wins
+ * (`preferred`, by name), then one called In Progress, then one named like work in motion, then the first
+ * that is not named like a wait, then the first: the first started status by position is not always the one
+ * you mean (a team can list "Blocked" first). Null when the issue is done, or already in one of those statuses.
+ */
+export const startedStateOf = (issue: Pick<IssueRow, 'state'>, states: readonly WorkflowState[], preferred?: string | null): WorkflowState | null => {
+  if (['completed', 'canceled', 'duplicate'].includes(issue.state.type)) return null;
+  const choices = startedStatesOf(states);
+  if (issue.state.type === 'started' || choices.some((s) => s.id === issue.state.id)) return null;
+  const want = preferred?.trim().toLowerCase();
+  const started = choices.filter((s) => s.type === 'started');
+  return (want ? choices.find((s) => s.name.trim().toLowerCase() === want) : undefined)
+    ?? started.find((s) => /^in progress$/i.test(s.name.trim()))
+    ?? started.find((s) => /progress|doing|working|development|started/i.test(s.name))
+    ?? started.find((s) => !/block|hold|pause|wait|stuck/i.test(s.name))
+    ?? started[0]
+    ?? null;
+};
 
 const SCALES: Record<string, { base: number[]; extended: number[] }> = {
   exponential: { base: [1, 2, 4, 8, 16], extended: [32, 64] },
@@ -111,3 +135,13 @@ export const estimateScale = (team: Pick<Team, 'issueEstimationType' | 'issueEst
   if (!scale) return [];
   return [...(team!.issueEstimationAllowZero ? [0] : []), ...scale.base, ...(team!.issueEstimationExtended ? scale.extended : [])];
 };
+
+/** The ready worktree already on `branch`, if any: creating another one for the same branch is refused. */
+export const worktreeOnBranch = (worktrees: readonly { directory: string; branch: string; status: string }[], branch: string): string | null => {
+  const wanted = branch.trim().replace(/^refs\/heads\//, '').toLowerCase();
+  if (!wanted) return null;
+  return worktrees.find((w) => w.status === 'ready' && w.branch.replace(/^refs\/heads\//, '').toLowerCase() === wanted)?.directory ?? null;
+};
+
+/** The branch to try after `failures` refused starts on `branch`: the host refuses a name that already exists, so `-2`, `-3`, and so on. */
+export const retryBranchName = (branch: string, failures: number): string => (failures > 0 ? `${branch}-${failures + 1}` : branch);

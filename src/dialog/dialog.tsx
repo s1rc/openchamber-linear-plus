@@ -23,8 +23,10 @@ const itemKey = (item: GuestItem | null): string => {
   return `${item.kind}:${item.action}:${'messageId' in item ? item.messageId : 'sessionId' in item ? item.sessionId : 'path' in item ? `${item.path}` : ''}`;
 };
 
-const PlusView = ({ scope, projectIds }: { scope: ReturnType<typeof createScope>; projectIds: string[] }) => {
-  const [tab, setTab] = useState<'create' | 'attach'>('create');
+// With no session open (New worktree, or a chat that has not started) there is nothing to link a new issue to,
+// and picking an issue to attach is what the dialog is for, so Attach leads.
+const PlusView = ({ scope, projectIds, teamIds, hasSession }: { scope: ReturnType<typeof createScope>; projectIds: string[]; teamIds: string[]; hasSession: boolean }) => {
+  const [tab, setTab] = useState<'create' | 'attach'>(hasSession ? 'create' : 'attach');
   return (
     <div class="lin-dialog-body">
       <Tabs
@@ -33,7 +35,7 @@ const PlusView = ({ scope, projectIds }: { scope: ReturnType<typeof createScope>
         onChange={(id) => setTab(id as 'create' | 'attach')}
       />
       <CreateView job={null} scope={scope} hidden={tab !== 'create'} />
-      {tab === 'attach' && <AttachView scope={scope} projectIds={projectIds} />}
+      {tab === 'attach' && <AttachView scope={scope} projectIds={projectIds} teamIds={teamIds} />}
     </div>
   );
 };
@@ -79,6 +81,6 @@ export const Dialog = ({ ctx }: { ctx: HostReadyContext }) => {
   if (job) view = <CreateView key={job.key} job={job} scope={scope} />;
   else if (item && 'kind' in item && item.kind === 'message' && item.action === 'comment-on-issue') view = <CommentView key={key} item={item} directory={ctx.directory} />;
   else if (item && 'providerId' in item) view = <AttachedView item={item} />;
-  else view = <PlusView scope={scope} projectIds={state.detection.projectIds} />;
+  else view = <PlusView scope={scope} projectIds={state.detection.projectIds} teamIds={state.detection.teamIds} hasSession={Boolean(ctx.session)} />;
   return <div class="lin-dialog">{view}</div>;
 };

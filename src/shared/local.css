@@ -315,3 +315,23 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-comment-target { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .lin-attach-group { display: flex; flex-direction: column; gap: 4px; }
 .lin-comment-target .sui-chip { min-width: 0; }
+
+/* Chat blocks (blocks/index.html). */
+.lin-block { box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-width: 0; }
+.lin-block-wait { display: flex; align-items: center; padding: 4px 0; }
+.lin-block-card { gap: 10px; }
+.lin-block-title { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.lin-block-title > svg { margin-top: 2px; }
+.lin-block-key { flex: none; padding-top: 1px; }
+.lin-block-name { font-weight: 600; font-size: 1rem; overflow-wrap: anywhere; min-width: 0; }
+.lin-block-value { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.lin-block-chips { flex-wrap: wrap; }
+.lin-block-rows { margin: 0 -4px; }
+@container (max-width: 480px) { .lin-block-rows .lin-meta-blocked { display: none; } }
+.lin-block-rows .lin-issue-row:last-child { border-bottom: 0; }
+.lin-block-rows .lin-issue-row[disabled] { cursor: default; }
+.lin-block-rows .lin-issue-row[disabled][aria-selected="false"] { opacity: 0.55; }
+.lin-block-rows .lin-issue-row[disabled]:hover { background: transparent; }
+.lin-block-rows .lin-issue-row[disabled][aria-selected="true"]:hover { background: var(--oc-selection); }
+.lin-block-missing { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 8px; border-bottom: 1px solid var(--oc-border); }
+.lin-block-start { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--oc-border); }

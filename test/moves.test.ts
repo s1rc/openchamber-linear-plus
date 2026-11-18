@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { groupIssues, type Group } from '../src/shared/grouping.ts';
-import { acceptStateOf, declineStateOf, estimateScale, planDrop, startedStateOf } from '../src/shared/moves.ts';
+import { acceptStateOf, declineStateOf, estimateScale, planDrop, retryBranchName, startedStateOf, startedStatesOf, worktreeOnBranch } from '../src/shared/moves.ts';
 import type { IssueRow, StateType, WorkflowState } from '../src/shared/types.ts';
 
 const state = (id: string, name: string, type: StateType, position: number): WorkflowState => ({ id, name, type, color: '#000', position });
@@ -104,5 +104,67 @@ describe('estimateScale', () => {
     expect(estimateScale(team('tShirt'))).toEqual([1, 2, 3, 5, 8]);
     expect(estimateScale(team('notUsed'))).toEqual([]);
     expect(estimateScale(undefined)).toEqual([]);
+  });
+});
+
+describe('worktreeOnBranch', () => {
+  const trees = [
+    { directory: '/wt/a', branch: 'con-315-linear-extension-test', status: 'ready' },
+    { directory: '/wt/b', branch: 'refs/heads/eng-1-fix', status: 'ready' },
+    { directory: '/wt/c', branch: 'eng-2-gone', status: 'missing' },
+  ];
+  test('finds the ready worktree on a branch, in any case', () => {
+    expect(worktreeOnBranch(trees, 'con-315-linear-extension-test')).toBe('/wt/a');
+    expect(worktreeOnBranch(trees, 'CON-315-Linear-Extension-Test')).toBe('/wt/a');
+    expect(worktreeOnBranch(trees, 'eng-1-fix')).toBe('/wt/b');
+  });
+  test('ignores a worktree that is not ready, an unknown branch and an empty name', () => {
+    expect(worktreeOnBranch(trees, 'eng-2-gone')).toBeNull();
+    expect(worktreeOnBranch(trees, 'nope')).toBeNull();
+    expect(worktreeOnBranch(trees, '  ')).toBeNull();
+  });
+});
+
+describe('retryBranchName', () => {
+  test('keeps the branch until a start is refused, then numbers it from 2', () => {
+    expect(retryBranchName('con-315-test', 0)).toBe('con-315-test');
+    expect(retryBranchName('con-315-test', 1)).toBe('con-315-test-2');
+    expect(retryBranchName('con-315-test', 2)).toBe('con-315-test-3');
+  });
+});
+
+describe('startedStateOf picks work in motion', () => {
+  const states = [state('t', 'Todo', 'unstarted', 1), state('b', 'Blocked', 'started', 2), state('p', 'In Progress', 'started', 3), state('r', 'In Review', 'started', 4)];
+  const todo = { state: states[0]! };
+  test('prefers In Progress over an earlier Blocked', () => {
+    expect(startedStateOf(todo, states)?.id).toBe('p');
+  });
+  test('falls back to a status named like work, then to one that is not a wait', () => {
+    expect(startedStateOf(todo, [states[1]!, state('d', 'Doing', 'started', 5)])?.id).toBe('d');
+    expect(startedStateOf(todo, [states[1]!, state('x', 'In Review', 'started', 6)])?.id).toBe('x');
+    expect(startedStateOf(todo, [states[1]!])?.id).toBe('b');
+  });
+  test('moves nothing for an issue already started or done', () => {
+    expect(startedStateOf({ state: states[2]! }, states)).toBeNull();
+  });
+});
+
+describe('start choices and the remembered status', () => {
+  const states = [state('t', 'Todo', 'unstarted', 1), state('pl', 'In Planning', 'unstarted', 2), state('b', 'Blocked', 'started', 3), state('p', 'In Progress', 'started', 4)];
+  const todo = { state: states[0]! };
+  test('a planning status is offered even when it is not a started one', () => {
+    expect(startedStatesOf(states).map((s) => s.id)).toEqual(['pl', 'b', 'p']);
+  });
+  test('the status used last wins, by name in any case', () => {
+    expect(startedStateOf(todo, states, 'in planning')?.id).toBe('pl');
+    expect(startedStateOf(todo, states, 'In Progress')?.id).toBe('p');
+  });
+  test('an unknown remembered name falls back to In Progress', () => {
+    expect(startedStateOf(todo, states, 'Gone')?.id).toBe('p');
+    expect(startedStateOf(todo, states, null)?.id).toBe('p');
+  });
+  test('moves nothing when the issue is already planning or started', () => {
+    expect(startedStateOf({ state: states[1]! }, states, 'In Progress')).toBeNull();
+    expect(startedStateOf({ state: states[3]! }, states)).toBeNull();
   });
 });

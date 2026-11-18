@@ -1,0 +1,304 @@
+[
+ {
+  "name": "p9-issue",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-11\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-11\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-todo",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"eng-13\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-todo-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"eng-13\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-start",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901,
+  "steps": [
+   {
+    "click": "Start session"
+   },
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p9-issue-start-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901,
+  "steps": [
+   {
+    "click": "Start session"
+   },
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p9-issue-missing",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-999\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-missing-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-999\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-invalid",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-12abc\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-issue-invalid-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-12abc\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Open work for checkout\",\"ids\":\"ENG-11, ENG-12, ENG-13, MOB-5, ENG-999\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Open work for checkout\",\"ids\":\"ENG-11, ENG-12, ENG-13, MOB-5, ENG-999\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list-hostile",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"<img src=x onerror=alert(1)> **Not bold** [link](https://evil.example)\",\"ids\":\"ENG-11,not-an-id,ENG-12;;javascript:alert(1)\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list-hostile-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"<img src=x onerror=alert(1)> **Not bold** [link](https://evil.example)\",\"ids\":\"ENG-11,not-an-id,ENG-12;;javascript:alert(1)\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list-empty",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Nothing valid\",\"ids\":\"foo, bar-, 12\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-list-empty-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Nothing valid\",\"ids\":\"foo, bar-, 12\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-pick",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearPickIssue",
+   "args": "{\"question\":\"Which issue should I work on first?\",\"ids\":\"ENG-13, ENG-14, ENG-17\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-pick-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearPickIssue",
+   "args": "{\"question\":\"Which issue should I work on first?\",\"ids\":\"ENG-13, ENG-14, ENG-17\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4901
+ },
+ {
+  "name": "p9-connect",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Open work\",\"ids\":\"ENG-11,ENG-12\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4902
+ },
+ {
+  "name": "p9-connect-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssueList",
+   "args": "{\"title\":\"Open work\",\"ids\":\"ENG-11,ENG-12\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4902
+ },
+ {
+  "name": "p9-error",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-11\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 720,
+  "height": 600,
+  "port": 4903
+ },
+ {
+  "name": "p9-error-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-11\"}",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 600,
+  "port": 4903
+ }
+]

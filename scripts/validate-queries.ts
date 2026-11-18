@@ -25,6 +25,10 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   ISSUE_EXTRAS: [{ ids: ['i1', 'i2'], after: null }],
   STATUS_COUNTS: [{ filter: { state: { type: { in: ['triage', 'unstarted', 'started'] } }, team: { id: { in: ['t1'] } } }, after: null }],
   STATUS_MINE: [{ filter: { and: [{ state: { type: { nin: ['completed', 'canceled', 'duplicate'] } } }, { assignee: { isMe: { eq: true } } }] } }],
+  ISSUES_BY_KEYS: [
+    { filter: { or: [{ team: { key: { eqIgnoreCase: 'ENG' } }, number: { in: [11, 12] } }, { team: { key: { eqIgnoreCase: 'MOB' } }, number: { in: [5] } }] } },
+  ],
+  BLOCK_STATES: [{ teamIds: ['t1', 't2'] }],
   REPO_ATTACHMENTS: [{ url: 'gitlab.com/acme/group/repo/' }],
   DOCUMENTS: [{ filter: { project: { id: { eq: 'p1' } } } }, { filter: { project: { id: { in: ['p1', 'p2'] } } } }],
   ISSUES: [
