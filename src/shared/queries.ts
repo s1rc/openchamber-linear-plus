@@ -242,6 +242,13 @@ export const ISSUES_BY_KEYS = `
   }
 `;
 
+/** The issue a branch name carries, with its description, for the service's agent instructions. */
+export const BRANCH_ISSUE = `
+  query BranchIssue($filter: IssueFilter) {
+    issues(first: 1, filter: $filter) { nodes { identifier title url description state { name } } }
+  }
+`;
+
 /** The started states of some teams, to draw a block's status pie as full as the dashboard does. */
 export const BLOCK_STATES = `
   query BlockStates($teamIds: [ID!]) {
@@ -377,7 +384,7 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
-  ISSUES_BY_KEYS, BLOCK_STATES,
+  ISSUES_BY_KEYS, BRANCH_ISSUE, BLOCK_STATES,
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT,
   ISSUE_UPDATE, ISSUE_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),

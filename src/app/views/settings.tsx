@@ -4,6 +4,7 @@ import { Button, Switch } from '../../shared/kit.tsx';
 import { getStartMoves, setStartMoves } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 import type { Workspace } from '../../shared/workspace.ts';
+import { AgentSettings } from './agent-settings.tsx';
 import { ProbeSection } from './probe-section.tsx';
 import { knownProject } from '../../shared/projects.ts';
 
@@ -56,6 +57,7 @@ export const Settings = ({ workspace, state, onChange }: { workspace: Workspace;
       <Section title="Sessions">
         <StartMovesSwitch />
       </Section>
+      <AgentSettings state={state} />
       <Section title="Account">
         <KV items={[
           ['Signed in as', `${workspace.viewer.name} (${workspace.viewer.email})`],

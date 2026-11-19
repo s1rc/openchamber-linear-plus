@@ -31,6 +31,9 @@ export const hostEnv: DetectEnv = {
   projectsByIds: fetchProjectsByIds,
 };
 
+/** What Settings can change on a saved mapping. */
+export type MappingPatch = Partial<Pick<Mapping, 'finishComments' | 'buildAgent' | 'buildModel' | 'planAgent' | 'planModel' | 'postPlan' | 'reviewMode' | 'aiReviewers'>>;
+
 export type DetectionState = {
   place: Place | null;
   detection: Detection;
@@ -44,6 +47,8 @@ export type DetectionState = {
   pin: () => Promise<void>;
   clear: () => Promise<void>;
   setActive: (id: string) => void;
+  /** Changes a saved mapping's finish-comments or build settings. False when the folder has no saved mapping. */
+  update: (patch: MappingPatch) => Promise<boolean>;
 };
 
 export const entityName = (workspace: Workspace, id: string): string =>
@@ -122,6 +127,15 @@ export const useDetection = (directory: string | null, workspace: Workspace | un
     void setMapping(place.key, mapping);
   }, [place, detection]);
 
+  const update = useCallback(async (patch: MappingPatch): Promise<boolean> => {
+    if (!place || !detection.mapping) return false;
+    const mapping = { ...detection.mapping, ...patch, updatedAt: Date.now() };
+    setDetection((d) => ({ ...d, mapping }));
+    const saved = await setMapping(place.key, mapping);
+    if (!saved) await toast(host, 'error', 'Could not save the setting. It applies until you reload.');
+    return saved;
+  }, [place, detection]);
+
   const mapped = detection.teamIds.length + detection.projectIds.length > 0;
-  return { place, detection, settled, mapped, refresh, save, pin, clear, setActive };
+  return { place, detection, settled, mapped, refresh, save, pin, clear, setActive, update };
 };

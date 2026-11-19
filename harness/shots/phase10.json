@@ -1,0 +1,721 @@
+[
+ {
+  "name": "p10-status",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-status-narrow",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-status-saved",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-settings-inferred",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 1100,
+  "height": 1500,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p10-settings-saved",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 1500,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p10-settings-saved-narrow",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 360,
+  "height": 1500,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p10-settings-model-open",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 1500,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "click": "Kimi K3"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p10-settings-noservice",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 1500,
+  "port": 4922,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-nobuild",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-issue-nobuild-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-issue-build",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-issue-build-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-issue-build-open",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-open-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-started",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"build\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-started-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"build\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-plan-open",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start plan"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-plan-open-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start plan"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-post",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_post\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 900
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-post-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_post\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 900
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-busy",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_busy\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 900
+   }
+  ]
+ },
+ {
+  "name": "p10-issue-build-busy-narrow",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_busy\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 900
+   }
+  ]
+ },
+ {
+  "name": "p10-status-post",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/checkout"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-status-post-narrow",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/checkout"
+  },
+  "width": 280,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-status-narrow-280",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 280,
+  "height": 700,
+  "port": 4921
+ },
+ {
+  "name": "p10-detail-build",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-11\",\"data\":{\"identifier\":\"ENG-11\",\"issueId\":\"i\"}}],\"links\":[]}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-detail-build-dialog",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-11\",\"data\":{\"identifier\":\"ENG-11\",\"issueId\":\"i\"}}],\"links\":[]}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   },
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-detail-plan-dialog",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-11\",\"data\":{\"identifier\":\"ENG-11\",\"issueId\":\"i\"}}],\"links\":[]}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   },
+   {
+    "click": "Start plan"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-detail-build-narrow",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-11\",\"data\":{\"identifier\":\"ENG-11\",\"issueId\":\"i\"}}],\"links\":[]}]",
+   "storage": "{\"map:p:ocp1\":{\"directory\":\"/work/engineering-api\",\"linearProjectIds\":[],\"teamIds\":[\"t-eng\"],\"activeProjectId\":\"t-eng\",\"finishComments\":\"draft\",\"buildAgent\":\"build\",\"buildModel\":\"fireworks-ai/accounts/fireworks/models/kimi-k3\",\"updatedAt\":1}}"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-reply-build",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_old\",\"title\":\"Hardening identity defaults\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":5}]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"build-from-reply\",\"sessionId\":\"ses_old\",\"sessionTitle\":\"Hardening identity defaults\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"## Plan\\n\\n1. Add `allowed_principal_arns` to the aws_auth object\\n2. Require bound_claims for OIDC\\n3. Add terraform test coverage\\n\\nRisk: breaking for audience-only callers.\"}"
+  },
+  "width": 560,
+  "height": 700,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-reply-build-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_old\",\"title\":\"Hardening identity defaults\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[{\"title\":\"ENG-13\",\"url\":\"https://linear.app/acme/issue/ENG-13/x\",\"kind\":\"issue\",\"linkedAt\":5}]}]",
+   "item": "{\"kind\":\"message\",\"action\":\"build-from-reply\",\"sessionId\":\"ses_old\",\"sessionTitle\":\"Hardening identity defaults\",\"directory\":\"/work/engineering-api\",\"messageId\":\"m1\",\"role\":\"assistant\",\"text\":\"## Plan\\n\\n1. Add `allowed_principal_arns` to the aws_auth object\\n2. Require bound_claims for OIDC\\n3. Add terraform test coverage\\n\\nRisk: breaking for audience-only callers.\"}"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p10-dialog-build",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "item": "{\"kind\":\"session\",\"action\":\"build-from-plan\",\"sessionId\":\"ses_plan\",\"sessionTitle\":\"Plan: saved cards first\",\"directory\":\"/work/engineering-api-wt\"}",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 560,
+  "height": 520,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p10-dialog-build-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "item": "{\"kind\":\"session\",\"action\":\"build-from-plan\",\"sessionId\":\"ses_plan\",\"sessionTitle\":\"Plan: saved cards first\",\"directory\":\"/work/engineering-api-wt\"}",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 360,
+  "height": 560,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p10-dialog-nolink",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "item": "{\"kind\":\"session\",\"action\":\"build-from-plan\",\"sessionId\":\"ses_plan\",\"sessionTitle\":\"Plan: saved cards first\",\"directory\":\"/work/engineering-api-wt\"}",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[],\"links\":[]}]"
+  },
+  "width": 560,
+  "height": 360,
+  "port": 4921,
+  "steps": [
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p10-settings-review",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "storage": "{\"map:p:ocp1\": {\"directory\": \"/work/engineering-api\", \"linearProjectIds\": [], \"teamIds\": [\"t-eng\"], \"activeProjectId\": \"t-eng\", \"finishComments\": \"draft\", \"buildAgent\": \"build\", \"buildModel\": \"fireworks-ai/accounts/fireworks/models/kimi-k3\", \"updatedAt\": 1, \"reviewMode\": \"mr\", \"aiReviewers\": \"CodeRabbit, Greptile\"}}"
+  },
+  "width": 1100,
+  "height": 1500,
+  "port": 4921,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ }
+]

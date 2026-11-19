@@ -7,6 +7,8 @@
 import { graphqlBody } from '../src/shared/gql-body.ts';
 import { all, customViewsFilter, MY_FILTERS, OPEN, scopeFilter } from '../src/shared/filters.ts';
 import { keysFilter } from '../src/shared/block-args.ts';
+import { withPlan } from '../src/shared/handoff-rules.ts';
+import { issueContext } from '../src/shared/issue-context.ts';
 import { commentBody } from '../src/dialog/jobs.ts';
 import { parseDraft } from '../src/shared/draft.ts';
 import * as Q from '../src/shared/queries.ts';
@@ -377,10 +379,71 @@ workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-14' })] = ok({ issue: {
   ...detail, ...engIssues[3], description: 'Deliveries that fail should retry with exponential backoff.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
   relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
 } });
-workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-13' })] = ok({ issue: {
+const eng13Detail = {
   ...detail, ...engIssues[2], description: 'Show the cards the customer used before first.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
   relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
-} });
+};
+workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-13' })] = ok({ issue: eng13Detail });
+
+// Phase 10: the service. A plan ready for ENG-13 (the section's row and the build call), the service's
+// own answers for Settings, and what the Start build click sends. Fake data only.
+const handoff = {
+  id: 'ses_plan:ENG-13', directory: '/work/engineering-api', sessionDirectory: '/work/engineering-api-wt', sessionId: 'ses_plan',
+  identifier: 'ENG-13', sessionTitle: 'Plan: saved cards first', plan: true, createdAt: Date.parse('2026-11-09T11:30:00Z'),
+};
+service['GET /handoffs?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({ handoffs: [handoff] }) };
+service[`POST /handoffs ${JSON.stringify({ id: handoff.id, action: 'dismiss' })}`] = { status: 200, body: JSON.stringify({ ok: true }) };
+service['POST /snapshot *'] = { status: 200, body: JSON.stringify({ ok: true, mapped: true }) };
+service['PUT /config *'] = { status: 200, body: JSON.stringify({ hasKey: false, directories: {} }) };
+service['GET /choices?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({
+  ok: true,
+  defaultModel: 'fireworks-ai/accounts/fireworks/routers/kimi-fast-latest',
+  agents: [{ id: 'build', label: 'build', hint: 'built in' }, { id: 'plan', label: 'plan', hint: 'built in' }, { id: 'review', label: 'review' }],
+  models: [
+    { id: 'fireworks-ai/accounts/fireworks/routers/kimi-fast-latest', label: 'Kimi Fast (latest)', hint: 'Fireworks AI' },
+    { id: 'fireworks-ai/accounts/fireworks/models/kimi-k3', label: 'Kimi K3', hint: 'Fireworks AI' },
+    { id: 'fireworks-ai/accounts/fireworks/models/qwen3p8', label: 'Qwen3.8', hint: 'Fireworks AI' },
+    { id: 'anthropic/claude-opus-4-5', label: 'Claude Opus 4.5', hint: 'Anthropic' },
+    { id: 'anthropic/claude-sonnet-4-5', label: 'Claude Sonnet 4.5', hint: 'Anthropic' },
+  ],
+}) };
+service['GET /config '] = { status: 200, body: JSON.stringify({ hasKey: false, directories: {} }) };
+service[`POST /handoff ${JSON.stringify({ sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, sessionTitle: handoff.sessionTitle, identifier: 'ENG-13', issueTitle: engIssues[2]!.title })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, sessionId: 'ses_build', directory: handoff.sessionDirectory }),
+};
+service[`POST /handoff ${JSON.stringify({ sessionId: 'ses_busy', sessionDirectory: handoff.sessionDirectory, sessionTitle: 'Plan: saved cards first', identifier: 'ENG-13', issueTitle: engIssues[2]!.title })}`] = {
+  status: 200, body: JSON.stringify({ ok: false, error: 'The planning session is still working. Start the build when it has finished.' }),
+};
+
+// Phase 10, plan side: Start plan (the service call after the frame made the worktree), the plan a build reads
+// and, with the post switch on, the comment that writes it to the issue.
+const PLAN_TEXT = '## Plan\n\n1. Read `PaymentStep` and find where cards are listed\n2. Sort the saved cards by last use\n3. Add a test for the order\n4. Run the checkout suite\n\nRisk: the mobile app reads the same list.';
+service[`POST /plan ${JSON.stringify({ identifier: 'ENG-13', directory: handoff.sessionDirectory, issueTitle: engIssues[2]!.title, context: issueContext(eng13Detail as never) })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, sessionId: 'ses_plan_new', directory: handoff.sessionDirectory }),
+};
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: false }),
+};
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-11' })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: false }),
+};
+service['GET /drafts?directory=/work/checkout '] = { status: 200, body: JSON.stringify({ drafts: [] }) };
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: 'ses_post', sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: true }),
+};
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: 'ses_busy', sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
+  status: 200, body: JSON.stringify({ ok: false, error: 'The planning session is still working. Start the build when it has finished.' }),
+};
+service[`POST /handoff ${JSON.stringify({ sessionId: 'ses_post', sessionDirectory: handoff.sessionDirectory, sessionTitle: 'Plan: saved cards first', identifier: 'ENG-13', issueTitle: engIssues[2]!.title })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, sessionId: 'ses_build', directory: handoff.sessionDirectory }),
+};
+service['GET /plans?sessionId=ses_plan '] = { status: 200, body: JSON.stringify({ sessions: [] }) };
+service['GET /plans?identifier=ENG-13 '] = { status: 200, body: JSON.stringify({ sessions: [] }) };
+service['GET /plans?identifier=ENG-11 '] = { status: 200, body: JSON.stringify({ sessions: [] }) };
+const WITH_PLAN = withPlan(eng13Detail.description, PLAN_TEXT)!;
+workspace[update('i-eng-13', { description: WITH_PLAN })] = updated({ ...engIssues[2]!, description: WITH_PLAN } as never);
+const handoffPost = { ...handoff, directory: '/work/checkout', id: 'ses_post:ENG-13', sessionId: 'ses_post', postPlan: true };
+service['GET /handoffs?directory=/work/checkout '] = { status: 200, body: JSON.stringify({ handoffs: [handoffPost] }) };
 
 await Bun.write('harness/fixtures/drafts.json', JSON.stringify(MODEL_ANSWERS, null, 1));
 

@@ -12,6 +12,20 @@ export type Mapping = {
   /** The team or project id shown first, or 'all' for every mapped one. */
   activeProjectId: string;
   finishComments: FinishComments;
+  /** The agent the plan to build handoff starts; empty means `build`. */
+  buildAgent?: string;
+  /** `provider/model` for the build session; empty means the host's default. */
+  buildModel?: string;
+  /** The agent Start plan starts; empty means `plan`. */
+  planAgent?: string;
+  /** `provider/model` for the plan session; empty means the host's default. */
+  planModel?: string;
+  /** Start build adds the plan to the issue's description first. */
+  postPlan?: boolean;
+  /** What the build does after the code is written: `mr` (usual options, then AI review), `auto` (all of it), or off. */
+  reviewMode?: 'mr' | 'auto';
+  /** The AI reviewers whose comments the build handles, comma separated; empty means CodeRabbit. */
+  aiReviewers?: string;
   updatedAt: number;
 };
 
@@ -79,7 +93,7 @@ export const setStartState = (teamId: string, name: string) => set(`pref:start-s
 export const getLastView = (placeKey: string) => get<string>(`view:${placeKey}`);
 
 /** Hands every mapping to the service, which acts on them with no window open. Best effort. */
-export const syncMappingsToService = async (): Promise<void> => {
+export const syncMappingsToService = async (options: { allowEmpty?: boolean } = {}): Promise<void> => {
   let keys: string[] = [];
   try { keys = (await host.storage.keys()) ?? []; } catch { return; }
   const directories: Record<string, Mapping> = {};
@@ -87,5 +101,16 @@ export const syncMappingsToService = async (): Promise<void> => {
     const mapping = await get<unknown>(key);
     if (isMapping(mapping) && mapping.directory) directories[mapping.directory] = mapping;
   }
+  // Forgetting the last folder is a change to send; a frame that merely loaded and found none has nothing to say.
+  if (options.allowEmpty === false && Object.keys(directories).length === 0) return;
   await api(host, 'PUT', '/config', { body: { directories }, name: 'Linear' });
+};
+
+let synced = false;
+
+/** Once per frame load: the service starts empty after an update or a new data folder, so it hears every mapping. */
+export const syncMappingsOnce = async (): Promise<void> => {
+  if (synced) return;
+  synced = true;
+  await syncMappingsToService({ allowEmpty: false });
 };

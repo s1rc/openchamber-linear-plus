@@ -6,6 +6,7 @@ import { all, MY_FILTERS, OPEN, type Filter } from '../shared/filters.ts';
 export const ACTIVE: Filter = { state: { type: { in: ['triage', 'unstarted', 'started'] } } };
 import { gql } from '../shared/linear.ts';
 import { fetchDrafts } from '../shared/drafts.ts';
+import { fetchHandoffs } from '../shared/handoff.ts';
 import { STATUS_COUNTS, STATUS_MINE } from '../shared/queries.ts';
 import type { StatusCountNode, StatusCountsResult, StatusMineIssue, StatusMineResult } from '../shared/types.ts';
 
@@ -42,3 +43,6 @@ export const useStatusMine = (scope: Filter | null) =>
 
 export const useDrafts = (directory: string | null) =>
   useQuery(directory ? `status-drafts:${directory}` : null, () => fetchDrafts(directory!));
+
+export const useHandoffs = (directory: string | null) =>
+  useQuery(directory ? `status-handoffs:${directory}` : null, () => fetchHandoffs(directory!));

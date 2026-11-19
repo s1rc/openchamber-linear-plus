@@ -338,6 +338,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-status-line:focus-visible { outline: 2px solid var(--oc-focus); }
 .lin-status-key { flex: none; font-size: 0.78rem; }
 .lin-status-actions { flex: none; display: inline-flex; gap: 4px; }
+/* A row with a label and buttons: the label keeps its whole text, and the buttons drop to their own line, left-aligned with it, when they do not fit beside it. */
+.lin-status-line--wrap { flex-wrap: wrap; row-gap: 2px; padding-top: 2px; padding-bottom: 2px; }
+.lin-status-line--wrap > .lin-status-label { flex: 1 0 auto; }
 .lin-status-draft { display: flex; flex-direction: column; gap: 4px; }
 .lin-status-refresh { display: flex; justify-content: flex-end; }
 .lin-status-hint { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -383,3 +386,13 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-block-rows .lin-issue-row[disabled][aria-selected="true"]:hover { background: var(--oc-selection); }
 .lin-block-missing { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 8px; border-bottom: 1px solid var(--oc-border); }
 .lin-block-start { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--oc-border); }
+
+/* Start build: the options under the card's button, and the same inside the dashboard's dialog. */
+.lin-build { display: flex; flex-direction: column; gap: 8px; }
+
+/* The first lines of the plan a build starts from. Plain text: the plan is the agent's, so it is never drawn as markup. */
+.lin-build-plan { margin: 0; padding: 8px 10px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--oc-mono, ui-monospace, monospace); font-size: 0.85em; color: var(--oc-muted); background: var(--oc-muted-surface); border-radius: 6px; }
+.lin-build-dialog { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+
+/* The "Move the issue to" row: the switch, and the status it moves to on its right. */
+.lin-move-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }

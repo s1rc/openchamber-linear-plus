@@ -112,14 +112,64 @@ export const startedStateOf = (issue: Pick<IssueRow, 'state'>, states: readonly 
   if (['completed', 'canceled', 'duplicate'].includes(issue.state.type)) return null;
   const choices = startedStatesOf(states);
   if (issue.state.type === 'started' || choices.some((s) => s.id === issue.state.id)) return null;
+  return pickStarted(choices.filter((s) => s.type === 'started'), preferred, choices);
+};
+
+/** The status used last (looked for among `named`, which may include a planning status), else the usual choice among the started ones. */
+const pickStarted = (started: readonly WorkflowState[], preferred?: string | null, named: readonly WorkflowState[] = started): WorkflowState | null => {
   const want = preferred?.trim().toLowerCase();
-  const started = choices.filter((s) => s.type === 'started');
-  return (want ? choices.find((s) => s.name.trim().toLowerCase() === want) : undefined)
+  return (want ? named.find((s) => s.name.trim().toLowerCase() === want) : undefined)
     ?? started.find((s) => /^in progress$/i.test(s.name.trim()))
     ?? started.find((s) => /progress|doing|working|development|started/i.test(s.name))
     ?? started.find((s) => !/block|hold|pause|wait|stuck/i.test(s.name))
     ?? started[0]
     ?? null;
+};
+
+/** A status named like planning, whatever its type: some teams file "In Planning" as started, some as unstarted. */
+export const isPlanningState = (state: Pick<WorkflowState, 'name'>): boolean => /plan/i.test(state.name);
+
+/** The statuses a build can move an issue to: the started ones that are not planning. Planning is where an issue waits before the build. */
+export const buildStatesOf = (states: readonly WorkflowState[]): WorkflowState[] => sortedStates(states).filter((s) => s.type === 'started' && !isPlanningState(s));
+
+/**
+ * The status Start build moves an issue to, chosen as Start session chooses. Unlike Start session it moves an issue
+ * that is in a planning status ("In Planning", even where the team files it as started): that is the status the plan
+ * was made in. Null when the issue is done or already building.
+ */
+export const buildStateOf = (issue: Pick<IssueRow, 'state'>, states: readonly WorkflowState[], preferred?: string | null): WorkflowState | null => {
+  if (['completed', 'canceled', 'duplicate'].includes(issue.state.type)) return null;
+  if (issue.state.type === 'started' && !isPlanningState(issue.state)) return null;
+  return pickStarted(buildStatesOf(states), preferred);
+};
+
+/**
+ * The status Start plan moves an issue to: one named like planning ("In Planning"), else what Start session would
+ * pick. Null when the issue is done or already in a started or planning status.
+ */
+export const planningStateOf = (issue: Pick<IssueRow, 'state'>, states: readonly WorkflowState[], preferred?: string | null): WorkflowState | null => {
+  if (['completed', 'canceled', 'duplicate'].includes(issue.state.type)) return null;
+  const choices = startedStatesOf(states);
+  if (issue.state.type === 'started' || choices.some((s) => s.id === issue.state.id)) return null;
+  return choices.find((s) => /plan/i.test(s.name)) ?? startedStateOf(issue, states, preferred);
+};
+
+export type MoveKind = 'session' | 'plan' | 'build';
+
+/** What the "Move the issue to" row offers: the statuses to pick from, the one chosen at first, and whether the issue moves at first. */
+export type MoveChoices = { options: WorkflowState[]; target: WorkflowState | null; moves: boolean };
+
+/**
+ * One rule for the "Move the issue to" row of Start session, Start plan and Start build. The statuses to pick from
+ * are the started ones (planning included for a session or a plan, left out for a build). The first choice is the
+ * status the action would move the issue to: a planning status for a plan, In Progress or the one used last for a
+ * session or a build. When the issue is already there, that status is shown and the issue does not move.
+ */
+export const moveChoices = (kind: MoveKind, issue: Pick<IssueRow, 'state'>, states: readonly WorkflowState[], preferred?: string | null): MoveChoices => {
+  const options = kind === 'build' ? buildStatesOf(states) : startedStatesOf(states);
+  const chosen = kind === 'build' ? buildStateOf(issue, states, preferred) : kind === 'plan' ? planningStateOf(issue, states, preferred) : startedStateOf(issue, states, preferred);
+  const target = chosen ?? options.find((s) => s.id === issue.state.id) ?? null;
+  return { options, target, moves: chosen !== null };
 };
 
 const SCALES: Record<string, { base: number[]; extended: number[] }> = {

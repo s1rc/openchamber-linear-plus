@@ -8,6 +8,7 @@ import { LinearError } from '../shared/linear.ts';
 import { getLastView } from '../shared/storage.ts';
 import { takeOpenTarget } from '../shared/open-target.ts';
 import { loadViewState, PlaceKey, saveOpenIssue, saveRoute, saveTab, setViewStateScope } from './view-state.ts';
+import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { useDetection, type DetectionState } from '../shared/use-detection.ts';
 import { loadWorkspace, useWorkspace, type Workspace } from '../shared/workspace.ts';
 import { PROJECT_VIEWS, REMEMBERED, TITLES, parseRouteId, routeId, type Route, type View } from './routes.ts';
@@ -396,6 +397,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   const data = workspace.data;
   return (
     <PlaceKey.Provider value={state.place?.key ?? null}>
+    {state.place && state.mapped && <SnapshotPusher directory={state.place.directory} workspace={data} state={state} />}
     <div class={wide ? 'lin-shell lin-shell--wide' : 'lin-shell'}>
       {wide && <Sidebar workspace={data} state={state} route={route} onRoute={onRoute} />}
       <main class="lin-main">

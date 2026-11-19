@@ -2,7 +2,7 @@
 // with its issues on a second tab.
 import type { HostReadyContext } from '@openchamber/sdk';
 import { Cards, Dot, KV, Section, StatCard } from '@openchamber-ext/shared-ui/preact';
-import { useContext, useState } from 'preact/hooks';
+import { useContext, useEffect, useState } from 'preact/hooks';
 import { PlaceKey, saveTab, tabFor } from '../view-state.ts';
 import { useQuery } from '../../shared/cache.ts';
 import { all, OPEN, scopeFilter } from '../../shared/filters.ts';
@@ -15,6 +15,7 @@ import { Badge, Banner, Button, Progress, Select, Spinner, Tabs, TextField } fro
 import { postProjectUpdate, writeErrorText, type Health } from '../../shared/writes.ts';
 import { gql } from '../../shared/linear.ts';
 import { Markdown } from '../../shared/markdown.tsx';
+import { projectPush, pushSnapshot } from '../../shared/snapshot.ts';
 import { PROJECT_DETAIL } from '../../shared/queries.ts';
 import type { ProjectDetail as Detail, ProjectDetailResult, StateType } from '../../shared/types.ts';
 import { IssueBrowser } from '../components/issue-browser.tsx';
@@ -156,6 +157,10 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
   const [tab, setTabState] = useState<'overview' | 'issues'>(() => (tabFor(placeKey, tabKey) === 'issues' && withIssues ? 'issues' : 'overview'));
   const setTab = (next: 'overview' | 'issues') => { setTabState(next); saveTab(placeKey, tabKey, next); };
   const project = detail.data;
+  // The service keeps this overview and the project's documents for the `@` menu when no API key is set.
+  useEffect(() => {
+    if (project && ctx.directory) void pushSnapshot(projectPush(ctx.directory, project));
+  }, [project, ctx.directory]);
   if (!project) {
     return detail.error ? (
       <Banner tone="error" title="Could not load the project" body={detail.error instanceof Error ? detail.error.message : String(detail.error)} action={{ label: 'Retry', onClick: () => detail.refresh() }} />

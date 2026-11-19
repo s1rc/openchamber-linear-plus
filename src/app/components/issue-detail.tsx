@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks';
 import { issueContext } from '../../shared/issue-context.ts';
 import { changeOf, estimateLabel, relativeTime, shortDate } from '../../shared/format.ts';
 import { Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, ProgressRing, StatusGlyph } from '../../shared/glyphs.tsx';
-import { host } from '../../shared/host.ts';
+import { host, useReady } from '../../shared/host.ts';
 import { useIssueDetail } from '../../shared/issues.ts';
 import { Banner, Button, Menu, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
 import { acceptStateOf, declineStateOf } from '../../shared/moves.ts';
@@ -21,6 +21,8 @@ import { IssueRow } from './issue-row.tsx';
 import {
   AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
 } from './property-editors.tsx';
+import { BuildPanel, useBuildSource } from '../../shared/build-panel.tsx';
+import { Modal } from './modal.tsx';
 import { StartSessionDialog } from './start-session.tsx';
 
 const PRIORITY_NAME = ['No priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
@@ -254,7 +256,9 @@ type Props = { id: string; stacked?: boolean; onClose: () => void; onOpenIssue: 
 export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
   const detail = useIssueDetail(id);
   const workspace = useWorkspace();
-  const [starting, setStarting] = useState(false);
+  const [starting, setStarting] = useState<'session' | 'plan' | null>(null);
+  const [building, setBuilding] = useState(false);
+  const buildSource = useBuildSource(useReady()?.directory ?? null, id);
   const [triaging, setTriaging] = useState(false);
   const issue = detail.data;
 
@@ -323,7 +327,9 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
             <Button label="Decline" variant="ghost" size="xs" disabled={triaging} onClick={() => { void triage('decline'); }} />
           </>
         )}
-        <Button label={stacked ? 'Start' : 'Start session'} size="xs" onClick={() => setStarting(true)} />
+        <Button label={stacked ? 'Plan' : 'Start plan'} size="xs" onClick={() => setStarting('plan')} />
+        <Button label={stacked ? 'Start' : 'Start session'} variant="outline" size="xs" onClick={() => setStarting('session')} />
+        {buildSource && <Button label={stacked ? 'Build' : 'Start build'} variant="outline" size="xs" onClick={() => setBuilding(true)} />}
         <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
         <Menu
           label="More"
@@ -415,7 +421,12 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
           <Activity issue={issue} onOpenIssue={onOpenIssue} />
         </div>
       </div>
-      {starting && <StartSessionDialog issue={issue} onClose={() => setStarting(false)} />}
+      {starting && <StartSessionDialog issue={issue} plan={starting === 'plan'} onClose={() => setStarting(null)} />}
+      {building && buildSource && (
+        <Modal title={`Start a build for ${issue.identifier}`} onClose={() => setBuilding(false)}>
+          <BuildPanel identifier={issue.identifier} source={buildSource} detail={issue} onClose={() => setBuilding(false)} />
+        </Modal>
+      )}
     </article>
   );
 };

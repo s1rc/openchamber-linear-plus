@@ -9,7 +9,8 @@
     "typecheck": "bunx tsc --noEmit -p .",
     "validate-queries": "bun scripts/validate-queries.ts",
     "test": "bun test",
-    "fixtures": "bun scripts/fixtures.ts"
+    "fixtures": "bun scripts/fixtures.ts",
+    "smoke": "bun scripts/service-smoke.ts"
   },
   "openchamber": {
     "apiVersion": 1,
@@ -56,6 +57,9 @@
         "events": ["session-created", "turn-started", "turn-finished"],
         "content": true
       },
+      "sessionControl": {
+        "content": true
+      },
       "instructions": true,
       "mentions": {
         "label": "Linear"
@@ -85,6 +89,11 @@
           "label": "Create Linear issue",
           "where": "diff",
           "icon": "add-circle"
+        },
+        {
+          "id": "build-from-plan",
+          "label": "Start build from this plan",
+          "where": "session"
         },
         {
           "id": "comment-on-issue",

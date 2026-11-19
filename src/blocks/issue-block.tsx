@@ -4,17 +4,19 @@ import { Card, Chip, KV } from '@openchamber-ext/shared-ui/preact';
 import { useState } from 'preact/hooks';
 import { LabelChip } from '../app/components/issue-chips.tsx';
 import { splitIds } from '../shared/block-args.ts';
+import { BuildPanel, useBuildSource } from '../shared/build-panel.tsx';
 import { relativeTime, shortDate } from '../shared/format.ts';
 import { Avatar, PriorityGlyph, ProjectIcon, StatusGlyph } from '../shared/glyphs.tsx';
 import { PRIORITY_NAMES } from '../shared/grouping.ts';
-import { host } from '../shared/host.ts';
+import { host, useReady } from '../shared/host.ts';
 import { Button } from '../shared/kit.tsx';
 import type { IssueRow } from '../shared/types.ts';
 import { Lookup, MissingRow } from './lookup.tsx';
 import { StartPanel } from './start-panel.tsx';
 
 const IssueCard = ({ issue }: { issue: IssueRow }) => {
-  const [starting, setStarting] = useState(false);
+  const [panel, setPanel] = useState<'session' | 'plan' | 'build' | null>(null);
+  const source = useBuildSource(useReady()?.directory ?? null, issue.identifier);
   const labels = issue.labels.nodes;
   return (
     <Card class="lin-block-card">
@@ -38,9 +40,14 @@ const IssueCard = ({ issue }: { issue: IssueRow }) => {
       />
       <div class="sui-row">
         <Button label="Open in Linear" variant="outline" size="sm" onClick={() => { void host.openUrl(issue.url); }} />
-        <Button label="Start session" variant="outline" size="sm" disabled={starting} onClick={() => setStarting(true)} />
+        <Button label="Start plan" variant="outline" size="sm" disabled={panel === 'plan'} onClick={() => setPanel('plan')} />
+        <Button label="Start session" variant="outline" size="sm" disabled={panel === 'session'} onClick={() => setPanel('session')} />
+        {source && <Button label="Start build" variant="outline" size="sm" disabled={panel === 'build'} onClick={() => setPanel('build')} />}
       </div>
-      {starting && <StartPanel issue={issue} onClose={() => setStarting(false)} />}
+      {(panel === 'session' || panel === 'plan') && <StartPanel issue={issue} plan={panel === 'plan'} onClose={() => setPanel(null)} />}
+      {panel === 'build' && source && (
+        <div class="lin-block-start"><BuildPanel identifier={issue.identifier} source={source} onClose={() => setPanel(null)} /></div>
+      )}
     </Card>
   );
 };

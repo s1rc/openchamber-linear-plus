@@ -15,6 +15,7 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   PROJECTS: [
     { after: null, filter: { id: { in: ['p1'] } } },
     { after: null, filter: { accessibleTeams: { some: { id: { eq: 't1' } } }, status: { type: { nin: ['completed', 'canceled'] } } } },
+    { after: null, filter: { accessibleTeams: { some: { id: { in: ['t1', 't2'] } } }, status: { type: { nin: ['completed', 'canceled'] } } } },
   ],
   CUSTOM_VIEWS: [{ filter: { team: { id: { eq: 't1' } }, modelName: { eq: 'Issue' } } }],
   CUSTOM_VIEW_ISSUES: [{ id: 'v1', filter: { team: { id: { in: ['t1'] } } }, after: null }],
@@ -28,6 +29,7 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   ISSUES_BY_KEYS: [
     { filter: { or: [{ team: { key: { eqIgnoreCase: 'ENG' } }, number: { in: [11, 12] } }, { team: { key: { eqIgnoreCase: 'MOB' } }, number: { in: [5] } }] } },
   ],
+  BRANCH_ISSUE: [{ filter: { team: { key: { eqIgnoreCase: 'ENG' } }, number: { eq: 123 } } }],
   BLOCK_STATES: [{ teamIds: ['t1', 't2'] }],
   REPO_ATTACHMENTS: [{ url: 'gitlab.com/acme/group/repo/' }],
   DOCUMENTS: [{ filter: { project: { id: { eq: 'p1' } } } }, { filter: { project: { id: { in: ['p1', 'p2'] } } } }],

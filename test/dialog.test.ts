@@ -107,6 +107,10 @@ describe('jobFor', () => {
     expect(job.source).toBe('From a reply by the assistant');
     expect((await job.build()).prompt).toContain('The cart fails over 50 items.');
   });
+  test('the Start build entry on a session drafts nothing: it has its own view', () => {
+    expect(jobFor({ kind: 'session', action: 'build-from-plan', sessionId: 's', sessionTitle: 'Plan', directory: '/d' }, deps)).toBeNull();
+    expect(jobFor({ kind: 'session', action: 'issue-from-session', sessionId: 's', sessionTitle: 'Plan', directory: '/d' }, deps)).not.toBeNull();
+  });
   test('an empty message has nothing to draft from', async () => {
     const built = await jobFor({ ...message, text: '  ' }, deps)!.build();
     expect(built.prompt).toBeNull();

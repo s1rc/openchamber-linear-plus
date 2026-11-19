@@ -1,6 +1,7 @@
 // The host's dialog for this extension. What it shows depends on how it was opened:
 //   a Create Linear issue action   -> the create form, drafted by the Small Model
 //   Comment on Linear issue        -> the comment form for the session's issue
+//   Start build from this plan     -> the build options for the issue the session is for
 //   a project or document chip     -> what is attached
 //   the + menu                     -> tabs: Create issue, Attach
 import type { GuestItem, HostReadyContext } from '@openchamber/sdk';
@@ -14,7 +15,8 @@ import { useWorkspace } from '../shared/workspace.ts';
 import { AttachedView, AttachView } from './attach-view.tsx';
 import { CommentView } from './comment-view.tsx';
 import { CreateView } from './create-view.tsx';
-import { jobFor } from './jobs.ts';
+import { BuildView } from './build-view.tsx';
+import { BUILD_ACTION, jobFor } from './jobs.ts';
 import { createScope } from './scope.ts';
 
 const itemKey = (item: GuestItem | null): string => {
@@ -80,6 +82,7 @@ export const Dialog = ({ ctx }: { ctx: HostReadyContext }) => {
   let view;
   if (job) view = <CreateView key={job.key} job={job} scope={scope} />;
   else if (item && 'kind' in item && item.kind === 'message' && item.action === 'comment-on-issue') view = <CommentView key={key} item={item} directory={ctx.directory} />;
+  else if (item && 'kind' in item && item.kind === 'session' && item.action === BUILD_ACTION) view = <BuildView key={key} item={item} directory={ctx.directory} />;
   else if (item && 'providerId' in item) view = <AttachedView item={item} />;
   else view = <PlusView scope={scope} projectIds={state.detection.projectIds} teamIds={state.detection.teamIds} hasSession={Boolean(ctx.session)} />;
   return <div class="lin-dialog">{view}</div>;

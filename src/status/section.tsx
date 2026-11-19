@@ -5,21 +5,23 @@ import { Chip, Dot } from '@openchamber-ext/shared-ui/preact';
 import { toast } from '@openchamber-ext/shared-ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { invalidate } from '../shared/cache.ts';
-import { discardDraft, postDraft, type Draft } from '../shared/drafts.ts';
+import { DraftRow } from '../shared/draft-row.tsx';
+import { HandoffRow } from '../shared/handoff-row.tsx';
 import { scopeFilter } from '../shared/filters.ts';
 import { HEALTH_LABEL, HEALTH_TONE, percent, shortDate } from '../shared/format.ts';
 import { StatusGlyph } from '../shared/glyphs.tsx';
+import { rowKey } from '../shared/handoff-rules.ts';
 import { host, useReady } from '../shared/host.ts';
-import { Banner, Button, Progress, Spinner, TextField } from '../shared/kit.tsx';
+import { Banner, Button, Progress, Spinner } from '../shared/kit.tsx';
 import { LinearError } from '../shared/linear.ts';
 import { openInPanel } from '../shared/open-target.ts';
 import { useProjects } from '../shared/projects.ts';
+import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { cycleLine, countByStatus, limitCounts, sortMine } from '../shared/status.ts';
 import type { ProjectSummary, StatusMineIssue, Team } from '../shared/types.ts';
 import { entityName, useDetection, type DetectionState } from '../shared/use-detection.ts';
 import { loadWorkspace, useWorkspace, type Workspace } from '../shared/workspace.ts';
-import { writeErrorText } from '../shared/writes.ts';
-import { useDrafts, useStatusCounts, useStatusMine } from './data.ts';
+import { useDrafts, useHandoffs, useStatusCounts, useStatusMine } from './data.ts';
 
 const MAX_PROJECT_LINES = 3;
 const MAX_CYCLE_LINES = 2;
@@ -89,45 +91,6 @@ const MineRow = ({ issue, onOpen }: { issue: StatusMineIssue; onOpen: () => void
   </div>
 );
 
-const DraftRow = ({ draft, onDone }: { draft: Draft; onDone: () => void }) => {
-  const [open, setOpen] = useState(false);
-  const [body, setBody] = useState(draft.body);
-  const [busy, setBusy] = useState<'post' | 'discard' | null>(null);
-
-  const post = async () => {
-    setBusy('post');
-    try {
-      await postDraft(draft, body);
-      await toast(host, 'success', `Posted the summary on ${draft.identifier}`);
-      onDone();
-    } catch (error) {
-      await toast(host, 'error', `Could not post on ${draft.identifier}: ${writeErrorText(error)}`);
-      setBusy(null);
-    }
-  };
-  const discard = async () => {
-    setBusy('discard');
-    if (await discardDraft(draft)) onDone();
-    else {
-      await toast(host, 'error', 'Could not discard the draft. Try again.');
-      setBusy(null);
-    }
-  };
-
-  return (
-    <div class="lin-status-draft" data-draft={draft.id}>
-      <div class="lin-status-line" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(!open)} onKeyDown={(event) => { if (event.key === 'Enter') setOpen(!open); }}>
-        <span class="lin-ellipsis sui-grow" title={draft.sessionTitle}>Summary ready for <span class="sui-mono lin-status-ref">{draft.identifier}</span></span>
-        <span class="lin-status-actions" onClick={(event) => event.stopPropagation()}>
-          <Button label="Post" size="xs" loading={busy === 'post'} disabled={busy !== null || !body.trim()} onClick={() => { void post(); }} />
-          <Button label="Discard" variant="ghost" size="xs" loading={busy === 'discard'} disabled={busy !== null} onClick={() => { void discard(); }} />
-        </span>
-      </div>
-      {open && <TextField value={body} onChange={setBody} multiline rows={5} disabled={busy !== null} />}
-    </div>
-  );
-};
-
 /** Shown in place of rows: why there is nothing, and what to do. */
 const Note = ({ children, action }: { children: string; action?: { label: string; onClick: () => void } }) => (
   <div class="sui-row">
@@ -145,13 +108,16 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
   const counts = useStatusCounts(scope);
   const mine = useStatusMine(scope);
   const drafts = useDrafts(directory);
+  const handoffs = useHandoffs(directory);
   const [handled, setHandled] = useState<ReadonlySet<string>>(new Set());
   const placeKey = state.place?.key ?? '';
 
   const cycles = cycleTeams(workspace, shown, projects.data ?? []).slice(0, MAX_CYCLE_LINES);
   const chips = useMemo(() => limitCounts(countByStatus(counts.data?.nodes ?? [])), [counts.data]);
   const mineRows = useMemo(() => sortMine(mine.data?.issues ?? []), [mine.data]);
-  const waiting = (drafts.data ?? []).filter((d) => !handled.has(d.id));
+  // A row done in this frame stays hidden, but a newer one for the same session (the plan was finished again) is a new row.
+  const waiting = (drafts.data ?? []).filter((d) => !handled.has(rowKey(d)));
+  const plans = (handoffs.data ?? []).filter((h) => !handled.has(rowKey(h)));
 
   const open = async (identifier: string) => {
     if (!(await openInPanel({ placeKey, issue: identifier }))) await toast(host, 'info', `Open the Linear panel to see ${identifier}.`);
@@ -160,7 +126,7 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
   const loading = (projectIds.length > 0 && projects.loading && !projects.data) || (counts.loading && !counts.data) || (mine.loading && !mine.data);
   const failed = [projects.error, counts.error, mine.error].find((e) => e !== undefined && e !== null);
   const rows = [
-    projects.data?.length ? 'project' : '', cycles.length ? 'cycle' : '', chips.shown.length ? 'chips' : '', mineRows.length ? 'mine' : '', waiting.length ? 'drafts' : '',
+    projects.data?.length ? 'project' : '', cycles.length ? 'cycle' : '', chips.shown.length ? 'chips' : '', mineRows.length ? 'mine' : '', plans.length ? 'plans' : '', waiting.length ? 'drafts' : '',
   ].filter(Boolean);
 
   return (
@@ -173,6 +139,21 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
           <Button label="Pin" variant="outline" size="xs" onClick={() => { void state.pin(); }} />
         </div>
       )}
+      {/* What waits for a click comes first: the section is at most 320 pixels tall, so what is last can be out of sight. */}
+      {plans.map((handoff) => (
+        <HandoffRow
+          key={handoff.id}
+          handoff={handoff}
+          onDone={() => { setHandled((set) => new Set(set).add(rowKey(handoff))); handoffs.refresh(); }}
+        />
+      ))}
+      {waiting.map((draft) => (
+        <DraftRow
+          key={draft.id}
+          draft={draft}
+          onDone={() => { setHandled((set) => new Set(set).add(rowKey(draft))); drafts.refresh(); }}
+        />
+      ))}
       {projects.data?.length ? <ProjectLines projects={projects.data} /> : null}
       {cycles.map((team) => (
         <div class="sui-small" key={team.id}>{cycleLine(team.activeCycle!, cycles.length > 1 ? team.key : null)}</div>
@@ -199,13 +180,6 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
           ))}
         </div>
       )}
-      {waiting.map((draft) => (
-        <DraftRow
-          key={draft.id}
-          draft={draft}
-          onDone={() => { setHandled((set) => new Set(set).add(draft.id)); drafts.refresh(); }}
-        />
-      ))}
       {loading && !rows.length && <Spinner size="sm" label="Loading Linear" />}
       {failed !== undefined && !rows.length && <ErrorNote error={failed} />}
       {!loading && failed === undefined && !rows.length && <Note>Nothing open for this folder in Linear.</Note>}
@@ -283,7 +257,12 @@ export const StatusSection = () => {
     if (!state.mapped) {
       return <Note action={{ label: 'Pick', onClick: () => { void openPicker(state.place?.key ?? ''); } }}>Pick a Linear project</Note>;
     }
-    return <Rows directory={directory} workspace={workspace.data} state={state} />;
+    return (
+      <>
+        <SnapshotPusher directory={directory} workspace={workspace.data} state={state} />
+        <Rows directory={directory} workspace={workspace.data} state={state} />
+      </>
+    );
   })();
 
   return (
