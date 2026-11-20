@@ -178,7 +178,8 @@ export const normalize = (text: string) => text.toLowerCase().replace(/[^a-z0-9]
 
 /** Words that say what kind of repository it is, not whose. */
 const GENERIC = new Set(['api', 'app', 'apps', 'web', 'ui', 'service', 'services', 'svc', 'server', 'client', 'helm', 'chart', 'charts',
-  'terraform', 'tf', 'infra', 'argo', 'deploy', 'config', 'lib', 'libs', 'sdk', 'core', 'backend', 'frontend', 'mobile', 'ios', 'android', 'worker']);
+  'terraform', 'tf', 'infra', 'argo', 'deploy', 'config', 'lib', 'libs', 'sdk', 'core', 'backend', 'frontend', 'mobile', 'ios', 'android', 'worker',
+  'shared', 'common', 'util', 'utils', 'tools', 'tool', 'kit', 'test', 'tests', 'docs', 'demo', 'example', 'examples', 'sandbox', 'extension', 'extensions']);
 
 export type NameCandidate = { text: string; weight: number; label: string };
 
@@ -214,10 +215,16 @@ const nameScore = (name: string, candidate: string): number => {
 
 const MATCH_MIN = 1.4;
 
+/**
+ * A project is a narrower claim than a team, and a word of the folder name is a weak hint: "shared" in `shared-ui` is a prefix of
+ * "Shared Records Tab/Page". So a project must equal a word (or start with the whole folder or repository name), not merely start with a word.
+ */
+export const PROJECT_MATCH_MIN = 2;
+
 export type NameMatch<T> = { item: T; score: number; label: string };
 
 /** Best item for the candidates: an exact name, then a prefix, then a key equal to a word. */
-export const matchByName = <T extends { name: string; key?: string }>(candidates: NameCandidate[], items: T[]): NameMatch<T> | null => {
+export const matchByName = <T extends { name: string; key?: string }>(candidates: NameCandidate[], items: T[], min = MATCH_MIN): NameMatch<T> | null => {
   let best: NameMatch<T> | null = null;
   for (const item of items) {
     for (const candidate of candidates) {
@@ -225,7 +232,7 @@ export const matchByName = <T extends { name: string; key?: string }>(candidates
       if (item.key && item.key.toLowerCase() === candidate.text.toLowerCase() && item.key.length >= 2) {
         score = Math.max(score, 2.5 * candidate.weight);
       }
-      if (score >= MATCH_MIN && (!best || score > best.score)) best = { item, score, label: candidate.label };
+      if (score >= min && (!best || score > best.score)) best = { item, score, label: candidate.label };
     }
   }
   return best;
@@ -324,7 +331,7 @@ export const detect = async (env: DetectEnv, place: Place, teams: TeamRef[]): Pr
   const term = candidates[0]?.text;
   if (term) {
     const found = (await env.searchProjects(term).catch(() => [])).filter(isActive);
-    const project = matchByName(candidates, found);
+    const project = matchByName(candidates, found, PROJECT_MATCH_MIN);
     if (project) return result({ source: 'name', inferred: true, evidence: project.label, teamIds: [], projectIds: [project.item.id], mapping: null });
   }
 

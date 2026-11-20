@@ -198,6 +198,19 @@ describe('detect', () => {
     expect(result).toMatchObject({ source: 'name', teamIds: [], projectIds: ['p-checkout'] });
   });
 
+  // Found by hand: `shared-ui` was pinned to a project called "Shared Records Tab/Page" on the word "shared".
+  test('a generic word, or a word that only starts a project name, does not pick a project', async () => {
+    const records = [...projects, project('p-records', 'Shared Records Tab/Page'), project('p-checkout-flow', 'Checkout Flow Rework')];
+    const withRecords = (dir: string) => ({
+      ...envOf({ projects: [oc(dir)] }),
+      searchProjects: async (term: string) => records.filter((p) => p.name.toLowerCase().includes(term.toLowerCase().split('-')[0]!)),
+    });
+    for (const dir of ['shared-ui', 'rework-api']) {
+      const env = withRecords(dir);
+      expect((await detect(env, await resolvePlace(env, `/work/${dir}`), teams)).source).toBe('none');
+    }
+  });
+
   test('nothing matches, and the latest linked issue is the current work', async () => {
     const env = envOf({
       projects: [oc('zzz-tool')],

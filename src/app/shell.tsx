@@ -1,4 +1,5 @@
 // The dashboard frame: Linear-style sidebar on the full page, a view picker in the rail panel.
+import { toast } from '@openchamber-ext/shared-ui';
 import type { HostReadyContext } from '@openchamber/sdk';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { invalidate } from '../shared/cache.ts';
@@ -359,10 +360,14 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Reloading with nothing new on screen looks like nothing happened (an open issue included), so a click answers with a toast.
   const refresh = () => {
     invalidate('');
-    void loadWorkspace(true).catch(() => undefined);
     state.refresh();
+    void loadWorkspace(true).then(
+      () => toast(host, 'success', 'Linear refreshed'),
+      () => toast(host, 'error', 'Could not refresh Linear. Check the connection and try again.'),
+    );
   };
 
   const wide = ctx.surface === 'page';

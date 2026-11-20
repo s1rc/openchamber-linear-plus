@@ -211,10 +211,14 @@ export const StatusSection = () => {
     return () => observer.disconnect();
   }, []);
 
+  // Reloading with nothing new on screen looks like nothing happened, so a click answers with a toast.
   const refresh = useCallback(() => {
     invalidate('');
-    void loadWorkspace(true).catch(() => undefined);
     state.refresh();
+    void loadWorkspace(true).then(
+      () => toast(host, 'success', 'Linear refreshed'),
+      () => toast(host, 'error', 'Could not refresh Linear. Check the connection and try again.'),
+    );
   }, [state.refresh]);
 
   // Refresh in the section header where the host draws controls, else a button in the body.
