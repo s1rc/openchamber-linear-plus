@@ -62,7 +62,11 @@ export const blockText = (value: unknown, max: number): string => {
 export const blockTitle = (value: unknown): string => blockText(value, MAX_TITLE);
 export const blockQuestion = (value: unknown): string => blockText(value, MAX_QUESTION);
 
-/** The IssueFilter that finds identifiers by team key and number: one clause per team. */
+/**
+ * The IssueFilter that finds identifiers by team key and number: one clause per team. Each clause is an explicit `and`:
+ * Linear reads the two fields of one `or` element as alternatives, so `{ team, number }` returned every issue of the team
+ * and every issue with that number, and a large team (INF, 4,400 issues) pushed the one wanted out of the first 25.
+ */
 export const keysFilter = (ids: readonly string[]): { or: Record<string, unknown>[] } => {
   const byTeam = new Map<string, number[]>();
   for (const id of ids) {
@@ -71,7 +75,7 @@ export const keysFilter = (ids: readonly string[]): { or: Record<string, unknown
     list.push(Number(number));
     byTeam.set(key, list);
   }
-  return { or: [...byTeam].map(([key, numbers]) => ({ team: { key: { eqIgnoreCase: key } }, number: { in: numbers } })) };
+  return { or: [...byTeam].map(([key, numbers]) => ({ and: [{ team: { key: { eqIgnoreCase: key } } }, { number: { in: numbers } }] })) };
 };
 
 /** How full each started state's pie is, as the dashboard draws it: the n-th of k states is n/(k+1). */

@@ -80,11 +80,12 @@ describe('block text', () => {
 });
 
 describe('keysFilter', () => {
-  test('one clause per team, numbers together', () => {
+  // Found on INF-4399: fields side by side in one `or` element are alternatives in Linear, not both required.
+  test('one clause per team, numbers together, team and number joined by an explicit and', () => {
     expect(keysFilter(['ENG-11', 'MOB-5', 'ENG-12'])).toEqual({
       or: [
-        { team: { key: { eqIgnoreCase: 'ENG' } }, number: { in: [11, 12] } },
-        { team: { key: { eqIgnoreCase: 'MOB' } }, number: { in: [5] } },
+        { and: [{ team: { key: { eqIgnoreCase: 'ENG' } } }, { number: { in: [11, 12] } }] },
+        { and: [{ team: { key: { eqIgnoreCase: 'MOB' } } }, { number: { in: [5] } }] },
       ],
     });
   });

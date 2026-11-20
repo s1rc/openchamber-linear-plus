@@ -27,7 +27,7 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   STATUS_COUNTS: [{ filter: { state: { type: { in: ['triage', 'unstarted', 'started'] } }, team: { id: { in: ['t1'] } } }, after: null }],
   STATUS_MINE: [{ filter: { and: [{ state: { type: { nin: ['completed', 'canceled', 'duplicate'] } } }, { assignee: { isMe: { eq: true } } }] } }],
   ISSUES_BY_KEYS: [
-    { filter: { or: [{ team: { key: { eqIgnoreCase: 'ENG' } }, number: { in: [11, 12] } }, { team: { key: { eqIgnoreCase: 'MOB' } }, number: { in: [5] } }] } },
+    { filter: { or: [{ and: [{ team: { key: { eqIgnoreCase: 'ENG' } } }, { number: { in: [11, 12] } }] }, { and: [{ team: { key: { eqIgnoreCase: 'MOB' } } }, { number: { in: [5] } }] }] } },
   ],
   BRANCH_ISSUE: [{ filter: { team: { key: { eqIgnoreCase: 'ENG' } }, number: { eq: 123 } } }],
   BLOCK_STATES: [{ teamIds: ['t1', 't2'] }],
