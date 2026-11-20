@@ -20,6 +20,7 @@ const find = async (item: GuestSessionItem, directory: string | null): Promise<F
   const fallback: BuildSource = { sessionId: item.sessionId, directory: dir ?? '', title: item.sessionTitle, agent: null, inWorktree: false, updatedAt: 0 };
   const identifiers: string[] = [];
   let source = fallback;
+  const known: string[] = [];
   // The session's own folder first (a worktree is known to its project), then the folder the dialog was opened in.
   for (const candidate of [item.directory, directory]) {
     if (!candidate) continue;
@@ -33,8 +34,9 @@ const find = async (item: GuestSessionItem, directory: string | null): Promise<F
   }
   const planned = await api(host, 'GET', '/plans', { query: { sessionId: item.sessionId }, name: 'Linear' });
   const rows: unknown = planned.ok === false ? [] : planned.sessions;
-  if (Array.isArray(rows)) for (const row of rows) { const id = (row as { identifier?: unknown }).identifier; if (typeof id === 'string' && !identifiers.includes(id)) identifiers.push(id); }
-  return { source: source.directory ? source : { ...source, directory: dir ?? '' }, identifiers };
+  if (Array.isArray(rows)) for (const row of rows) { const id = (row as { identifier?: unknown }).identifier; if (typeof id === 'string' && !known.includes(id)) known.push(id); }
+  // The issue the plan was started for leads: a link added later (a new issue linked to the chat) is not what this plan is for.
+  return { source: source.directory ? source : { ...source, directory: dir ?? '' }, identifiers: [...known, ...identifiers.filter((id) => !known.includes(id))] };
 };
 
 export const BuildView = ({ item, directory }: { item: GuestSessionItem; directory: string | null }) => {
@@ -62,7 +64,7 @@ export const BuildView = ({ item, directory }: { item: GuestSessionItem; directo
       {found.identifiers.length > 1 && (
         <Select value={picked} options={found.identifiers.map((id) => ({ id, label: id }))} onChange={setPicked} label="Issue" />
       )}
-      <BuildPanel key={picked} identifier={picked} source={found.source} onClose={() => { void host.close(); }} onDone={() => { void host.close(); }} />
+      <BuildPanel fill key={picked} identifier={picked} source={found.source} onClose={() => { void host.close(); }} onDone={() => { void host.close(); }} />
     </div>
   );
 };

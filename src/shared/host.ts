@@ -13,6 +13,14 @@ host.onReady((ctx) => {
   for (const listener of listeners) listener(ctx);
 });
 
+// The host sends the item in its own message after `ready` (and again when it changes), and the SDK tells only
+// onItem listeners about it. Without this the dialog saw an item of null and opened as the plain + menu.
+host.onItem((item) => {
+  if (!latest || latest.item === item) return;
+  latest = { ...latest, item };
+  for (const listener of listeners) listener(latest);
+});
+
 /** The latest host context. Re-renders on every theme, session or directory change. */
 export const useReady = (): HostReadyContext | null => {
   const [ctx, setCtx] = useState<HostReadyContext | null>(latest);

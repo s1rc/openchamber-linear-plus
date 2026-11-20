@@ -26,9 +26,11 @@ type Props = {
   onClose: () => void;
   /** Called after the build started and its session opened. */
   onDone?: () => void;
+  /** In the dialog: show the whole plan and let it take the room the frame has, with the controls below it. */
+  fill?: boolean;
 };
 
-export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone }: Props) => {
+export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone, fill }: Props) => {
   const [detail, setDetail] = useState<IssueDetail | null>(given ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [allowMove, setAllowMove] = useState(true);
@@ -113,7 +115,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone 
   };
 
   return (
-    <div class="lin-build" data-state="options">
+    <div class={fill ? 'lin-build lin-build--fill' : 'lin-build'} data-state="options">
       <div class="sui-small">
         Builds from the last reply in <strong>{source.title}</strong>{source.agent ? ` (${source.agent} agent)` : ''}, in {folderName(source.directory)}, as a new session.
         It uses the folder's build agent and model from Settings.
@@ -128,7 +130,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone 
         />
       )}
       {preview?.earlier && <div class="sui-muted sui-small">The last reply in that session is not the plan, so this is the latest reply that was.</div>}
-      {preview && <pre class="lin-build-plan">{planExcerpt(preview.plan)}</pre>}
+      {preview && <pre class="lin-build-plan">{fill ? preview.plan.trim() : planExcerpt(preview.plan)}</pre>}
       {error && <Banner tone="error" title="Could not start the build" body={error} />}
       <Switch
         label="Add the plan to the issue description first"

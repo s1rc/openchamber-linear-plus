@@ -392,7 +392,11 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 
 /* The first lines of the plan a build starts from. Plain text: the plan is the agent's, so it is never drawn as markup. */
 .lin-build-plan { margin: 0; padding: 8px 10px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--oc-mono, ui-monospace, monospace); font-size: 0.85em; color: var(--oc-muted); background: var(--oc-muted-surface); border-radius: 6px; }
-.lin-build-dialog { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.lin-build-dialog { display: flex; flex-direction: column; gap: 10px; padding: 14px; flex: 1 1 auto; min-height: 0; }
+/* The host's dialog is taller than this form: the plan takes the spare room and scrolls, and the controls stay below it. */
+.lin-dialog:has(> .lin-build-dialog) { height: 100vh; min-height: 0; overflow: hidden; }
+.lin-build--fill { flex: 1 1 auto; min-height: 0; }
+.lin-build--fill .lin-build-plan { flex: 1 1 auto; min-height: 120px; }
 
 /* The "Move the issue to" row: the switch, and the status it moves to on its right. */
 .lin-move-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
