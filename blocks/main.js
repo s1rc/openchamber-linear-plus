@@ -609,6 +609,14 @@ ${rs}`;var os="oc-sdk-ui-style",ve=(e)=>{while(e.firstChild)e.removeChild(e.firs
   inRelations: inverseRelations(first: 5) { nodes { type } }
  } }
   }
+`,SLASH_BY_NUMBER:`
+  query SlashByNumber($filter: IssueFilter) {
+    issues(first: 6, filter: $filter) { nodes { identifier title } }
+  }
+`,SLASH_SEARCH:`
+  query SlashSearch($term: String!) {
+    searchIssues(term: $term, first: 3) { nodes { identifier title } }
+  }
 `,BRANCH_ISSUE:`
   query BranchIssue($filter: IssueFilter) {
     issues(first: 1, filter: $filter) { nodes { identifier title url description state { name } } }

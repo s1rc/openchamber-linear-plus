@@ -8,6 +8,7 @@ bunx openchamber-guest-bundle src/app/main.tsx panel/main.js
 bunx openchamber-guest-bundle src/dialog/main.tsx dialog/main.js
 bunx openchamber-guest-bundle src/status/main.tsx status/main.js
 bunx openchamber-guest-bundle src/blocks/main.tsx blocks/main.js
+bunx openchamber-guest-bundle src/background/main.ts background/main.js
 bunx openchamber-guest-bundle --node src/service/main.ts service/main.js
 # Every frame gets the shared styles, then Linear's own.
 for frame in panel dialog status blocks; do

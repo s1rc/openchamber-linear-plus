@@ -29,6 +29,12 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   ISSUES_BY_KEYS: [
     { filter: { or: [{ and: [{ team: { key: { eqIgnoreCase: 'ENG' } } }, { number: { in: [11, 12] } }] }, { and: [{ team: { key: { eqIgnoreCase: 'MOB' } } }, { number: { in: [5] } }] }] } },
   ],
+  SLASH_BY_NUMBER: [
+    { filter: { and: [{ number: { eq: 4399 } }, { team: { id: { in: ['t1'] } } }] } },
+    { filter: { and: [{ number: { eq: 4399 } }, { or: [{ assignee: { isMe: { eq: true } } }, { creator: { isMe: { eq: true } } }, { subscribers: { some: { isMe: { eq: true } } } }] }] } },
+    { filter: { number: { eq: 4399 } } },
+  ],
+  SLASH_SEARCH: [{ term: 'infisical project' }],
   BRANCH_ISSUE: [{ filter: { team: { key: { eqIgnoreCase: 'ENG' } }, number: { eq: 123 } } }],
   BLOCK_STATES: [{ teamIds: ['t1', 't2'] }],
   REPO_ATTACHMENTS: [{ url: 'gitlab.com/acme/group/repo/' }],

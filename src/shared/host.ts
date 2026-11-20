@@ -21,6 +21,9 @@ host.onItem((item) => {
   for (const listener of listeners) listener(latest);
 });
 
+/** The host context now, for code that is not a component. Null before the host has said ready. */
+export const readyNow = (): HostReadyContext | null => latest;
+
 /** The latest host context. Re-renders on every theme, session or directory change. */
 export const useReady = (): HostReadyContext | null => {
   const [ctx, setCtx] = useState<HostReadyContext | null>(latest);

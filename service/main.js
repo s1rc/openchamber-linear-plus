@@ -737,6 +737,16 @@ var ISSUES_BY_KEYS = `
     issues(first: 25, filter: $filter) { nodes { ${ISSUE_ROW} } }
   }
 `;
+var SLASH_BY_NUMBER = `
+  query SlashByNumber($filter: IssueFilter) {
+    issues(first: 6, filter: $filter) { nodes { identifier title } }
+  }
+`;
+var SLASH_SEARCH = `
+  query SlashSearch($term: String!) {
+    searchIssues(term: $term, first: 3) { nodes { identifier title } }
+  }
+`;
 var BRANCH_ISSUE = `
   query BranchIssue($filter: IssueFilter) {
     issues(first: 1, filter: $filter) { nodes { identifier title url description state { name } } }
@@ -866,6 +876,8 @@ var ALL_DOCUMENTS = {
   STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(["ENG-1", "ENG-2"]),
   ISSUES_BY_KEYS,
+  SLASH_BY_NUMBER,
+  SLASH_SEARCH,
   BRANCH_ISSUE,
   BLOCK_STATES,
   TEAM_CYCLES,

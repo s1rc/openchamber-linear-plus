@@ -64,6 +64,14 @@
       "mentions": {
         "label": "Linear"
       },
+      "background": {
+        "entry": "background/index.html"
+      },
+      "commands": [
+        { "name": "linear-issue", "description": "Show an issue card: /linear-issue ENG-123, a number, or words" },
+        { "name": "linear-list", "description": "Show a list of issues: /linear-list [ENG-1 ENG-2] [heading]" },
+        { "name": "linear-pick", "description": "Ask which issue: /linear-pick [ENG-1 ENG-2] [question]" }
+      ],
       "actions": [
         {
           "id": "issue-from-message",
