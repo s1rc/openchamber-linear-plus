@@ -14,6 +14,7 @@ Run all of these before a release. Each must pass.
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 9 screen tests, fake data only |
 
 Also check by grep:
 
@@ -29,9 +30,27 @@ Also check by grep:
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
 - **Dashboard rules**: grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
+### Screen tests (`bun run e2e`)
+
+`e2e/run.ts` serves the built pages inside `e2e/harness.html`, a mock OpenChamber host that answers the SDK (projects, sessions, storage, start session, attach, close, clipboard, toasts) and replays `harness/fixtures/workspace.json` or `plan-extras.json`. It records every host message and every Linear and service call, and checks:
+
+| Test | Checks |
+|---|---|
+| `picker` | The dialog lists the folder's issues with a preview; a pasted Linear link lists only that issue; Enter attaches it and closes the dialog |
+| `dialog-escape` | Escape with the filter open closes only the filter; the next Escape closes the dialog |
+| `issue-pane` | An issue from a list opens in the right-hand pane with its trail, the list stays beside it, another row swaps it, Escape closes it; a cycle's issue opens in the same pane |
+| `issue-rail` | On the rail the issue replaces the view, with its trail; Back returns to the list |
+| `sidebar` | The folder's team is open with Home, Triage (count 1), Issues, Projects, Views; the sub-team sits under it and opens; a saved view opens the team's issues with it picked; open teams are remembered |
+| `milestones` | A milestone's issue count opens its three issues |
+| `copy-buttons` | Copy ID copies the key |
+| `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
+| `plan-extras` | The Work Status frame claims a finished plan, sets the estimate on the team's scale, creates the split-out issue once, relates it, reports it done, and toasts what it did |
+
+Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).
+
 ### What they do not cover
 
-- **The frames (Preact components) are not unit tested.** They are checked by screenshots instead: `bun run fixtures` writes fake Linear data to `harness/fixtures/`, and the shot lists in `harness/shots/` are shot with shared-ui's harness (see "Screenshots" below). Look at every shot.
+- **Not every screen has a test.** The rest are checked by screenshots: `bun run fixtures` writes fake Linear data to `harness/fixtures/`, and the shot lists in `harness/shots/` are shot with shared-ui's harness (see "Screenshots" below). Look at every shot.
 - **Nothing runs against a real OpenChamber host or the real Linear workspace.** That is the hand testing below.
 
 ### Screenshots

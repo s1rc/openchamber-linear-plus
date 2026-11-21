@@ -10,7 +10,8 @@
     "validate-queries": "bun scripts/validate-queries.ts",
     "test": "bun test",
     "fixtures": "bun scripts/fixtures.ts",
-    "smoke": "bun scripts/service-smoke.ts"
+    "smoke": "bun scripts/service-smoke.ts",
+    "e2e": "sh scripts/build.sh && bun scripts/fixtures.ts && bun e2e/run.ts"
   },
   "openchamber": {
     "apiVersion": 1,
@@ -68,9 +69,18 @@
         "entry": "background/index.html"
       },
       "commands": [
-        { "name": "linear-issue", "description": "Show an issue card: /linear-issue ENG-123, a number, or words" },
-        { "name": "linear-list", "description": "Show a list of issues: /linear-list [ENG-1 ENG-2] [heading]" },
-        { "name": "linear-pick", "description": "Ask which issue: /linear-pick [ENG-1 ENG-2] [question]" }
+        {
+          "name": "linear-issue",
+          "description": "Show an issue card: /linear-issue ENG-123, a number, or words"
+        },
+        {
+          "name": "linear-list",
+          "description": "Show a list of issues: /linear-list [ENG-1 ENG-2] [heading]"
+        },
+        {
+          "name": "linear-pick",
+          "description": "Ask which issue: /linear-pick [ENG-1 ENG-2] [question]"
+        }
       ],
       "actions": [
         {
@@ -146,6 +156,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "graphql": "^17.1.0",
+    "playwright-core": "1.65.0",
     "typescript": "^7.0.2"
   }
 }

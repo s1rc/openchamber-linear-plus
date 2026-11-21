@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html, body { margin: 0; height: 100%; }
+      iframe { border: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <iframe id="f"></iframe>
+    <script>
+      // A mock OpenChamber host for the end-to-end tests (e2e/run.ts). It answers the SDK the way the real host does
+      // for what Linear+ uses, from the query and from replayed fixtures, and records every message in window.__log.
+      // Query: page, surface, dir, mode, block, args, item, connected, fx (fixture file), projects, sessions, storage.
+      const q = new URLSearchParams(location.search);
+      const page = q.get('page') || 'panel/index.html';
+      const surface = q.get('surface') || 'page';
+      const dir = q.get('dir') || null;
+      const mode = q.get('mode') || 'dark';
+      const fx = q.get('fx') || 'workspace';
+      const block = q.get('block') ? { name: q.get('block'), args: JSON.parse(q.get('args') || '{}'), answered: null } : undefined;
+      const item = q.get('item') ? JSON.parse(q.get('item')) : null;
+      const connected = q.get('connected') !== '0';
+      const store = JSON.parse(q.get('storage') || '{}');
+      const projects = JSON.parse(q.get('projects') || '[]');
+      const sessions = JSON.parse(q.get('sessions') || '[]');
+      window.__log = [];
+      const dark = mode === 'dark';
+      const tokens = {
+        background: dark ? '#151313' : '#fbf9f6', elevated: dark ? '#1d1b1a' : '#ffffff', foreground: dark ? '#e6e1dc' : '#1c1917',
+        muted: dark ? '#a8a29e' : '#6b6560', subtle: dark ? '#262322' : '#f1ede8', border: dark ? '#3a3633' : '#ddd6cf', hover: dark ? '#262322' : '#f1ede8',
+        selection: dark ? '#33302d' : '#e9e3dc', focus: '#ef9a4f', primary: '#ef9a4f', mutedSurface: dark ? '#201e1c' : '#f4f0eb',
+        elevatedForeground: dark ? '#e6e1dc' : '#1c1917', active: dark ? '#33302d' : '#e9e3dc', selectionForeground: dark ? '#fff' : '#000',
+        primaryForeground: '#1c1917', primaryText: '#ef9a4f', successText: '#4ade80', warningText: '#fbbf24', errorText: '#f87171', infoText: '#60a5fa',
+        success: '#22c55e', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6',
+        font: 'ui-sans-serif, system-ui, sans-serif', mono: 'ui-monospace, monospace', radius: '8px',
+      };
+      const f = document.getElementById('f');
+      const send = (m) => f.contentWindow.postMessage({ channel: 'openchamber.sdk', v: 1, ...m }, '*');
+      const ready = () => send({ type: 'ready', payload: {
+        theme: { mode, tokens }, locale: 'en', directory: dir, session: null, surface: block ? 'block' : surface,
+        connection: { connected, account: connected ? 'demo' : '' }, settings: {}, item, ...(block ? { block } : {}), features: {},
+      } });
+      window.addEventListener('message', async (e) => {
+        if (e.source !== f.contentWindow) return;
+        const m = e.data;
+        if (!m || m.channel !== 'openchamber.sdk') return;
+        if (m.type === 'hello') { ready(); return; }
+        const ok = (payload) => send({ type: 'result', id: m.id, ok: true, ...(payload !== undefined ? { payload } : {}) });
+        const fail = (error, code) => send({ type: 'result', id: m.id, ok: false, error, code });
+        window.__log.push({ type: m.type, payload: m.payload ?? null });
+        if (m.type === 'service-request' || m.type === 'request') {
+          const r = await fetch(`/${m.type === 'request' ? 'req' : 'svc'}?fx=${encodeURIComponent(fx)}`, { method: 'POST', body: JSON.stringify(m.payload) }).then((x) => x.json());
+          if (r.code && r.status === undefined) fail(r.error || 'failed', r.code); else ok(r);
+          return;
+        }
+        if (m.type === 'start-session') { ok({ sessionId: 'ses_test', sent: 'sent' }); return; }
+        if (m.type === 'workspace-read') {
+          const k = m.payload.kind;
+          if (k === 'projects') { ok({ kind: 'projects', state: 'ready', projects }); return; }
+          if (k === 'sessions') { ok({ kind: 'sessions', projectId: m.payload.projectId, state: 'ready', coverage: [], sessions: sessions.filter((s) => s.projectId === m.payload.projectId) }); return; }
+          if (k === 'worktrees') { ok({ kind: 'worktrees', projectId: m.payload.projectId, state: 'ready', worktrees: [] }); return; }
+        }
+        if (m.type === 'storage') {
+          const p = m.payload;
+          if (p.op === 'get') { ok(p.key in store ? { storage: true, op: 'get', found: true, value: store[p.key] } : { storage: true, op: 'get', found: false }); return; }
+          if (p.op === 'set') { store[p.key] = p.value; ok({ storage: true, op: 'set' }); return; }
+          if (p.op === 'delete') { delete store[p.key]; ok({ storage: true, op: 'delete' }); return; }
+          if (p.op === 'keys') { ok({ storage: true, op: 'keys', keys: Object.keys(store) }); return; }
+        }
+        if (m.id) ok();
+      });
+      f.src = '/ext/' + page;
+    </script>
+  </body>
+</html>
