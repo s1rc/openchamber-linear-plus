@@ -23,6 +23,7 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   CYCLE_DETAIL: [{ id: 'c1' }],
   CHILD_STATES: [{ ids: ['i1', 'i2'], after: null }],
   MILESTONE_ISSUES: [{ projectId: 'p1', after: null }],
+  TRIAGE_COUNTS: [{ teamIds: ['t1', 't2'] }],
   CHILD_ISSUES: [{ ids: ['i1', 'i2'], after: null }],
   ISSUE_EXTRAS: [{ ids: ['i1', 'i2'], after: null }],
   STATUS_COUNTS: [{ filter: { state: { type: { in: ['triage', 'unstarted', 'started'] } }, team: { id: { in: ['t1'] } } }, after: null }],

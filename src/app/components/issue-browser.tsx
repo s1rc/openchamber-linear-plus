@@ -22,11 +22,11 @@ import { updateIssue, writeErrorText } from '../../shared/writes.ts';
 import { CreateIssueDialog } from './create-issue.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import {
-  openIssueFor, PlaceKey, saveOpenIssue, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
+  openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
 } from '../view-state.ts';
 import { Board } from './board.tsx';
 import { GroupIcon } from './group-icon.tsx';
-import { IssueDetail } from './issue-detail.tsx';
+import { usePaneIssue } from '../issue-pane.tsx';
 import { IssueRow } from './issue-row.tsx';
 import { OptionsPanel } from './options-panel.tsx';
 import { ViewsBar } from './views-bar.tsx';
@@ -55,6 +55,8 @@ type Props = {
   viewTeamId?: string | null;
   /** The project new issues go to by default, for a project's list. */
   projectId?: string | null;
+  /** Where the list is, for the open issue's crumb: a team, a project, a cycle. */
+  origin?: string;
   /** A project's milestones, for the milestone filter. With one picked the list shows its issues in every state. */
   milestones?: { id: string; name: string }[];
   milestone?: string | null;
@@ -63,7 +65,7 @@ type Props = {
   emptyBody: string;
 };
 
-export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, emptyTitle, emptyBody }: Props) => {
+export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, origin = 'Issues', emptyTitle, emptyBody }: Props) => {
   const placeKey = useContext(PlaceKey);
   const workspace = useWorkspace();
   const statesByTeam = workspace.data?.statesByTeam;
@@ -110,12 +112,9 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [moving, setMoving] = useState<{ issue: Issue; choices: TeamChoice[]; extra: IssueInput } | null>(null);
-  const [openId, setOpenIdState] = useState<string | null>(() => openIssueFor(placeKey, listKey));
-  const [cursorId, setCursorId] = useState<string | null>(openId);
-  const setOpenId = (id: string | null) => {
-    setOpenIdState(id);
-    saveOpenIssue(placeKey, listKey, id);
-  };
+  // The open issue is drawn by the shell's pane, the same from every view (src/app/issue-pane.tsx).
+  const [openId, setOpenId] = usePaneIssue(placeKey, listKey, origin);
+  const [cursorId, setCursorId] = useState<string | null>(() => openIssueFor(placeKey, listKey));
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!openId && cursorId) root.current?.querySelector(`[data-issue="${cursorId}"]`)?.scrollIntoView({ block: 'center' });
@@ -276,11 +275,6 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   );
 
   if (!scope) return <Empty title={emptyTitle} body={emptyBody} />;
-
-  // An open issue takes the whole view, as in Linear; Back (or Escape) returns to the list where it was.
-  if (openId) {
-    return <IssueDetail id={openId} stacked={!wide} onClose={() => setOpenId(null)} onOpenIssue={(id) => { setOpenId(id); setCursorId(id); }} />;
-  }
 
   const error = list.error instanceof LinearError ? list.error : list.error ? new LinearError('network', String(list.error)) : null;
 

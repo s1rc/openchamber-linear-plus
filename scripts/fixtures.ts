@@ -30,8 +30,8 @@ const ada = user('u-ada', 'Ada Park');
 const cycle = { id: 'c-42', number: 42, name: null, startsAt: '2026-11-02T12:00:00Z', endsAt: '2026-11-16T12:00:00Z', progress: 0.6, isActive: true, isFuture: false, isPast: false, completedAt: null };
 
 const teams = [
-  { id: 't-eng', key: 'ENG', name: 'Engineering', color: '#5e6ad2', icon: null, cyclesEnabled: true, triageEnabled: true, issueEstimationType: 'tShirt', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-eng-backlog' }, activeCycle: cycle },
-  { id: 't-mob', key: 'MOB', name: 'Mobile', color: '#26b5ce', icon: null, cyclesEnabled: false, triageEnabled: false, issueEstimationType: 'fibonacci', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-mob-todo' }, activeCycle: null },
+  { id: 't-eng', key: 'ENG', name: 'Engineering', color: '#5e6ad2', icon: null, cyclesEnabled: true, triageEnabled: true, issueEstimationType: 'tShirt', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-eng-backlog' }, parent: null, activeCycle: cycle },
+  { id: 't-mob', key: 'MOB', name: 'Mobile', color: '#26b5ce', icon: null, cyclesEnabled: false, triageEnabled: false, issueEstimationType: 'fibonacci', issueEstimationAllowZero: false, issueEstimationExtended: false, defaultIssueState: { id: 't-mob-todo' }, parent: { id: 't-eng' }, activeCycle: null },
 ];
 
 // Positions run into the thousands and overlap between types, as in a long-lived workspace.
@@ -152,7 +152,7 @@ const issuesKey = (filter: Record<string, unknown>) => key(Q.ISSUES, { filter, a
 const engScope = scopeFilter(['t-eng'], [], true)!;
 
 const workspace: Record<string, Saved> = {
-  [key(Q.VIEWER)]: ok({ viewer: { ...matt, email: 'matt@example.com', organization: { id: 'org', name: 'Acme', urlKey: 'acme' }, teams: { nodes: [{ id: 't-eng' }] } } }),
+  [key(Q.VIEWER)]: ok({ viewer: { ...matt, email: 'matt@example.com', organization: { id: 'org', name: 'Acme', urlKey: 'acme' }, teams: { nodes: [{ id: 't-eng' }, { id: 't-mob' }] } } }),
   [key(Q.TEAMS)]: ok({ teams: { nodes: teams } }),
   [key(Q.WORKFLOW_STATES, { after: null })]: ok({ workflowStates: page([...stateSet('t-eng'), ...stateSet('t-mob')]) }),
   // Detection for /work/repo: no team is called "repo", so it searches projects for the folder name.
@@ -403,6 +403,9 @@ workspace[key(Q.MILESTONE_ISSUES, { projectId: 'p-checkout', after: null })] = o
 ]) });
 workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m2')))] = ok({ issues: page(inM2) });
 workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m1')))] = ok({ issues: page([doneInM1]) });
+
+// Phase 12: the sidebar's triage counts for the open teams.
+workspace[key(Q.TRIAGE_COUNTS, { teamIds: ['t-eng'], after: null })] = ok({ issues: page(engIssues.filter((i) => i.state.type === 'triage').map((i) => ({ team: { id: i.team.id } }))) });
 
 // Phase 9: the chat blocks. Each block reads its issues by team key and number in one request, then the
 // started states of those issues' teams. Keyed by the same filter the blocks build, so a changed filter

@@ -84,6 +84,14 @@ export const setRepo = async (placeKey: string, repo: StoredRepo): Promise<void>
 export const getStartMoves = async (): Promise<boolean> => (await get<boolean>('pref:start-moves')) !== false;
 export const setStartMoves = (on: boolean) => set('pref:start-moves', on);
 
+/** Which teams are open in the sidebar, and whether Your teams is. Null before the user toggled anything. */
+export type NavOpen = { teams: string[]; yourTeams: boolean };
+export const getNavOpen = async (): Promise<NavOpen | null> => {
+  const value = await get<NavOpen>('pref:nav-open');
+  return value && Array.isArray(value.teams) ? { teams: value.teams.filter((t) => typeof t === 'string'), yourTeams: value.yourTeams !== false } : null;
+};
+export const setNavOpen = (value: NavOpen) => set('pref:nav-open', value);
+
 /** Whether a new issue starts assigned to you. Off unless turned on in Settings; the create form can change it each time. */
 export const getAssignToMe = async (): Promise<boolean> => (await get<boolean>('pref:assign-me')) === true;
 export const setAssignToMe = (on: boolean) => set('pref:assign-me', on);

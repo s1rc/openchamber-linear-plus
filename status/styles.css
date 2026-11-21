@@ -60,12 +60,42 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-shell--wide { flex-direction: row; }
 .lin-nav { flex: none; width: 220px; padding: 10px 8px; border-right: 1px solid var(--oc-border); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
 .lin-nav-org { font-weight: 650; padding: 2px 8px 4px; }
-.lin-nav-group { display: flex; flex-direction: column; gap: 2px; }
-.lin-nav-heading { color: var(--oc-muted); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 8px; }
+.lin-nav-group { display: flex; flex-direction: column; gap: 1px; }
+.lin-nav-heading { display: flex; align-items: center; gap: 4px; color: var(--oc-muted); font-size: 0.78rem; font-weight: 500; padding: 6px 8px 2px; }
+/* The sidebar as Linear draws it (src/app/components/sidebar.tsx). */
+.lin-nav-heading--toggle { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 4px; color: var(--oc-muted); font-size: 0.78rem; font-weight: 500; padding: 6px 8px 2px; cursor: pointer; border-radius: var(--oc-radius, 6px); }
+.lin-nav-heading--toggle:hover { color: var(--oc-fg); }
+.lin-nav-heading--toggle:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-nav-item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 28px; padding: 3px 8px; border-radius: var(--oc-radius, 6px); cursor: pointer; color: var(--oc-fg); font-size: 0.86rem; min-width: 0; }
+.lin-nav-item:hover { background: var(--oc-hover); }
+.lin-nav-item[aria-current="page"] { background: var(--oc-selection); color: var(--oc-selection-fg); }
+.lin-nav-item:focus-visible { outline: 2px solid var(--oc-focus); outline-offset: -2px; }
+.lin-nav-icon { flex: none; color: var(--oc-muted); }
+.lin-nav-item[aria-current="page"] .lin-nav-icon { color: inherit; }
+.lin-nav-label { flex: 1 1 auto; min-width: 0; }
+.lin-nav-count { flex: none; color: var(--oc-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.lin-nav-chevron { flex: none; color: var(--oc-muted); transition: transform 0.12s; }
+.lin-nav-team-row .lin-nav-label { font-weight: 500; flex: 0 1 auto; }
+.lin-nav-team-mark { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 16px; height: 16px; border-radius: 4px; color: var(--oc-bg); font-size: 0.62rem; font-weight: 700; }
+.lin-nav-children { display: flex; flex-direction: column; gap: 1px; padding-left: 6px; border-left: 1px solid var(--oc-border); }
+.lin-nav-foot { margin-top: auto; }
+/* A team's Views page. */
+.lin-view-list { display: flex; flex-direction: column; }
+.lin-view-row { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 4px 8px; border-bottom: 1px solid var(--oc-border); cursor: pointer; min-width: 0; }
+.lin-view-row:hover { background: var(--oc-hover); }
+.lin-view-row:focus-visible { outline: 2px solid var(--oc-focus); outline-offset: -2px; }
+.lin-view-row > .lin-ellipsis { flex: 1 1 auto; }
 .lin-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .lin-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--oc-border); min-height: 44px; }
 .lin-title { margin: 0; font-size: 0.95rem; font-weight: 600; }
 .lin-content { padding: 12px; min-width: 0; }
+.lin-content[hidden] { display: none; }
+/* An open issue on the page: a pane on the right of the whole view, each side scrolling on its own (src/app/issue-pane.tsx). */
+.lin-shell--wide:has(.lin-body--split) { height: 100vh; overflow: hidden; }
+.lin-shell--wide:has(.lin-body--split) .lin-main { min-height: 0; }
+.lin-body--split { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(420px, 46%, 760px); }
+.lin-body--split > .lin-content { overflow-y: auto; min-height: 0; }
+.lin-pane { min-width: 0; min-height: 0; overflow-y: auto; padding: 12px 14px; border-left: 1px solid var(--oc-border); }
 .lin-pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
 /* A Linear data color (status, label, project), never a theme color. */
 .lin-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
@@ -206,6 +236,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-comment-body--reply { border-top: 1px solid var(--oc-border); padding-left: 36px; }
 .lin-nowrap { white-space: nowrap; }
 @container (max-width: 480px) { .lin-issue-crumb { display: none; } }
+.lin-issue-trail { margin-bottom: -6px; }
+/* With the trail above, the bar does not repeat the team. */
+.lin-issue-trail ~ .lin-issue-bar .lin-issue-crumb, .lin-issue-trail ~ .lin-issue-bar .lin-issue-barkey { display: none; }
 
 /* Board. */
 .lin-board-scroll { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 8px; }

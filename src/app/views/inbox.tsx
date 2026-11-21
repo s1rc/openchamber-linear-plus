@@ -14,19 +14,16 @@ import { NOTIFICATIONS } from '../../shared/queries.ts';
 import { inScope } from '../../shared/inbox.ts';
 import type { Notification, NotificationsResult } from '../../shared/types.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
-import { IssueDetail } from '../components/issue-detail.tsx';
-import { openIssueFor, PlaceKey, saveOpenIssue } from '../view-state.ts';
+import { usePaneIssue } from '../issue-pane.tsx';
+import { PlaceKey } from '../view-state.ts';
 
 type Props = { state: DetectionState; scoped: boolean };
 
 export const Inbox = ({ state, scoped }: Props) => {
   const placeKey = useContext(PlaceKey);
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const [openId, setOpenIdState] = useState<string | null>(() => openIssueFor(placeKey, 'inbox'));
-  const setOpenId = (id: string | null) => { setOpenIdState(id); saveOpenIssue(placeKey, 'inbox', id); };
+  const [openId, setOpenId] = usePaneIssue(placeKey, 'inbox', 'Inbox');
   const list = useQuery('notifications', async () => (await gql<NotificationsResult>(NOTIFICATIONS, { after: null })).notifications);
-
-  if (openId) return <IssueDetail id={openId} stacked onClose={() => setOpenId(null)} onOpenIssue={setOpenId} />;
 
   const all = list.data?.nodes ?? [];
   const scopedOn = scoped && state.mapped;

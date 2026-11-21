@@ -253,10 +253,13 @@ const Activity = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (id: str
   );
 };
 
-/** `stacked`: the view replaces a list in a narrow frame, so Back sits on the left. */
-type Props = { id: string; stacked?: boolean; onClose: () => void; onOpenIssue: (identifier: string) => void };
+/**
+ * `stacked`: one column, properties above the description (the rail panel and the page's side pane).
+ * `origin`: where it was opened from, the first crumb. `pane`: it sits beside the view, so the first button closes it.
+ */
+type Props = { id: string; stacked?: boolean; origin?: string; pane?: boolean; onClose: () => void; onOpenIssue: (identifier: string) => void };
 
-export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
+export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }: Props) => {
   const detail = useIssueDetail(id);
   const workspace = useWorkspace();
   const [starting, setStarting] = useState<'session' | 'plan' | null>(null);
@@ -319,10 +322,16 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
 
   return (
     <article class="lin-issue-view">
+      {origin && (
+        // Where the issue was opened from, the same line in the page's pane and on the rail panel.
+        <div class="lin-issue-trail sui-small sui-muted lin-ellipsis" title={`${origin} › ${issue.team.name} › ${issue.identifier}`}>
+          {origin} › {origin !== issue.team.name ? `${issue.team.name} › ` : ''}<span class="sui-mono">{issue.identifier}</span>
+        </div>
+      )}
       <header class="lin-issue-bar">
-        <Button label="Back" variant="ghost" size="xs" onClick={onClose} />
-        <span class="sui-muted sui-small lin-ellipsis lin-issue-crumb">{issue.team.name} ›</span>
-        <span class="sui-mono sui-small lin-nowrap">{issue.identifier}</span>
+        <Button label={pane ? 'Close' : 'Back'} variant="ghost" size="xs" onClick={onClose} />
+        <span class="sui-muted sui-small lin-ellipsis lin-issue-crumb" title={issue.team.name}>{issue.team.name} ›</span>
+        <span class="sui-mono sui-small lin-nowrap lin-issue-barkey">{issue.identifier}</span>
         <span class="sui-grow" />
         <CopyButtons issue={issue} plain />
         {issue.state.type === 'triage' && (

@@ -12,7 +12,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 1
    }
   ]
@@ -30,7 +30,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    }
   ]
@@ -48,7 +48,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -69,7 +69,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -93,7 +93,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    }
   ]
@@ -111,7 +111,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    },
    {
@@ -133,7 +133,7 @@
   "port": 4702,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    },
    {

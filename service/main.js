@@ -651,6 +651,7 @@ var TEAMS = `
       nodes {
         id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
         defaultIssueState { id }
+        parent { id }
         activeCycle { ${CYCLE_SUMMARY} }
       }
     }
@@ -778,6 +779,14 @@ var MILESTONE_ISSUES = `
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
       nodes { projectMilestone { id } }
+      ${PAGE}
+    }
+  }
+`;
+var TRIAGE_COUNTS = `
+  query TriageCounts($teamIds: [ID!]) {
+    issues(first: 250, filter: { team: { id: { in: $teamIds } }, state: { type: { eq: "triage" } } }) {
+      nodes { team { id } }
       ${PAGE}
     }
   }
@@ -999,6 +1008,7 @@ var ALL_DOCUMENTS = {
   PICKER_ISSUES,
   PICKER_SEARCH,
   MILESTONE_ISSUES,
+  TRIAGE_COUNTS,
   ISSUE_UPDATE,
   ISSUE_CREATE,
   ISSUE_RELATION_CREATE,

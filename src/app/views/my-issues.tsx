@@ -25,6 +25,7 @@ export const MyIssues = ({ ctx, state, scoped, viewerId }: { ctx: HostReadyConte
       <IssueBrowser
         key={tab}
         listKey={`my-issues:${tab}`}
+        origin="My issues"
         ctx={ctx}
         scope={all(MY_FILTERS[tab], scope)}
         teamIds={folder ? state.detection.teamIds : []}

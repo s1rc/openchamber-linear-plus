@@ -51,6 +51,7 @@ const CycleBody = ({ ctx, cycle, teamId, viewerId, estimates }: { ctx: HostReady
         key={cycle.id}
         ctx={ctx}
         listKey={`cycle:${cycle.id}`}
+        origin={cycleName(cycle)}
         scope={{ cycle: { id: { eq: cycle.id } } }}
         teamIds={[teamId]}
         viewerId={viewerId}

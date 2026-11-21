@@ -13,10 +13,16 @@ import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { PlanExtrasRunner } from '../shared/plan-extras-runner.tsx';
 import { useDetection, type DetectionState } from '../shared/use-detection.ts';
 import { loadWorkspace, useWorkspace, type Workspace } from '../shared/workspace.ts';
-import { PROJECT_VIEWS, REMEMBERED, TITLES, parseRouteId, routeId, type Route, type View } from './routes.ts';
-import { ALL, FolderHeader, mappedIds, ScopeChip, WorkRow } from './views/folder-header.tsx';
+import { PROJECT_VIEWS, REMEMBERED, TEAM_VIEWS, TITLES, parseRouteId, routeId, type Route, type View } from './routes.ts';
+import { ALL, FolderHeader, mappedIds, ScopeChip } from './views/folder-header.tsx';
 import { scopeFilter } from '../shared/filters.ts';
 import { IssueBrowser } from './components/issue-browser.tsx';
+import { shownTeamIds, Sidebar } from './components/sidebar.tsx';
+import { teamPages, teamTree, type TeamNode } from './nav.ts';
+import { TeamViews } from './views/team-views.tsx';
+import { TeamOverview } from './views/team-overview.tsx';
+import { IssueDetail } from './components/issue-detail.tsx';
+import { IssuePaneProvider, useIssuePane } from './issue-pane.tsx';
 import { FolderOverview } from './views/folder-overview.tsx';
 import { Cycles } from './views/cycles.tsx';
 import { Inbox } from './views/inbox.tsx';
@@ -38,47 +44,13 @@ const navGroups = (workspace: Workspace, state: DetectionState): NavGroup[] => {
     });
   }
   groups.push({ heading: 'Workspace', items: [{ id: 'projects', title: 'Projects' }, { id: 'cycles', title: 'Cycles' }] });
-  // Your teams and the folder's teams; a workspace can have dozens more.
-  const shown = workspace.teams.filter((t) => workspace.myTeamIds.has(t.id) || state.detection.teamIds.includes(t.id));
-  groups.push({
-    heading: 'Your teams',
-    items: shown.flatMap((team) => [
-      { id: `team-issues:${team.id}`, title: team.name },
-      ...(team.triageEnabled ? [{ id: `triage:${team.id}`, title: `${team.name} triage` }] : []),
-    ]),
-  });
+  // The rail's picker lists the same team pages as the page's sidebar, in its tree order.
+  const flat = (nodes: TeamNode[]): TeamNode[] => nodes.flatMap((n) => [n, ...flat(n.children)]);
+  for (const { team } of flat(teamTree(workspace.teams, shownTeamIds(workspace, state)))) {
+    groups.push({ items: teamPages(team).map((page) => ({ id: `${page.view}:${team.id}`, title: `${team.name} · ${page.title}` })) });
+  }
   groups.push({ items: [{ id: 'settings', title: 'Settings' }] });
   return groups;
-};
-
-const Sidebar = ({ workspace, state, route, onRoute }: {
-  workspace: Workspace;
-  state: DetectionState;
-  route: Route;
-  onRoute: (route: Route) => void;
-}) => {
-  const current = routeId(route);
-  return (
-    <nav class="lin-nav" aria-label="Linear">
-      <div class="lin-nav-org">{workspace.viewer.organization?.name ?? 'Linear'}</div>
-      {navGroups(workspace, state).map((group) => {
-        const selected = group.items.some((item) => item.id === current) ? current : null;
-        return (
-        <div class="lin-nav-group">
-          {group.heading && <div class="lin-nav-heading">{group.heading}</div>}
-          {/* Remount when the selection moves, so the kit's keyboard highlight follows it. */}
-          <List
-            key={selected ?? 'none'}
-            items={group.items}
-            selectedId={selected}
-            onSelect={(id) => onRoute(parseRouteId(id))}
-            ariaLabel={group.heading ?? 'Main'}
-          />
-        </div>
-        );
-      })}
-    </nav>
-  );
 };
 
 const ViewPicker = ({ workspace, state, route, onRoute }: {
@@ -144,7 +116,6 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
             body="Pick the team that owns this folder, or the projects it works on. Worktrees of this folder use the same choice."
             action={{ label: 'Pick team or projects', onClick: toPicker }}
           />
-          <WorkRow state={state} />
         </div>
       ) : (
         <Empty title="No folder open" body="Open a project in OpenChamber to see its Linear team here." />
@@ -167,6 +138,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
           <IssueBrowser
             key={`${route.view}:${shown.join(',')}`}
             listKey={`${route.view}:${shown.join(',')}`}
+            origin="This folder"
             defaultMode={route.view === 'project-board' ? 'board' : 'list'}
             viewTeamId={shownTeams.length === 1 ? shownTeams[0] : null}
             ctx={ctx}
@@ -236,6 +208,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
       <IssueBrowser
         key={`triage:${route.teamId}`}
         listKey={`triage:${route.teamId}`}
+        origin={`${team?.name ?? 'Team'} triage`}
         ctx={ctx}
         scope={{ team: { id: { eq: route.teamId } }, state: { type: { eq: 'triage' } } }}
         teamIds={[route.teamId]}
@@ -246,12 +219,23 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
       />
     );
   }
+  if (route.view === 'team-home' && route.teamId) {
+    const team = workspace.teamsById.get(route.teamId);
+    if (team) return <TeamOverview team={team} orgKey={workspace.viewer.organization?.urlKey ?? ''} onProject={(projectId) => onRoute({ view: 'project-detail', projectId })} />;
+  }
+  if (route.view === 'team-projects' && route.teamId) {
+    return <ProjectsList workspace={workspace} state={state} scoped={false} teamIds={[route.teamId]} onOpen={(projectId) => onRoute({ view: 'project-detail', projectId })} />;
+  }
+  if (route.view === 'team-views' && route.teamId) {
+    return <TeamViews teamId={route.teamId} onOpen={() => onRoute({ view: 'team-issues', teamId: route.teamId })} />;
+  }
   if (route.view === 'team-issues' && route.teamId) {
     const team = workspace.teamsById.get(route.teamId);
     return (
       <IssueBrowser
         key={route.teamId}
         listKey={`team-issues:${route.teamId}`}
+        origin={team?.name ?? 'Issues'}
         viewTeamId={route.teamId}
         ctx={ctx}
         scope={scopeFilter([route.teamId], [])}
@@ -268,6 +252,46 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
     <div class="lin-stack">
       {pickPrompt}
       <NotYet view={route.view} />
+    </div>
+  );
+};
+
+const typingIn = (target: EventTarget | null) =>
+  target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+/**
+ * The view, and the open issue drawn the same way whatever view opened it: on the page a pane on the right of the
+ * whole view, on the rail panel in place of the view (kept mounted and hidden, so Back finds it as it was).
+ */
+const PaneLayout = ({ wide, children }: { wide: boolean; children: preact.ComponentChildren }) => {
+  const pane = useIssuePane();
+  const open = pane.current;
+  const close = () => { open?.onClosed?.(); pane.close(); };
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || typingIn(event.target) || document.querySelector('.oc-sdk-popup, .lin-modal')) return;
+      close();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+  return (
+    <div class={open && wide ? 'lin-body lin-body--split' : 'lin-body'}>
+      <div class="lin-content" hidden={Boolean(open) && !wide}>{children}</div>
+      {open && (
+        <aside class={wide ? 'lin-pane' : 'lin-content'} aria-label={`Issue ${open.id}`}>
+          <IssueDetail
+            key={open.id}
+            id={open.id}
+            stacked
+            pane={wide}
+            origin={open.origin}
+            onClose={close}
+            onOpenIssue={(id) => pane.open(open.owner, open.origin, id, open.onClosed)}
+          />
+        </aside>
+      )}
     </div>
   );
 };
@@ -301,7 +325,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
     const usable = (r: Route | undefined): r is Route => Boolean(r)
       && r!.view !== 'picker'
       && (!PROJECT_VIEWS.includes(r!.view) || mapped)
-      && (r!.view !== 'team-issues' && r!.view !== 'triage' || Boolean(r!.teamId && teams.has(r!.teamId)))
+      && (!TEAM_VIEWS.includes(r!.view) || Boolean(r!.teamId && teams.has(r!.teamId)))
       && (r!.view !== 'project-detail' || Boolean(r!.projectId));
     void (async () => {
       const saved = await loadViewState(key);
@@ -403,6 +427,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   const data = workspace.data;
   return (
     <PlaceKey.Provider value={state.place?.key ?? null}>
+    <IssuePaneProvider>
     {state.place && state.mapped && <SnapshotPusher directory={state.place.directory} workspace={data} state={state} />}
     {state.place && state.mapped && <PlanExtrasRunner directory={state.place.directory} viewerId={data.viewer.id} />}
     <div class={wide ? 'lin-shell lin-shell--wide' : 'lin-shell'}>
@@ -413,7 +438,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
           <span class="sui-grow" />
           <Button label="Refresh" variant="ghost" size="sm" onClick={refresh} />
         </header>
-        <div class="lin-content">
+        <PaneLayout wide={wide}>
           <Content
             key={nonce}
             ctx={ctx}
@@ -426,9 +451,10 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
             scoped={scoped}
             onScoped={setScoped}
           />
-        </div>
+        </PaneLayout>
       </main>
     </div>
+    </IssuePaneProvider>
     </PlaceKey.Provider>
   );
 };

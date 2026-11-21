@@ -47,6 +47,8 @@ export type Team = {
   issueEstimationExtended: boolean;
   /** Where new issues land, and where Accept moves a triage issue. */
   defaultIssueState: { id: string } | null;
+  /** The team this one is a sub-team of. */
+  parent: { id: string } | null;
   activeCycle: CycleSummary | null;
 };
 
@@ -273,6 +275,7 @@ export type PickerIssue = {
   parent: { id: string; identifier: string; title: string; state: WorkflowState } | null;
   children: Connection<{ id: string; state: { type: StateType } }>;
 };
+export type TriageCountsResult = { issues: Page<{ team: { id: string } }> };
 export type MilestoneIssuesResult = { issues: Page<{ projectMilestone: { id: string } | null }> };
 export type PickerIssuesResult = { issues: Connection<PickerIssue> };
 export type PickerSearchResult = { searchIssues: Connection<PickerIssue> };

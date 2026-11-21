@@ -6,7 +6,10 @@ export type View =
   | 'project-board'
   | 'projects'
   | 'cycles'
+  | 'team-home'
   | 'team-issues'
+  | 'team-projects'
+  | 'team-views'
   | 'triage'
   | 'project-detail'
   | 'settings'
@@ -18,6 +21,9 @@ export type Route = { view: View; teamId?: string; projectId?: string };
 /** Views remembered as the last view for a folder. */
 export const REMEMBERED: readonly View[] = ['inbox', 'my-issues', 'project', 'project-issues', 'project-board', 'projects', 'cycles'];
 
+/** Views that belong to one team (`teamId` set). */
+export const TEAM_VIEWS: readonly View[] = ['team-home', 'triage', 'team-issues', 'team-projects', 'team-views'];
+
 export const PROJECT_VIEWS: readonly View[] = ['project', 'project-issues', 'project-board'];
 
 export const TITLES: Record<View, string> = {
@@ -28,7 +34,10 @@ export const TITLES: Record<View, string> = {
   'project-board': 'Board',
   projects: 'Projects',
   cycles: 'Cycles',
+  'team-home': 'Home',
   'team-issues': 'Issues',
+  'team-projects': 'Projects',
+  'team-views': 'Views',
   triage: 'Triage',
   'project-detail': 'Project',
   settings: 'Settings',

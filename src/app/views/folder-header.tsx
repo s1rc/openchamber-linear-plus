@@ -1,7 +1,5 @@
-// Above every folder view: which mapped team or project is showing, where the mapping came from,
-// and the issue you are working on here.
+// Above every folder view: which mapped team or project is showing, and where the mapping came from.
 import { Chip } from '@openchamber-ext/shared-ui/preact';
-import { host } from '../../shared/host.ts';
 import { Banner, Button, Tabs } from '../../shared/kit.tsx';
 import { entityName, type DetectionState } from '../../shared/use-detection.ts';
 import type { Workspace } from '../../shared/workspace.ts';
@@ -16,20 +14,6 @@ export const mappedNames = (workspace: Workspace, state: DetectionState) =>
 const tabLabel = (workspace: Workspace, id: string) => {
   const team = workspace.teamsById.get(id);
   return team ? `${team.key} · ${team.name}` : entityName(workspace, id);
-};
-
-/** The issue from this folder's branch or latest session: your work, whoever owns the folder. */
-export const WorkRow = ({ state }: { state: DetectionState }) => {
-  const work = state.detection.work;
-  if (!work) return null;
-  return (
-    <div class="sui-row sui-small">
-      <span class="sui-muted">{work.from === 'branch' ? 'Your branch:' : 'Your latest session:'}</span>
-      <Chip><span class="sui-mono">{work.identifier}</span> {work.title}</Chip>
-      {work.projectName && <span class="sui-muted">in {work.projectName}</span>}
-      <Button label="Open" variant="ghost" size="xs" onClick={() => { void host.openUrl(work.url); }} />
-    </div>
-  );
 };
 
 type Props = {
@@ -65,7 +49,6 @@ export const FolderHeader = ({ workspace, state, activeId, onActive, onChange }:
           <span class="sui-grow" />
           <Button label="Change" variant="ghost" size="sm" onClick={onChange} />
         </div>
-        <WorkRow state={state} />
       </div>
     );
   }
@@ -78,7 +61,6 @@ export const FolderHeader = ({ workspace, state, activeId, onActive, onChange }:
         <span class="sui-muted sui-small">{detection.source === 'config' ? 'From .linear.json' : 'Saved for this folder'}</span>
         <Button label="Change" variant="ghost" size="xs" onClick={onChange} />
       </div>
-      <WorkRow state={state} />
     </div>
   );
 };

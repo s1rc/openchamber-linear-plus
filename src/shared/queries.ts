@@ -50,6 +50,7 @@ export const TEAMS = `
       nodes {
         id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
         defaultIssueState { id }
+        parent { id }
         activeCycle { ${CYCLE_SUMMARY} }
       }
     }
@@ -200,6 +201,16 @@ export const MILESTONE_ISSUES = `
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
       nodes { projectMilestone { id } }
+      ${PAGE}
+    }
+  }
+`;
+
+/** Triage issues of the given teams, for the counts beside Triage in the sidebar. */
+export const TRIAGE_COUNTS = `
+  query TriageCounts($teamIds: [ID!]) {
+    issues(first: 250, filter: { team: { id: { in: $teamIds } }, state: { type: { eq: "triage" } } }) {
+      nodes { team { id } }
       ${PAGE}
     }
   }
@@ -441,7 +452,7 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
-  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES,
+  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, TRIAGE_COUNTS,
   ISSUE_UPDATE, ISSUE_CREATE, ISSUE_RELATION_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

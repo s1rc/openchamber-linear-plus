@@ -1,10 +1,11 @@
 // A mapped team: its active cycle and its active projects.
 import { Cards, Section, StatCard } from '@openchamber-ext/shared-ui/preact';
-import { daysUntil, HEALTH_LABEL, HEALTH_TONE, percent, shortDate } from '../../shared/format.ts';
+import { daysUntil, percent, shortDate } from '../../shared/format.ts';
 import { host } from '../../shared/host.ts';
-import { Button, Empty, List, Progress, Spinner } from '../../shared/kit.tsx';
+import { Button, Empty, Progress, Spinner } from '../../shared/kit.tsx';
 import { useTeamProjects } from '../../shared/projects.ts';
 import type { Team } from '../../shared/types.ts';
+import { ProjectTable } from '../components/project-table.tsx';
 
 export const TeamOverview = ({ team, orgKey, onProject }: { team: Team; orgKey: string; onProject: (id: string) => void }) => {
   const projects = useTeamProjects([team.id]);
@@ -31,17 +32,7 @@ export const TeamOverview = ({ team, orgKey, onProject }: { team: Team; orgKey: 
       {projects.loading && !projects.data ? (
         <Spinner size="sm" label="Loading projects" />
       ) : projects.data?.length ? (
-        <List
-          items={projects.data.slice(0, 25).map((p) => ({
-            id: p.id,
-            title: p.name,
-            subtitle: [p.status.name, p.targetDate ? `target ${shortDate(p.targetDate)}` : ''].filter(Boolean).join(' · '),
-            meta: percent(p.progress),
-            ...(p.health ? { badge: { label: HEALTH_LABEL[p.health], tone: HEALTH_TONE[p.health] } } : {}),
-          }))}
-          onSelect={onProject}
-          ariaLabel={`${team.name} projects`}
-        />
+        <ProjectTable projects={projects.data.slice(0, 50)} onOpen={onProject} />
       ) : (
         <Empty title="No active projects" body={`${team.name} has no project in progress.`} />
       )}

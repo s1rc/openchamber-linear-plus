@@ -276,6 +276,7 @@ ${Ol}`;var Cl="oc-sdk-ui-style",At=(e)=>{while(e.firstChild)e.removeChild(e.firs
       nodes {
         id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
         defaultIssueState { id }
+        parent { id }
         activeCycle { id number name startsAt endsAt progress isActive isFuture isPast completedAt }
       }
     }
@@ -546,6 +547,7 @@ ${Ol}`;var Cl="oc-sdk-ui-style",At=(e)=>{while(e.firstChild)e.removeChild(e.firs
       nodes {
         id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
         defaultIssueState { id }
+        parent { id }
         activeCycle { id number name startsAt endsAt progress isActive isFuture isPast completedAt }
       }
     }
@@ -905,6 +907,13 @@ ${Ol}`;var Cl="oc-sdk-ui-style",At=(e)=>{while(e.firstChild)e.removeChild(e.firs
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
       nodes { projectMilestone { id } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`,TRIAGE_COUNTS:`
+  query TriageCounts($teamIds: [ID!]) {
+    issues(first: 250, filter: { team: { id: { in: $teamIds } }, state: { type: { eq: "triage" } } }) {
+      nodes { team { id } }
       pageInfo { hasNextPage endCursor }
     }
   }

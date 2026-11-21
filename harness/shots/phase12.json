@@ -282,7 +282,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    },
    {
@@ -307,7 +307,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    },
    {
@@ -339,7 +339,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 5
    },
    {
@@ -371,7 +371,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -395,7 +395,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -426,7 +426,7 @@
   "port": 4812,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -471,7 +471,7 @@
   "port": 4813,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -493,7 +493,7 @@
   "port": 4813,
   "steps": [
    {
-    "css": ".lin-nav [role=\"option\"]",
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
     "nth": 3
    },
    {
@@ -515,6 +515,301 @@
   "steps": [
    {
     "wait": 4000
+   }
+  ]
+ },
+ {
+  "name": "p12-pane-cycle",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
+    "nth": 6
+   },
+   {
+    "wait": 1000
+   },
+   {
+    "css": "[data-issue]",
+    "nth": 0
+   },
+   {
+    "wait": 1000
+   }
+  ]
+ },
+ {
+  "name": "p12-pane-project",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   },
+   {
+    "wait": 1200
+   },
+   {
+    "css": ".lin-milestone-count",
+    "nth": 1
+   },
+   {
+    "wait": 1200
+   },
+   {
+    "css": "[data-issue]",
+    "nth": 0
+   },
+   {
+    "wait": 1000
+   }
+  ]
+ },
+ {
+  "name": "p12-pane-team",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p12-pane-inbox",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
+    "nth": 0
+   },
+   {
+    "css": ".lin-notification",
+    "nth": 0
+   }
+  ]
+ },
+ {
+  "name": "p12-pane-project-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1800,
+  "port": 4812,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p12-sidebar",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-sidebar-sub",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": "[data-team=\"MOB\"] .lin-nav-team-row"
+   },
+   {
+    "wait": 400
+   },
+   {
+    "css": "[data-team=\"MOB\"] .lin-nav-children > .lin-nav-item",
+    "nth": 0
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-team-views",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": "[data-team=\"ENG\"] .lin-nav-children > .lin-nav-item",
+    "nth": 4
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-team-projects",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": "[data-team=\"ENG\"] .lin-nav-children > .lin-nav-item",
+    "nth": 3
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-rail-picker",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-header .oc-sdk-trigger"
+   },
+   {
+    "wait": 500
+   }
+  ]
+ },
+ {
+  "name": "p12-projects-card",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav .lin-nav-item:not(.lin-nav-team-row)",
+    "nth": 5
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-overview-table",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1100,
+  "height": 700,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-overview-table-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1200
    }
   ]
  }

@@ -210,6 +210,7 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
         <IssueBrowser
           ctx={ctx}
           listKey={`project:${project.id}`}
+          origin={project.name}
           scope={scopeFilter([], [project.id])}
           viewerId={viewerId}
           showProject={false}

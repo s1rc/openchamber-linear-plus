@@ -349,6 +349,7 @@ Use only keys you know exist. If none fit, say so instead of guessing.`}}throw n
       nodes {
         id key name color icon cyclesEnabled triageEnabled issueEstimationType issueEstimationAllowZero issueEstimationExtended
         defaultIssueState { id }
+        parent { id }
         activeCycle { id number name startsAt endsAt progress isActive isFuture isPast completedAt }
       }
     }
@@ -708,6 +709,13 @@ Use only keys you know exist. If none fit, say so instead of guessing.`}}throw n
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
       nodes { projectMilestone { id } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`,TRIAGE_COUNTS:`
+  query TriageCounts($teamIds: [ID!]) {
+    issues(first: 250, filter: { team: { id: { in: $teamIds } }, state: { type: { eq: "triage" } } }) {
+      nodes { team { id } }
       pageInfo { hasNextPage endCursor }
     }
   }
