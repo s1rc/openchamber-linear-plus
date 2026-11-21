@@ -3,21 +3,22 @@
 import { KV, Section } from '@openchamber-ext/shared-ui/preact';
 import { api } from '@openchamber-ext/shared-ui';
 import { useEffect, useState } from 'preact/hooks';
-import { useQuery } from '../../shared/cache.ts';
+import { invalidate, put, useQuery } from '../../shared/cache.ts';
 import { fetchChoices } from '../../shared/choices.ts';
+import type { Choice, Choices } from '../../shared/choices-rules.ts';
 import { DEFAULT_ID, withSaved } from '../../shared/choices-rules.ts';
 import { DraftRow } from '../../shared/draft-row.tsx';
 import { fetchDrafts } from '../../shared/drafts.ts';
 import { rowKey } from '../../shared/handoff-rules.ts';
 import { host } from '../../shared/host.ts';
 import { Banner, Button, Select, Spinner, Switch, TextField } from '../../shared/kit.tsx';
-import type { FinishComments } from '../../shared/storage.ts';
+import { getAgentDefaults, setAgentDefaults, type FinishComments } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 
 type ServiceState = { reachable: boolean; hasKey: boolean };
 
 const readService = async (): Promise<ServiceState> => {
-  const reply = await api(host, 'GET', '/config', { name: 'Linear' });
+  const reply = await api(host, 'GET', '/config', { name: 'Linear+' });
   return reply.ok === false ? { reachable: false, hasKey: false } : { reachable: true, hasKey: reply.hasKey === true };
 };
 
@@ -33,30 +34,38 @@ const COPY = {
 } as const;
 const keys = (role: Role) => (role === 'plan' ? ({ agent: 'planAgent', model: 'planModel' } as const) : ({ agent: 'buildAgent', model: 'buildModel' } as const));
 
-const TypedFields = ({ state, role }: { state: DetectionState; role: Role }) => {
-  const mapping = state.detection.mapping;
-  const k = keys(role);
-  const [agent, setAgent] = useState(mapping?.[k.agent] ?? '');
-  const [model, setModel] = useState(mapping?.[k.model] ?? '');
+/** One agent and model pair: the one for every folder, or this folder's. */
+type Pair = {
+  agent: string;
+  model: string;
+  save: (agent: string, model: string) => Promise<boolean>;
+  disabled: boolean;
+  /** The first entry of each select: what an empty value means here. */
+  agentDefault: string;
+  modelDefault: string;
+};
+
+const TypedFields = ({ pair, role }: { pair: Pair; role: Role }) => {
+  const [agent, setAgent] = useState(pair.agent);
+  const [model, setModel] = useState(pair.model);
   const [saved, setSaved] = useState(false);
-  useEffect(() => { setAgent(mapping?.[k.agent] ?? ''); setModel(mapping?.[k.model] ?? ''); }, [mapping?.[k.agent], mapping?.[k.model]]);
+  useEffect(() => { setAgent(pair.agent); setModel(pair.model); }, [pair.agent, pair.model]);
   const badModel = model.trim() !== '' && !/^[^\s/]+\/\S+$/.test(model.trim());
-  const dirty = agent.trim() !== (mapping?.[k.agent] ?? '') || model.trim() !== (mapping?.[k.model] ?? '');
+  const dirty = agent.trim() !== pair.agent || model.trim() !== pair.model;
   return (
     <>
-      <div class="sui-muted sui-small">The list of agents and models could not be read, so write them out.</div>
-      <TextField label={COPY[role].agent} value={agent} onChange={(v) => { setAgent(v); setSaved(false); }} placeholder={COPY[role].example} disabled={!mapping} mono />
+      <TextField label={COPY[role].agent} value={agent} onChange={(v) => { setAgent(v); setSaved(false); }} placeholder={`${COPY[role].example}, or empty for: ${pair.agentDefault}`} disabled={pair.disabled} mono />
       <TextField
         label={COPY[role].model}
         value={model}
         onChange={(v) => { setModel(v); setSaved(false); }}
-        placeholder="provider/model, empty for the default"
-        disabled={!mapping}
+        placeholder={`provider/model, or empty for: ${pair.modelDefault}`}
+        disabled={pair.disabled}
         mono
         {...(badModel ? { error: 'Write it as provider/model, for example fireworks-ai/accounts/fireworks/models/kimi-k3.' } : {})}
       />
       <div class="sui-row">
-        <Button label="Save" size="sm" disabled={!mapping || !dirty || badModel} onClick={() => { void state.update({ [k.agent]: agent.trim(), [k.model]: model.trim() }).then((ok) => setSaved(ok)); }} />
+        <Button label="Save" size="sm" disabled={pair.disabled || !dirty || badModel} onClick={() => { void pair.save(agent.trim(), model.trim()).then((ok) => setSaved(ok)); }} />
         {saved && <span class="sui-small sui-muted">Saved</span>}
       </div>
     </>
@@ -64,33 +73,76 @@ const TypedFields = ({ state, role }: { state: DetectionState; role: Role }) => 
 };
 
 /** Pick an agent and a model from what OpenCode offers; a pick is saved at once. */
-const AgentModelFields = ({ state, role }: { state: DetectionState; role: Role }) => {
+const AgentModelFields = ({ pair, role, choices }: { pair: Pair; role: Role; choices: Choices | null }) => {
+  if (!choices) return <TypedFields pair={pair} role={role} />;
+  const agents = withSaved(choices.agents, pair.agent, pair.agentDefault);
+  const models = withSaved(choices.models, pair.model, pair.modelDefault);
+  return (
+    <div class="lin-field-pair">
+      <Select label={COPY[role].agent} value={pair.agent || DEFAULT_ID} options={agents} disabled={pair.disabled} onChange={(id) => { void pair.save(id === DEFAULT_ID ? '' : id, pair.model); }} />
+      <Select
+        label={COPY[role].model}
+        value={pair.model || DEFAULT_ID}
+        options={models}
+        disabled={pair.disabled}
+        searchable
+        searchPlaceholder="Search models"
+        onChange={(id) => { void pair.save(pair.agent, id === DEFAULT_ID ? '' : id); }}
+      />
+    </div>
+  );
+};
+
+const labelOf = (list: readonly Choice[], id: string | undefined): string | null => (id ? list.find((c) => c.id === id)?.label ?? id : null);
+
+/** The agent and model for every folder, then this folder's own, which wins when set. */
+const RoleFields = ({ state, role }: { state: DetectionState; role: Role }) => {
   const mapping = state.detection.mapping;
   const directory = state.place?.directory ?? null;
   const choices = useQuery(`settings:choices:${directory ?? ''}`, () => fetchChoices(directory));
-  if (choices.loading && choices.data === undefined) return <Spinner size="sm" label="Reading agents and models" />;
-  if (!choices.data) return <TypedFields state={state} role={role} />;
+  const defaults = useQuery('settings:agent-defaults', getAgentDefaults);
+  if ((choices.loading && choices.data === undefined) || !defaults.data) return <Spinner size="sm" label="Reading agents and models" />;
   const k = keys(role);
-  const agents = withSaved(choices.data.agents, mapping?.[k.agent], COPY[role].agentDefault);
-  const models = withSaved(choices.data.models, mapping?.[k.model], choices.data.defaultModel ? 'Your default model' : 'The host default');
+  const list = choices.data ?? null;
+  const all = defaults.data;
+  const hostModel = list?.defaultModel ? 'Your default model' : 'The host default';
+  const everywhere: Pair = {
+    agent: all[k.agent] ?? '',
+    model: all[k.model] ?? '',
+    disabled: false,
+    agentDefault: COPY[role].agentDefault,
+    modelDefault: hostModel,
+    save: async (agent, model) => {
+      const next = { ...all, [k.agent]: agent || undefined, [k.model]: model || undefined };
+      put('settings:agent-defaults', next);
+      const saved = await setAgentDefaults(next);
+      invalidate('start-choices:');
+      return saved;
+    },
+  };
+  const inherited = (id: string | undefined, fallback: string, options: readonly Choice[]) => `All folders: ${labelOf(options, id) ?? fallback}`;
+  const folder: Pair = {
+    agent: mapping?.[k.agent]?.trim() ?? '',
+    model: mapping?.[k.model]?.trim() ?? '',
+    disabled: !mapping,
+    agentDefault: inherited(all[k.agent], COPY[role].agentDefault, list?.agents ?? []),
+    modelDefault: inherited(all[k.model], hostModel, list?.models ?? []),
+    save: async (agent, model) => {
+      const saved = await state.update({ [k.agent]: agent, [k.model]: model });
+      invalidate('start-choices:');
+      return saved;
+    },
+  };
   return (
     <>
-      <Select
-        label={COPY[role].agent}
-        value={mapping?.[k.agent]?.trim() || DEFAULT_ID}
-        options={agents}
-        disabled={!mapping}
-        onChange={(id) => { void state.update({ [k.agent]: id === DEFAULT_ID ? '' : id }); }}
-      />
-      <Select
-        label={COPY[role].model}
-        value={mapping?.[k.model]?.trim() || DEFAULT_ID}
-        options={models}
-        disabled={!mapping}
-        searchable
-        searchPlaceholder="Search models"
-        onChange={(id) => { void state.update({ [k.model]: id === DEFAULT_ID ? '' : id }); }}
-      />
+      {!list && <div class="sui-muted sui-small">The list of agents and models could not be read, so write them out.</div>}
+      <div class="lin-subheading">All folders</div>
+      <AgentModelFields pair={everywhere} role={role} choices={list} />
+      <div class="lin-subheading">This folder</div>
+      <AgentModelFields pair={folder} role={role} choices={list} />
+      <div class="sui-muted sui-small">
+        {mapping ? 'Leave this folder on "All folders" to follow the setting above.' : 'Pin this folder to a team or project to give it its own agent and model.'}
+      </div>
     </>
   );
 };
@@ -153,7 +205,7 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
       <Section title="Agent context">
         <KV items={[['Personal API key', service.data ? (service.data.hasKey ? 'Set' : 'Not set') : '...']]} />
         {service.data && !service.data.reachable && (
-          <Banner tone="warning" title="The Linear service is not running" body="Approve the Linear extension in Settings, Extensions. Until then agents get no Linear context and the @ menu has no Linear rows." />
+          <Banner tone="warning" title="The Linear+ service is not running" body="Approve the Linear+ extension in Settings, Extensions. Until then agents get no Linear context and the @ menu has no Linear rows." />
         )}
         {service.data?.reachable && !service.data.hasKey && (
           <div class="sui-muted sui-small">
@@ -185,14 +237,13 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
         <div class="sui-muted sui-small">
           Start plan makes the issue's worktree and starts a planning session in it with this agent and model. The session plans and stops: it changes no files.
         </div>
-        <AgentModelFields state={state} role="plan" />
-        {!mapping && <div class="sui-muted sui-small">Pin this folder to a team or project first.</div>}
+        <RoleFields state={state} role="plan" />
       </Section>
       <Section title="Start build">
         <div class="sui-muted sui-small">
-          Start build begins a new session in the same worktree with the plan from the planning session. Pick the agent and model it uses here, or leave both on the default.
+          Start build begins a new session in the same worktree with the plan from the planning session. Pick the agent and model it uses for every folder, and this folder's own when it should differ.
         </div>
-        <AgentModelFields state={state} role="build" />
+        <RoleFields state={state} role="build" />
         <ReviewFields state={state} />
         <Switch
           label="Add the plan to the issue description when I click Start build"

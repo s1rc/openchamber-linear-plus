@@ -5,6 +5,8 @@ import type { ReadText } from './directories.ts';
 
 export type Choice = { id: string; label: string; hint?: string };
 export type Choices = { agents: Choice[]; models: Choice[]; defaultModel: string | null };
+/** The agent and model a plan or build would start with here when nothing is picked for that one start. */
+export type CurrentChoice = { agent: string; model?: string };
 
 export type ChoicesIo = {
   read: ReadText;

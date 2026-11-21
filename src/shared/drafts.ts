@@ -29,7 +29,7 @@ export const parseDrafts = (reply: { [key: string]: unknown } | null | undefined
 
 /** Drafts waiting for this folder. An unreachable or older service means none. */
 export const fetchDrafts = async (directory: string): Promise<Draft[]> => {
-  const reply = await api(host, 'GET', '/drafts', { query: { directory }, name: 'Linear' });
+  const reply = await api(host, 'GET', '/drafts', { query: { directory }, name: 'Linear+' });
   return reply.ok === false ? [] : parseDrafts(reply);
 };
 
@@ -39,10 +39,10 @@ export const postDraft = async (draft: Draft, body: string): Promise<void> => {
   const issue = Object.values(found).find((row) => row !== null);
   if (!issue) throw new Error(`${draft.identifier} was not found in Linear.`);
   await addComment(issue, body);
-  await api(host, 'POST', '/drafts', { body: { id: draft.id, action: 'posted' }, name: 'Linear' });
+  await api(host, 'POST', '/drafts', { body: { id: draft.id, action: 'posted' }, name: 'Linear+' });
 };
 
 export const discardDraft = async (draft: Draft): Promise<boolean> => {
-  const reply = await api(host, 'POST', '/drafts', { body: { id: draft.id, action: 'discard' }, name: 'Linear' });
+  const reply = await api(host, 'POST', '/drafts', { body: { id: draft.id, action: 'discard' }, name: 'Linear+' });
   return reply.ok !== false;
 };

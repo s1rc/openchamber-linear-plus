@@ -282,6 +282,49 @@ var QUOTA_PROVIDER_IDLE_MS = 10 * 60000;
 // node_modules/@openchamber/sdk/dist/service-surface.js
 var SURFACE_CONTROLLERS = ["none", "agent", "user"];
 var CONTROLLERS = new Set(SURFACE_CONTROLLERS);
+// src/shared/plan-extras.ts
+var EXTRAS_FENCE = "linear-plan";
+var EXTRA_ISSUES_MAX = 10;
+var TITLE_MAX = 200;
+var DESCRIPTION_MAX = 8000;
+var BLOCK = new RegExp("```" + EXTRAS_FENCE + "[^\\n]*\\n([\\s\\S]*?)```", "g");
+var number = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1000 ? value : null;
+var oneLine = (value, max) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+var parsePlanExtras = (reply) => {
+  const blocks = [...reply.matchAll(BLOCK)];
+  const body = blocks.at(-1)?.[1];
+  if (body === undefined)
+    return null;
+  let raw;
+  try {
+    raw = JSON.parse(body.trim());
+  } catch {
+    return null;
+  }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+    return null;
+  const record = raw;
+  const issues = [];
+  for (const item of Array.isArray(record.issues) ? record.issues : []) {
+    if (typeof item !== "object" || item === null)
+      continue;
+    const entry = item;
+    const title = oneLine(entry.title, TITLE_MAX);
+    if (!title)
+      continue;
+    const description = typeof entry.description === "string" ? entry.description.trim().slice(0, DESCRIPTION_MAX) : "";
+    issues.push({ title, description, estimate: number(entry.estimate) });
+    if (issues.length >= EXTRA_ISSUES_MAX)
+      break;
+  }
+  const estimate = number(record.estimate);
+  return estimate === null && issues.length === 0 ? null : { estimate, issues };
+};
+var withoutExtras = (text) => text.replace(BLOCK, "").replace(/\n{3,}/g, `
+
+`).trim();
+var CLAIM_STALE_MS = 2 * 60000;
+
 // src/service/directories.ts
 import path from "node:path";
 var trimDir = (directory) => {
@@ -394,7 +437,7 @@ var looksLikePlan = (reply) => {
   return structure >= 4 && /\bplan\b/i.test(text);
 };
 var handoffId = (sessionId, identifier) => `${sessionId}:${identifier}`;
-var withoutBlocks = (reply) => reply.replace(/```openui-lang[\s\S]*?```/g, "").replace(/\n{3,}/g, `
+var withoutBlocks = (reply) => withoutExtras(reply.replace(/```openui-lang[\s\S]*?```/g, "")).replace(/\n{3,}/g, `
 
 `).trim();
 var PLANS_KEPT = 10;
@@ -411,6 +454,10 @@ var handoffPrompt = (input) => {
     `Reference ${input.identifier} in commit messages and the pull request title so Linear links them.`,
     input.planSessionTitle ? `The plan came from the session "${input.planSessionTitle.replace(/\s+/g, " ").trim().slice(0, 120)}".` : ""
   ].filter(Boolean);
+  const split = (input.splitOut ?? []).filter(Boolean).slice(0, 10);
+  if (split.length) {
+    where.push(`The plan split these parts into separate Linear issues; leave them out of this build: ${split.map((t) => `"${t.replace(/\s+/g, " ").trim().slice(0, 160)}"`).join(", ")}.`);
+  }
   const finish = input.review && input.review.mode !== "off" ? reviewSteps(input.review.mode, input.identifier, input.review.reviewers) : ["Implement this plan now. Follow its steps in order, run the project's tests, and report what changed."];
   return [head, "", ...where, "", "Plan:", "---", body, "---", "", ...finish].join(`
 `);
@@ -443,6 +490,30 @@ var cleanAgent = (value, fallback = "build") => {
   const text = value?.trim();
   return text && /^[A-Za-z0-9._-]{1,64}$/.test(text) ? text : fallback;
 };
+var sessionChoice = (role, folder, defaults, override = {}) => {
+  const agentKey = role === "plan" ? "planAgent" : "buildAgent";
+  const modelKey = role === "plan" ? "planModel" : "buildModel";
+  const text = (value) => typeof value === "string" ? value : undefined;
+  const agent = [override.agent, folder?.[agentKey], defaults?.[agentKey]].map((v) => text(v)?.trim()).find((v) => v && cleanAgent(v, "") === v) ?? role;
+  const model = [override.model, folder?.[modelKey], defaults?.[modelKey]].map((v) => cleanModel(text(v))).find(Boolean);
+  return model ? { agent, model } : { agent };
+};
+var extrasLines = (identifier, scale) => {
+  const text = scale?.replace(/\s+/g, " ").trim().slice(0, 400);
+  if (!text)
+    return [];
+  return [
+    `Size the work. ${text} Size by the effort for a coding agent like you (reading, changing and testing the code, and the review rounds), not by a person's days. Give one estimate for ${identifier} as planned, and one for each split-out issue.`,
+    "",
+    `If part of the work is better done as a separate issue (it can ship on its own, or it belongs to another area), leave it out of the plan and list it instead. Each one becomes a separate Linear issue in the same team and project, related to ${identifier}. Do not create issues or change estimates yourself: the Linear+ extension does it when this plan finishes. Most plans split nothing.`,
+    "",
+    `Put this block just before the closing card, once, with valid JSON (an empty list when nothing is split out):`,
+    "```" + EXTRAS_FENCE,
+    '{"estimate": 3, "issues": [{"title": "Short title", "description": "What it is and why, in markdown", "estimate": 2}]}',
+    "```",
+    ""
+  ];
+};
 var planPrompt = (input) => {
   const context = input.context.trim().slice(0, 20000);
   return [
@@ -459,7 +530,8 @@ var planPrompt = (input) => {
     "",
     "You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.",
     "",
-    'This session only plans. A separate build session, started from the Linear extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
+    ...extrasLines(input.identifier, input.scale),
+    'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
     "",
     "End that final message with this block, exactly, so the Linear card with the Start build button appears under the plan (it is only a display, not a question):",
     "```openui-lang",
@@ -479,7 +551,7 @@ var clip = (text, max) => {
 };
 var issueLine = (issue, title) => `${issue.identifier} ${clip(issue.title, title)}${issue.state ? ` [${issue.state}]` : ""}`;
 var render = (input, budget) => {
-  const lines = ["Linear for this folder (from the Linear extension):"];
+  const lines = ["Linear for this folder (from the Linear+ extension):"];
   const projects = input.projects.slice(0, budget.projects).map((p) => `${clip(p.name, 50)} (${p.url})`);
   const teams = input.teamKeys.slice(0, 4);
   const where = [projects.length ? `Projects: ${projects.join(", ")}` : "", teams.length ? `${teams.length > 1 ? "teams" : "team"} ${teams.join(", ")}` : ""].filter(Boolean);
@@ -620,7 +692,7 @@ var PROJECT_DETAIL = `
       ${PROJECT_SUMMARY}
       description content
       members(first: 50) { nodes { ${USER} } }
-      projectMilestones(first: 50) { nodes { id name targetDate progress sortOrder } }
+      projectMilestones(first: 50) { nodes { id name description targetDate progress sortOrder } }
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
@@ -641,7 +713,7 @@ var ISSUE_DETAIL = `
       ${ISSUE_ROW}
       description
       creator { ${USER} }
-      team { id key name states(first: 100) { nodes { ${STATE} } } }
+      team { id key name issueEstimationType issueEstimationAllowZero issueEstimationExtended states(first: 100) { nodes { ${STATE} } } }
       children(first: 50) { nodes { ${ISSUE_ROW} } }
       comments(first: 100) { nodes { id body createdAt editedAt url user { ${USER} } parent { id } } }
       links: attachments(first: 50) { nodes { id title subtitle url sourceType metadata createdAt } }
@@ -698,6 +770,14 @@ var ISSUE_EXTRAS = `
         needs(first: 3) { nodes { id customer { id name revenue } } }
         stateHistory(last: 1) { nodes { startedAt } }
       }
+      ${PAGE}
+    }
+  }
+`;
+var MILESTONE_ISSUES = `
+  query MilestoneIssues($projectId: ID!, $after: String) {
+    issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
+      nodes { projectMilestone { id } }
       ${PAGE}
     }
   }
@@ -803,6 +883,26 @@ var SEARCH_ISSUES = `
     searchIssues(term: $term, first: 20, filter: $filter) { nodes { ${ISSUE_ROW} } }
   }
 `;
+var PICKER_ROW = `
+  id identifier title priority updatedAt url branchName
+  state { ${STATE} }
+  team { id key name }
+  assignee { ${USER} }
+  labels(first: 6) { nodes { ${LABEL} } }
+  project { id name color icon }
+  parent { id identifier title state { ${STATE} } }
+  children(first: 25) { nodes { id state { type } } }
+`;
+var PICKER_ISSUES = `
+  query PickerIssues($filter: IssueFilter, $first: Int) {
+    issues(first: $first, filter: $filter, orderBy: updatedAt) { nodes { ${PICKER_ROW} } }
+  }
+`;
+var PICKER_SEARCH = `
+  query PickerSearch($term: String!, $filter: IssueFilter) {
+    searchIssues(term: $term, first: 30, filter: $filter) { nodes { ${PICKER_ROW} } }
+  }
+`;
 var SEARCH_PROJECTS = `
   query SearchProjects($term: String!) {
     searchProjects(term: $term, first: 20) { nodes { ${PROJECT_SUMMARY} } }
@@ -826,6 +926,11 @@ var DOCUMENT = `
 var ISSUE_UPDATE = `
   mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
     issueUpdate(id: $id, input: $input) { success issue { ${ISSUE_ROW} } }
+  }
+`;
+var ISSUE_RELATION_CREATE = `
+  mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
+    issueRelationCreate(input: $input) { success }
   }
 `;
 var ISSUE_CREATE = `
@@ -891,8 +996,12 @@ var ALL_DOCUMENTS = {
   SEARCH_DOCUMENTS,
   DOCUMENTS,
   DOCUMENT,
+  PICKER_ISSUES,
+  PICKER_SEARCH,
+  MILESTONE_ISSUES,
   ISSUE_UPDATE,
   ISSUE_CREATE,
+  ISSUE_RELATION_CREATE,
   COMMENT_CREATE,
   PROJECT_UPDATE_CREATE,
   NOTIFICATION_MARK_READ,
@@ -1070,6 +1179,17 @@ var mapping = (raw) => {
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0
   };
 };
+var readDefaults = (raw) => {
+  if (!isObject(raw))
+    return;
+  const defaults = {
+    ...optional("planAgent", text(raw.planAgent, 64)),
+    ...optional("planModel", text(raw.planModel, 200)),
+    ...optional("buildAgent", text(raw.buildAgent, 64)),
+    ...optional("buildModel", text(raw.buildModel, 200))
+  };
+  return Object.keys(defaults).length ? defaults : undefined;
+};
 var readConfig = (raw) => {
   if (!isObject(raw) || !isObject(raw.directories))
     return null;
@@ -1079,7 +1199,8 @@ var readConfig = (raw) => {
     if (read)
       directories[read.directory] = read;
   }
-  return { directories };
+  const defaults = readDefaults(raw.defaults);
+  return defaults ? { directories, defaults } : { directories };
 };
 var knownTeamKeys = (snapshot) => {
   const keys = new Set;
@@ -1189,8 +1310,8 @@ var fetchDocText = async (gql, id) => documentContext((await gql(DOCUMENT, { id 
 // src/service/mentions.ts
 var ROWS_MAX = 20;
 var TEXT_LIMIT = 15000;
-var TITLE_MAX = 120;
-var clip2 = (text, max = TITLE_MAX) => {
+var TITLE_MAX2 = 120;
+var clip2 = (text, max = TITLE_MAX2) => {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 3)}...` : flat;
 };
@@ -1288,6 +1409,8 @@ var SEEN_MAX = 50;
 var DEBUG_FLAG = "debug-events";
 var NOT_A_PLAN = "The last reply in that session is not a plan. Ask the session to repeat the final plan in full, then try again.";
 var IDENTIFIER = /^[A-Za-z][A-Za-z0-9]{0,6}-\d{1,9}$/;
+var EXTRAS_KEPT = 40;
+var EXTRAS_SHOWN_MS = 14 * 24 * 60 * 60000;
 var isObject2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var parse = (raw) => {
   try {
@@ -1513,6 +1636,8 @@ var createApp = (deps) => {
   };
   const postHandoffs = (raw) => {
     const body = parse(raw);
+    if (typeof body.action === "string" && body.action.endsWith("-extras") || body.action === "extras-done" || body.action === "extras-failed")
+      return postExtras(body);
     const id = typeof body.id === "string" ? body.id : "";
     if (!id || body.action !== "dismiss")
       return fail("Expected { id, action: 'dismiss' }.", 400);
@@ -1521,6 +1646,58 @@ var createApp = (deps) => {
     if (handoffs.pending.length !== before)
       saveHandoffs();
     return { body: { ok: true } };
+  };
+  const extrasFor = (directory) => {
+    const folder = directory ? mappedFor(directory) : null;
+    if (directory && !folder)
+      return [];
+    return Object.values(handoffs.extras ?? {}).filter((x) => (!folder || x.directory === folder) && now() - x.at < EXTRAS_SHOWN_MS).sort((a, b) => b.at - a.at).slice(0, 20);
+  };
+  const keepExtras = (state) => {
+    const all = { ...handoffs.extras ?? {}, [state.sessionId]: state };
+    handoffs.extras = Object.fromEntries(Object.entries(all).sort((x, y) => y[1].at - x[1].at).slice(0, EXTRAS_KEPT));
+    saveHandoffs();
+  };
+  const strings = (value) => Array.isArray(value) ? value.filter((v) => typeof v === "string" && IDENTIFIER.test(v)).slice(0, 20) : [];
+  const postExtras = (body) => {
+    const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+    const current = handoffs.extras?.[sessionId];
+    if (!current)
+      return fail("No plan extras for that session.");
+    if (body.action === "claim-extras") {
+      const free = current.state === "pending" || current.state === "claimed" && now() - (current.claimedAt ?? 0) > CLAIM_STALE_MS;
+      if (!free)
+        return { body: { ok: false, claimed: false, state: current } };
+      const claimed = { ...current, state: "claimed", claimedAt: now() };
+      keepExtras(claimed);
+      return { body: { ok: true, claimed: true, state: claimed } };
+    }
+    if (body.action === "extras-done" || body.action === "extras-failed") {
+      if (current.state !== "claimed")
+        return fail("Those extras are not being written.");
+      const next = {
+        ...current,
+        state: body.action === "extras-done" ? "done" : "failed",
+        estimateDone: body.estimateDone === true,
+        estimateSet: typeof body.estimateSet === "number" ? body.estimateSet : null,
+        created: strings(body.created),
+        ...body.action === "extras-failed" ? { error: typeof body.error === "string" ? body.error.slice(0, 300) : "Linear refused a write." } : {}
+      };
+      if (body.action === "extras-done")
+        delete next.error;
+      delete next.claimedAt;
+      keepExtras(next);
+      return { body: { ok: true, state: next } };
+    }
+    if (body.action === "retry-extras") {
+      if (current.state !== "failed")
+        return fail("Only extras that failed can run again.");
+      const next = { ...current, state: "pending" };
+      delete next.error;
+      keepExtras(next);
+      return { body: { ok: true, state: next } };
+    }
+    return fail("Unknown action.", 400);
   };
   const rememberSession = (sessionId, entry) => {
     handoffs.builds[sessionId] = entry;
@@ -1581,15 +1758,14 @@ var createApp = (deps) => {
         directory: sessionDirectory,
         planSessionTitle: typeof body.sessionTitle === "string" ? body.sessionTitle : pending?.sessionTitle ?? null,
         plan: got.plan,
-        review: { mode: mapping?.reviewMode ?? "off", reviewers: mapping?.aiReviewers ?? "" }
+        review: { mode: mapping?.reviewMode ?? "off", reviewers: mapping?.aiReviewers ?? "" },
+        splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? []
       });
-      const model = cleanModel(mapping?.buildModel);
       const started = await host.sessions.start({
         prompt,
         directory: sessionDirectory,
         title: `${identifier} build`,
-        agent: cleanAgent(mapping?.buildAgent),
-        ...model ? { model } : {}
+        ...sessionChoice("build", mapping, config.defaults, { model: body.model })
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? sessionDirectory, createdAt: now(), role: "build", sessionDirectory, title: `${identifier} build` });
       handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
@@ -1615,19 +1791,18 @@ var createApp = (deps) => {
     try {
       const folder = mappedFor(directory);
       const mapping = folder ? config.directories[folder] : undefined;
-      const model = cleanModel(mapping?.planModel);
       const started = await host.sessions.start({
         prompt: planPrompt({
           identifier,
           issueTitle: typeof body.issueTitle === "string" ? body.issueTitle : null,
           branch: readBranch(directory, read),
           directory,
-          context: typeof body.context === "string" ? body.context : ""
+          context: typeof body.context === "string" ? body.context : "",
+          scale: typeof body.scale === "string" ? body.scale : null
         }),
         directory,
         title: `${identifier} plan`,
-        agent: cleanAgent(mapping?.planAgent, "plan"),
-        ...model ? { model } : {}
+        ...sessionChoice("plan", mapping, config.defaults, { model: body.model })
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: "plan", sessionDirectory: directory, title: `${identifier} plan` });
       saveHandoffs();
@@ -1673,7 +1848,7 @@ var createApp = (deps) => {
       return { body: { text: projectMarkdown(cached.project, cached.at) } };
     if (cached?.kind === "doc")
       return { body: { text: docMarkdown(cached.doc, cached.at) } };
-    return { status: 404, body: { message: "That Linear item is not cached. Open the Linear dashboard once so it is, or add a personal API key in Settings, Integrations." } };
+    return { status: 404, body: { message: "That Linear item is not cached. Open the Linear+ dashboard once so it is, or add a personal API key in Settings, Integrations." } };
   };
   const debugOn = () => store.exists(DEBUG_FLAG);
   const handleEvent = async (request) => {
@@ -1727,6 +1902,22 @@ var createApp = (deps) => {
       handoffs.plans = Object.fromEntries(Object.entries(kept).sort((x, y) => y[1].at - x[1].at).slice(0, PLANS_KEPT));
       saveHandoffs();
     }
+    const raw = content?.type === "turn-finished" ? content.reply : "";
+    const extras = build?.role !== "build" && raw ? parsePlanExtras(raw) : null;
+    if (extras && (build?.role === "plan" || looksLikePlan(reply))) {
+      const before = handoffs.extras?.[event.session.id];
+      if (!before || before.state === "pending") {
+        keepExtras({
+          sessionId: event.session.id,
+          identifier: build?.identifier ?? issues[issues.length - 1],
+          directory: folder,
+          sessionTitle: title?.trim() || "Untitled session",
+          extras,
+          state: "pending",
+          at: now()
+        });
+      }
+    }
     if (build?.role !== "build" && reply.trim()) {
       const identifier = issues[issues.length - 1];
       const handoff = {
@@ -1779,7 +1970,11 @@ var createApp = (deps) => {
       if (path === "/handoffs") {
         if (method === "POST")
           return postHandoffs(raw);
-        return { body: { handoffs: handoffsFor(query.get("directory")) } };
+        return { body: { handoffs: handoffsFor(query.get("directory")), extras: extrasFor(query.get("directory")) } };
+      }
+      if (path === "/extras") {
+        const id = query.get("sessionId") ?? "";
+        return { body: { extras: handoffs.extras?.[id] ?? null } };
       }
       if (path === "/handoff" && method === "POST")
         return await startBuild(raw);
@@ -1789,7 +1984,9 @@ var createApp = (deps) => {
         return { body: { sessions: plansFor(query.get("identifier"), query.get("sessionId")) } };
       if (path === "/choices") {
         const folder = mappedFor(query.get("directory"));
-        return { body: deps.choices ? { ok: true, ...deps.choices(folder ?? query.get("directory")) } : { ok: false, error: "This service cannot read the agent and model lists." } };
+        const mapping = folder ? config.directories[folder] : undefined;
+        const current = { plan: sessionChoice("plan", mapping, config.defaults), build: sessionChoice("build", mapping, config.defaults) };
+        return { body: deps.choices ? { ok: true, ...deps.choices(folder ?? query.get("directory")), current } : { ok: false, error: "This service cannot read the agent and model lists.", current } };
       }
       return null;
     } catch (error) {
@@ -2021,7 +2218,7 @@ http.createServer((req, res) => {
       res.writeHead(reply ? reply.status ?? 200 : 404, { "Content-Type": "application/json" }).end(JSON.stringify(reply ? reply.body : { message: "Not found" }));
       reply?.after?.();
     }, () => {
-      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, error: "The Linear service hit an error." }));
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: false, error: "The Linear+ service hit an error." }));
     });
   });
 }).listen(Number(process.env.OPENCHAMBER_SERVICE_PORT), "127.0.0.1", () => {

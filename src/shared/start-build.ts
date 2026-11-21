@@ -1,7 +1,9 @@
 // Start build: the service starts the session. Before it, a frame can add the plan to the issue's description (a Linear
 // write, on the click); after it, the issue moves, and the caller opens the session last, as Start session does.
 import { NOT_A_PLAN_TEXT, withPlan, type BuildSource, type Handoff } from './handoff-rules.ts';
-import { previewPlan, requestBuild } from './handoff.ts';
+import { fetchSessionExtras, previewPlan, requestBuild } from './handoff.ts';
+import { applyPlanExtras } from './plan-extras-apply.ts';
+import { viewerIdNow } from './workspace.ts';
 import { gql } from './linear.ts';
 import { buildStateOf } from './moves.ts';
 import { ISSUE_DETAIL } from './queries.ts';
@@ -20,6 +22,8 @@ export type BuildOptions = {
   state?: WorkflowState | null;
   /** The status used last on this team, by name, so the default follows the user's habit. */
   lastState?: string | null;
+  /** `provider/model` for this build only, instead of the one in Settings. */
+  model?: string;
 };
 
 export type BuildOutcome = { sessionId: string; target: WorkflowState | null; moved: boolean; moveError: string | null; posted: boolean };
@@ -50,7 +54,11 @@ export const startBuildFor = async (issue: IssueDetail, source: BuildSource, opt
     await writePlan(issue, source, options.force);
     posted = true;
   }
-  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force });
+  // The plan's estimate and split-out issues are written when it finishes; a build started before any frame did it
+  // writes them first. A failure is recorded for Retry in Work Status and does not stop the build.
+  const extras = await fetchSessionExtras(source.sessionId).catch(() => null);
+  if (extras && (extras.state === 'pending' || extras.state === 'claimed')) await applyPlanExtras(extras, viewerIdNow()).catch(() => null);
+  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force, ...(options.model ? { model: options.model } : {}) });
   const target = options.state ?? buildStateOf(issue, issue.team.states.nodes, options.lastState);
   let moved = false;
   let moveError: string | null = null;

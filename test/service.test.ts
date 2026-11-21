@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { GuestSessionLinkedItem } from '@openchamber/sdk';
 import { issueOfBranch, mainOfGitFile, parseHead, readBranch, resolveMapped, type ReadText } from '../src/service/directories.ts';
 import { buildDraft, draftBody, linearIssuesOf, looksLikePlan, upsertDraft, withoutBlocks, REPLY_LIMIT } from '../src/service/events.ts';
-import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewerNames, reviewSteps } from '../src/service/handoff.ts';
+import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewerNames, reviewSteps, sessionChoice } from '../src/service/handoff.ts';
 import { buildInstructions, INSTRUCTIONS_TARGET } from '../src/service/instructions.ts';
 import { docMarkdown, locate, mentionRows, projectMarkdown, ROWS_MAX } from '../src/service/mentions.ts';
 import { mergePush, readConfig, readPush, knownTeamKeys } from '../src/service/snapshot.ts';
@@ -77,7 +77,7 @@ describe('buildInstructions', () => {
       branchIssue: { identifier: 'ENG-123', title: 'Fix login timeout', state: 'In Progress', description: 'Users are logged out after 30 s.' },
       mine: [issue(120), issue(118)],
     });
-    expect(text.split('\n')[0]).toBe('Linear for this folder (from the Linear extension):');
+    expect(text.split('\n')[0]).toBe('Linear for this folder (from the Linear+ extension):');
     expect(text).toContain('- Projects: Foo (https://linear.app/acme/project/foo-1a2b); team ENG.');
     expect(text).toContain('- Current branch issue: ENG-123 "Fix login timeout" [In Progress]. Users are logged out after 30 s.');
     expect(text).toContain('- My open issues here: ENG-120 Title 120 [Todo]; ENG-118 Title 118 [Todo].');
@@ -390,6 +390,20 @@ describe('pushes and config', () => {
     const next = mergePush(current, { directory: '/r', moreProjects: [project('p2', 'B2', { text: 'FULL' }), project('p3', 'C')] }, 5);
     expect(next.projects.map((p) => p.name).sort()).toEqual(['A', 'B2', 'C']);
   });
+  test('sessionChoice: the folder wins, then every folder, then plan or build on the host default; bad values fall through', () => {
+    expect(sessionChoice('plan', undefined, undefined)).toEqual({ agent: 'plan' });
+    expect(sessionChoice('build', {}, { buildAgent: 'coder', buildModel: 'fw/kimi' })).toEqual({ agent: 'coder', model: 'fw/kimi' });
+    expect(sessionChoice('build', { buildAgent: 'mine', buildModel: 'a/b' }, { buildAgent: 'coder', buildModel: 'fw/kimi' })).toEqual({ agent: 'mine', model: 'a/b' });
+    expect(sessionChoice('plan', { planAgent: 'bad agent!', planModel: 'kimi' }, { planAgent: 'architect', planModel: 'fw/kimi' })).toEqual({ agent: 'architect', model: 'fw/kimi' });
+    expect(sessionChoice('plan', { buildAgent: 'coder' }, { buildModel: 'fw/kimi' })).toEqual({ agent: 'plan' });
+  });
+
+  test('readConfig keeps the defaults for every folder, trimmed, and drops empty ones', () => {
+    expect(readConfig({ directories: {}, defaults: { planAgent: ' plan ', buildModel: ' fw/kimi ', planModel: '', other: 'x' } })).toEqual({ directories: {}, defaults: { planAgent: 'plan', buildModel: 'fw/kimi' } });
+    expect(readConfig({ directories: {}, defaults: { planModel: ' ' } })).toEqual({ directories: {} });
+    expect(readConfig({ directories: {}, defaults: 'x' })).toEqual({ directories: {} });
+  });
+
   test('readConfig keys each mapping by its own directory and defaults finish-comments to off', () => {
     const config = readConfig({ directories: { ignored: { directory: '/r', teamIds: ['t'], linearProjectIds: [], activeProjectId: 't', finishComments: 'whatever', buildModel: ' fw/kimi ' }, bad: { teamIds: [] } } })!;
     expect(Object.keys(config.directories)).toEqual(['/r']);

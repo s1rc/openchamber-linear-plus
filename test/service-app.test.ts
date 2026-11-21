@@ -307,6 +307,35 @@ describe('start plan', () => {
     expect('model' in ctx.calls.started[0]!).toBe(false);
   });
 
+  test('the agent and model for every folder apply where the folder sets none, also in a folder that is not mapped', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, planModel: 'anthropic/claude-opus-4-5' } }, defaults: { planAgent: 'architect', planModel: 'fireworks/kimi-k2', buildAgent: 'coder' } });
+    await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT });
+    expect(ctx.calls.started[0]).toMatchObject({ agent: 'architect', model: 'anthropic/claude-opus-4-5' });
+    await ctx.call('POST', '/plan', { identifier: 'ENG-6', directory: '/elsewhere' });
+    expect(ctx.calls.started[1]).toMatchObject({ agent: 'architect', model: 'fireworks/kimi-k2' });
+  });
+
+  test('a model picked for one plan or build wins over Settings, and a bad one falls back to Settings', async () => {
+    const ctx = setup();
+    ctx.calls.reply = '## Plan\n1. Raise the window\n2. Test it';
+    await deliver(ctx, finished({}, ctx.calls.reply));
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, planModel: 'anthropic/claude-opus-4-5', buildModel: 'fireworks/kimi-k2' } } });
+    await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, model: 'openai/gpt-5' });
+    expect(ctx.calls.started[0]).toMatchObject({ agent: 'plan', model: 'openai/gpt-5' });
+    await ctx.call('POST', '/plan', { identifier: 'ENG-6', directory: WT, model: 'not a model' });
+    expect(ctx.calls.started[1]).toMatchObject({ model: 'anthropic/claude-opus-4-5' });
+    await ctx.call('POST', '/handoff', { force: true, sessionId: 'ses_1', identifier: 'ENG-5', model: 'openai/gpt-5' });
+    expect(ctx.calls.started[2]).toMatchObject({ agent: 'build', model: 'openai/gpt-5' });
+  });
+
+  test('GET /choices says what a plan and a build would use here', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, buildModel: 'fireworks/kimi-k2' } }, defaults: { planAgent: 'architect' } });
+    const { body } = await ctx.call('GET', '/choices', undefined, `directory=${WT}`);
+    expect(body.current).toEqual({ plan: { agent: 'architect' }, build: { agent: 'build', model: 'fireworks/kimi-k2' } });
+  });
+
   test('works in a folder that is not mapped, and refuses a bad body or a second click', async () => {
     const ctx = setup();
     expect((await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: '/elsewhere' })).body.ok).toBe(true);
@@ -593,3 +622,52 @@ describe('with a personal API key (fake Linear)', () => {
     expect(after.body.items.map((i: { title: string }) => i.title)).toContain('API');
   });
 });
+
+describe('plan extras', () => {
+  const EXTRAS = '```linear-plan\n{"estimate": 3, "issues": [{"title": "Cache rates", "description": "Why", "estimate": 2}]}\n```';
+  const step = 'Change the login timeout handling in the session middleware and cover it with a test that waits past the old limit.';
+  const PLAN = `## Plan\n1. ${step}\n2. ${step}\n3. ${step}\n4. ${step}\n5. Run the suite.\n\n${EXTRAS}`;
+
+  test('a plan with a block is kept once for a frame to write, and one frame at a time may claim it', async () => {
+    const ctx = setup();
+    await deliver(ctx, finished({}, PLAN));
+    const list = (await ctx.call('GET', '/handoffs', undefined, `directory=${WT}`)).body;
+    expect(list.extras).toEqual([expect.objectContaining({ sessionId: 'ses_1', identifier: 'ENG-5', directory: REPO, state: 'pending', extras: { estimate: 3, issues: [{ title: 'Cache rates', description: 'Why', estimate: 2 }] } })]);
+    expect((await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'claim-extras' })).body).toMatchObject({ ok: true, claimed: true });
+    expect((await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'claim-extras' })).body).toMatchObject({ ok: false, claimed: false });
+    ctx.tick(3 * 60_000);
+    expect((await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'claim-extras' })).body.claimed).toBe(true);
+    const done = (await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'extras-done', estimateDone: true, estimateSet: 3, created: ['ENG-6', 'bad id'] })).body;
+    expect(done.state).toMatchObject({ state: 'done', estimateSet: 3, created: ['ENG-6'] });
+    // A revised plan never writes again.
+    await deliver(ctx, finished({}, PLAN.replace('Cache rates', 'Other')));
+    expect((await ctx.call('GET', '/extras', undefined, 'sessionId=ses_1')).body.extras).toMatchObject({ state: 'done', extras: { issues: [{ title: 'Cache rates' }] } });
+  });
+
+  test('a failure keeps what was written and can run again; the plan text and drafts lose the block', async () => {
+    const ctx = setup();
+    ctx.calls.reply = PLAN;
+    await deliver(ctx, finished({}, PLAN));
+    await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'claim-extras' });
+    const failed = (await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'extras-failed', estimateDone: true, created: [], error: 'Linear refused' })).body.state;
+    expect(failed).toMatchObject({ state: 'failed', error: 'Linear refused', estimateDone: true });
+    expect((await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'retry-extras' })).body.state.state).toBe('pending');
+    expect((await ctx.call('GET', '/drafts')).body.drafts[0].body).not.toContain('linear-plan');
+    const preview = (await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5' })).body;
+    expect(preview.plan).not.toContain('linear-plan');
+    await ctx.call('POST', '/handoff', { sessionId: 'ses_1', identifier: 'ENG-5' });
+    expect(String(ctx.calls.started[0]!.prompt)).toContain('leave them out of this build: "Cache rates"');
+  });
+
+  test('a reply that is not a plan keeps no extras, and Start plan sends the scale into the prompt', async () => {
+    const ctx = setup();
+    await deliver(ctx, finished({}, EXTRAS));
+    expect((await ctx.call('GET', '/handoffs', undefined, `directory=${WT}`)).body.extras).toEqual([]);
+    await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, scale: 'Estimates on this team, written as the number: XS = 1, M = 3.' });
+    const prompt = String(ctx.calls.started[0]!.prompt);
+    expect(prompt).toContain('XS = 1, M = 3');
+    expect(prompt).toContain('```linear-plan');
+    expect(prompt).toContain('Do not create issues or change estimates yourself');
+  });
+});
+

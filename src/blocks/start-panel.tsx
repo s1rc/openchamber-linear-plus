@@ -7,6 +7,7 @@ import { invalidate } from '../shared/cache.ts';
 import { host, useReady } from '../shared/host.ts';
 import { Banner, Button, Select, Spinner, Switch } from '../shared/kit.tsx';
 import { gql } from '../shared/linear.ts';
+import { ModelPick } from '../shared/model-pick.tsx';
 import { MoveRow, useMoveChoice } from '../shared/move-row.tsx';
 import { retryBranchName } from '../shared/moves.ts';
 import { ISSUE_DETAIL } from '../shared/queries.ts';
@@ -35,6 +36,7 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
   const [done, setDone] = useState<string | null>(null);
   const directory = useReady()?.directory ?? null;
   const choice = useMoveChoice(plan ? 'plan' : 'session', detail, lastState, allowMove);
+  const [model, setModel] = useState('');
 
   useEffect(() => {
     let live = true;
@@ -73,7 +75,7 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
     setBusy(true);
     setError(null);
     try {
-      const outcome = await (plan ? startPlanFor : startSessionFor)(detail, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory });
+      const outcome = await (plan ? startPlanFor : startSessionFor)(detail, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}) });
       if (!outcome.started) {
         setMade(outcome.directory);
         setError(outcome.error ?? null);
@@ -101,7 +103,7 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
     <div class="lin-block-start" data-state="options">
       {made && <Banner tone="warning" title={`The worktree is ready, but the ${noun} did not start`} body={`Retry starts the ${noun} in ${made}.`} />}
       {!made && found && <Banner tone="info" title="This issue already has a worktree" body={`The session starts in ${found}, on branch ${detail.branchName}.`} />}
-      {plan && !made && <div class="sui-muted sui-small">Makes the worktree, then starts a planning session in it with the folder's plan agent and model. It plans and stops: it changes no files.</div>}
+      {plan && !made && <div class="sui-muted sui-small">Makes the worktree, then starts a planning session in it with the plan agent from Settings, on the model below. It plans and stops: it changes no files.</div>}
       {error && <Banner tone="error" title={`Could not start a ${noun}`} body={error} />}
       <Switch
         label={existing ? 'Work in the existing worktree' : 'Work in a new worktree'}
@@ -111,6 +113,7 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
         onChange={setWorktree}
       />
       <MoveRow choice={choice} disabled={busy} />
+      {plan && <ModelPick role="plan" directory={directory} value={model} onChange={setModel} disabled={busy} />}
       <div class="sui-row">
         <Button label={busy ? 'Starting...' : made ? 'Retry in that worktree' : found ? 'Start in that worktree' : plan ? 'Start plan' : 'Start session'} size="sm" disabled={busy} onClick={() => { void start(); }} />
         <Button label="Cancel" variant="ghost" size="sm" disabled={busy} onClick={onClose} />

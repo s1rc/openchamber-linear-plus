@@ -17,7 +17,7 @@ export const pushSnapshot = async (push: SnapshotPush): Promise<void> => {
   const last = sent.get(slot);
   if (last && last.signature === signature && Date.now() - last.at < RESEND_MS) return;
   sent.set(slot, { signature, at: Date.now() });
-  await api(host, 'POST', '/snapshot', { body: push, name: 'Linear' });
+  await api(host, 'POST', '/snapshot', { body: push, name: 'Linear+' });
 };
 
 /** The push for a folder from what a frame has loaded: its mapped teams and projects and my open issues there. */

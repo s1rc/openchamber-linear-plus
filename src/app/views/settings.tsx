@@ -1,7 +1,7 @@
 import { KV, Section } from '@openchamber-ext/shared-ui/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Button, Switch } from '../../shared/kit.tsx';
-import { getStartMoves, setStartMoves } from '../../shared/storage.ts';
+import { getAssignToMe, getStartMoves, setAssignToMe, setStartMoves } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 import type { Workspace } from '../../shared/workspace.ts';
 import { AgentSettings } from './agent-settings.tsx';
@@ -26,6 +26,20 @@ const StartMovesSwitch = () => {
       description="The default in the Start session dialog: the team's first started status. You can still change it each time."
       checked={on}
       onChange={(next) => { setOn(next); void setStartMoves(next); }}
+    />
+  );
+};
+
+const AssignToMeSwitch = () => {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { void getAssignToMe().then(setOn); }, []);
+  if (on === null) return null;
+  return (
+    <Switch
+      label="Assign new issues to me"
+      description="The default of the Assign to me switch in every create form: New issue, and Create Linear issue from a message, a selection, a chat or a diff. You can still change it each time."
+      checked={on}
+      onChange={(next) => { setOn(next); void setAssignToMe(next); }}
     />
   );
 };
@@ -56,6 +70,9 @@ export const Settings = ({ workspace, state, onChange }: { workspace: Workspace;
       </Section>
       <Section title="Sessions">
         <StartMovesSwitch />
+      </Section>
+      <Section title="New issues">
+        <AssignToMeSwitch />
       </Section>
       <AgentSettings state={state} />
       <Section title="Account">

@@ -32,7 +32,7 @@ const find = async (item: GuestSessionItem, directory: string | null): Promise<F
     identifiers.push(...linkedIdentifiers(record));
     break;
   }
-  const planned = await api(host, 'GET', '/plans', { query: { sessionId: item.sessionId }, name: 'Linear' });
+  const planned = await api(host, 'GET', '/plans', { query: { sessionId: item.sessionId }, name: 'Linear+' });
   const rows: unknown = planned.ok === false ? [] : planned.sessions;
   if (Array.isArray(rows)) for (const row of rows) { const id = (row as { identifier?: unknown }).identifier; if (typeof id === 'string' && !known.includes(id)) known.push(id); }
   // The issue the plan was started for leads: a link added later (a new issue linked to the chat) is not what this plan is for.

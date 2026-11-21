@@ -138,7 +138,7 @@ export type Comment = {
 export type IssueDetail = Omit<IssueRow, 'team'> & {
   description: string | null;
   creator: User | null;
-  team: { id: string; key: string; name: string; states: Connection<WorkflowState> };
+  team: { id: string; key: string; name: string; issueEstimationType?: string; issueEstimationAllowZero?: boolean; issueEstimationExtended?: boolean; states: Connection<WorkflowState> };
   children: Connection<IssueRow>;
   comments: Connection<Comment>;
   links: Connection<Attachment & { subtitle: string | null; createdAt: string }>;
@@ -178,7 +178,7 @@ export type ProjectDetail = ProjectSummary & {
   description: string;
   content: string | null;
   members: Connection<User>;
-  projectMilestones: Connection<{ id: string; name: string; targetDate: string | null; progress: number; sortOrder: number }>;
+  projectMilestones: Connection<{ id: string; name: string; description?: string | null; targetDate: string | null; progress: number; sortOrder: number }>;
   lastUpdate: { id: string; health: ProjectHealth; createdAt: string } | null;
   projectUpdates: Connection<ProjectUpdate>;
   documents: Connection<DocumentSummary>;
@@ -255,6 +255,27 @@ export type RepoAttachmentsResult = {
   attachments: Connection<{ url: string; issue: { id: string; identifier: string; team: { id: string }; project: { id: string } | null } | null }>;
 };
 export type SearchIssuesResult = { searchIssues: Connection<IssueRow> };
+
+/** One issue in the dialog's picker (`PICKER_ROW`). */
+export type PickerIssue = {
+  id: string;
+  identifier: string;
+  title: string;
+  priority: Priority;
+  updatedAt: string;
+  url: string;
+  branchName: string;
+  state: WorkflowState;
+  team: { id: string; key: string; name: string };
+  assignee: User | null;
+  labels: Connection<Label>;
+  project: { id: string; name: string; color: string; icon: string | null } | null;
+  parent: { id: string; identifier: string; title: string; state: WorkflowState } | null;
+  children: Connection<{ id: string; state: { type: StateType } }>;
+};
+export type MilestoneIssuesResult = { issues: Page<{ projectMilestone: { id: string } | null }> };
+export type PickerIssuesResult = { issues: Connection<PickerIssue> };
+export type PickerSearchResult = { searchIssues: Connection<PickerIssue> };
 export type SearchProjectsResult = { searchProjects: Connection<ProjectSummary> };
 export type SearchDocumentsResult = { searchDocuments: Connection<DocumentSummary> };
 export type DocumentsResult = { documents: Connection<DocumentSummary> };

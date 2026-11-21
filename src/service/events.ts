@@ -1,5 +1,6 @@
 // Reading a session event: which Linear issues the session is tied to, the finish-comment draft and the
 // plan to build candidate it can leave. Pure.
+import { withoutExtras } from '../shared/plan-extras.ts';
 import type { GuestSessionLinkedItem } from '@openchamber/sdk';
 import type { Draft, Handoff } from './types.ts';
 
@@ -80,6 +81,6 @@ export const handoffId = (sessionId: string, identifier: string): string => `${s
  * A reply without the display blocks an agent drew in it (the card it was asked to end the plan with). They are for
  * the chat: written into an issue or sent to a build session they would only be noise.
  */
-export const withoutBlocks = (reply: string): string => reply.replace(/```openui-lang[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim();
+export const withoutBlocks = (reply: string): string => withoutExtras(reply.replace(/```openui-lang[\s\S]*?```/g, '')).replace(/\n{3,}/g, '\n\n').trim();
 
 export const PLANS_KEPT = 10;

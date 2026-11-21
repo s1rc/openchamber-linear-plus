@@ -186,6 +186,10 @@ export const estimateScale = (team: Pick<Team, 'issueEstimationType' | 'issueEst
   return [...(team!.issueEstimationAllowZero ? [0] : []), ...scale.base, ...(team!.issueEstimationExtended ? scale.extended : [])];
 };
 
+/** The scale of an issue's own team as the issue view reads it (its estimation fields may be missing). */
+export const teamScale = (team: { issueEstimationType?: string; issueEstimationAllowZero?: boolean; issueEstimationExtended?: boolean }): number[] =>
+  estimateScale({ issueEstimationType: team.issueEstimationType ?? 'notUsed', issueEstimationAllowZero: team.issueEstimationAllowZero ?? false, issueEstimationExtended: team.issueEstimationExtended ?? false });
+
 /** The ready worktree already on `branch`, if any: creating another one for the same branch is refused. */
 export const worktreeOnBranch = (worktrees: readonly { directory: string; branch: string; status: string }[], branch: string): string | null => {
   const wanted = branch.trim().replace(/^refs\/heads\//, '').toLowerCase();

@@ -7,6 +7,11 @@
 import { graphqlBody } from '../src/shared/gql-body.ts';
 import { all, customViewsFilter, MY_FILTERS, OPEN, scopeFilter } from '../src/shared/filters.ts';
 import { keysFilter } from '../src/shared/block-args.ts';
+import { browseFilter, keyFilter, modeFilter } from '../src/shared/picker.ts';
+import { milestoneFilter } from '../src/shared/milestones.ts';
+import { extraDescription, scaleText } from '../src/shared/plan-extras.ts';
+import { teamScale } from '../src/shared/moves.ts';
+import { estimateLabel } from '../src/shared/format.ts';
 import { withPlan } from '../src/shared/handoff-rules.ts';
 import { issueContext } from '../src/shared/issue-context.ts';
 import { commentBody } from '../src/dialog/jobs.ts';
@@ -105,7 +110,7 @@ const detail = {
   ...engIssues[0],
   description: 'Carts over **50 items** take longer than 30 s to price, and the gateway gives up. See https://linear.app/acme/issue/ENG-14/retry-webhooks and [MR !42](https://gitlab.com/acme/checkout/-/merge_requests/42).\n\n## Findings\n- Happens on web and mobile\n- Started after `TaxService.lookup()` moved to one call per line\n    - `priceCart(cart)` calls it `cart.lines.length` times\n\n```ts\nawait priceCart(cart) // 31.2 s\n```',
   creator: ada,
-  team: { id: 't-eng', key: 'ENG', name: 'Engineering', states: { nodes: stateSet('t-eng').map(({ team: _team, ...st }) => st) } },
+  team: { id: 't-eng', key: 'ENG', name: 'Engineering', issueEstimationType: 'tShirt', issueEstimationAllowZero: false, issueEstimationExtended: false, states: { nodes: stateSet('t-eng').map(({ team: _team, ...st }) => st) } },
   children: { nodes: [engIssues[1]] },
   comments: { nodes: [
     { id: 'cm1', body: 'Reproduced with a 60 item cart: 31 s. Blocked on https://linear.app/acme/issue/ENG-13/x', createdAt: '2026-11-07T09:00:00Z', editedAt: null, url: 'https://linear.app/acme/issue/ENG-11#comment-1', user: ada, parent: null },
@@ -132,8 +137,8 @@ const checkoutDetail = {
   content: '## Goal\nCut checkout time in half and remove the payment timeouts.\n\n## Out of scope\nNew payment providers.',
   members: { nodes: [matt, ada] },
   projectMilestones: { nodes: [
-    { id: 'm1', name: 'Pricing under 2 s', targetDate: '2026-11-05', progress: 1, sortOrder: 1 },
-    { id: 'm2', name: 'Idempotent payments', targetDate: '2026-11-12', progress: 0.5, sortOrder: 2 },
+    { id: 'm1', name: 'Pricing under 2 s', description: 'Batch the tax lookups so a 60 item cart prices in under 2 s.', targetDate: '2026-11-05', progress: 1, sortOrder: 1 },
+    { id: 'm2', name: 'Idempotent payments', description: null, targetDate: '2026-11-12', progress: 0.5, sortOrder: 2 },
   ] },
   lastUpdate: { id: 'u1', health: 'atRisk', createdAt: '2026-11-06T16:00:00Z' },
   projectUpdates: { nodes: [{ id: 'u1', body: 'Pricing is fixed. Payments slipped a week: the gateway sandbox was down.', health: 'atRisk', createdAt: '2026-11-06T16:00:00Z', url: 'https://linear.app/acme/project/checkout/updates', user: ada }] },
@@ -358,6 +363,47 @@ workspace[key(Q.SEARCH_PROJECTS, { term: 'zzzz' })] = ok({ searchProjects: { nod
 workspace[key(Q.SEARCH_DOCUMENTS, { term: 'zzzz' })] = ok({ searchDocuments: { nodes: [] } });
 workspace[key(Q.DOCUMENT, { id: 'd1' })] = ok({ document: { ...docs[0], content: '# Checkout architecture\n\nPricing, tax and payment run as three steps.\n\n1. Price the cart\n2. Look up tax\n3. Charge the card', creator: ada } });
 
+// Phase 12: the Attach tab's picker, laid out like the host's "Start from Linear". Rows carry the
+// parent's title and state, the team's name and the sub-issues' states.
+const teamName: Record<string, string> = { 't-eng': 'Engineering', 't-mob': 'Mobile' };
+const pickRow = (i: (typeof engIssues)[number]) => {
+  const parent = i.parent ? engIssues.find((p) => p.id === i.parent!.id) : undefined;
+  return {
+    id: i.id, identifier: i.identifier, title: i.title, priority: i.priority, updatedAt: i.updatedAt, url: i.url, branchName: i.branchName,
+    state: i.state, team: { ...i.team, name: teamName[i.team.id] }, assignee: i.assignee, labels: i.labels, project: i.project,
+    parent: parent ? { id: parent.id, identifier: parent.identifier, title: parent.title, state: parent.state } : null,
+    children: { nodes: engIssues.filter((c) => c.parent?.id === i.id).map((c) => ({ id: c.id, state: { type: c.state.type } })) },
+  };
+};
+const recent = [...engIssues].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+for (const mode of ['open', 'mine', 'all'] as const) {
+  for (const [teamIds, projectIds] of [[['t-eng'], []], [[], []]] as [string[], string[]][]) {
+    const rows = recent.filter((i) => mode !== 'mine' || i.assignee === matt).filter((i) => !teamIds.length || teamIds.includes(i.team.id));
+    workspace[key(Q.PICKER_ISSUES, { first: 50, filter: browseFilter(mode, teamIds, projectIds) })] = ok({ issues: { nodes: rows.map(pickRow) } });
+  }
+}
+workspace[key(Q.PICKER_ISSUES, { first: 1, filter: keyFilter('ENG-13') })] = ok({ issues: { nodes: [pickRow(engIssues[2]!)] } });
+workspace[key(Q.PICKER_ISSUES, { first: 1, filter: keyFilter('ENG-999') })] = ok({ issues: { nodes: [] } });
+workspace[key(Q.PICKER_SEARCH, { term: 'tax', filter: modeFilter('open') })] = ok({ searchIssues: { nodes: [pickRow(engIssues[4]!), pickRow(engIssues[0]!)] } });
+for (const i of recent) {
+  workspace[key(Q.ISSUE_DETAIL, { id: i.id })] = ok({ issue: i.id === 'i-eng-11' ? detail : {
+    ...detail, ...i, description: i.id === 'i-eng-13' ? 'Returning customers should see their saved cards before the new card form.\n\n- Sort by last used\n- Hide expired cards' : null,
+    children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] }, relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] },
+    team: { ...detail.team, id: i.team.id, key: i.team.key, name: teamName[i.team.id] },
+  } });
+}
+workspace[key(Q.PROJECT_DETAIL, { id: 'p-repo' })] ??= ok({ project: { ...checkoutDetail, ...projects[0], content: '## Repo\nShared tooling for every service.' } });
+
+// Phase 12: milestone counts on the project overview, and one milestone's issues in every status.
+const checkoutIssues = engIssues.filter((i) => i.project?.id === 'p-checkout');
+const inM2 = checkoutIssues.slice(1, 4).map((i) => ({ ...i, projectMilestone: { id: 'm2', name: 'Idempotent payments' } }));
+const doneInM1 = { ...issue('Batch the tax lookups', 'Done', { completedAt: '2026-11-04T10:00:00Z' }), projectMilestone: { id: 'm1', name: 'Pricing under 2 s' } };
+workspace[key(Q.MILESTONE_ISSUES, { projectId: 'p-checkout', after: null })] = ok({ issues: page([
+  ...inM2.map(() => ({ projectMilestone: { id: 'm2' } })), { projectMilestone: { id: 'm1' } }, ...checkoutIssues.slice(4).map(() => ({ projectMilestone: null })),
+]) });
+workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m2')))] = ok({ issues: page(inM2) });
+workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m1')))] = ok({ issues: page([doneInM1]) });
+
 // Phase 9: the chat blocks. Each block reads its issues by team key and number in one request, then the
 // started states of those issues' teams. Keyed by the same filter the blocks build, so a changed filter
 // shows up as a missing fixture.
@@ -395,8 +441,9 @@ service['GET /handoffs?directory=/work/engineering-api '] = { status: 200, body:
 service[`POST /handoffs ${JSON.stringify({ id: handoff.id, action: 'dismiss' })}`] = { status: 200, body: JSON.stringify({ ok: true }) };
 service['POST /snapshot *'] = { status: 200, body: JSON.stringify({ ok: true, mapped: true }) };
 service['PUT /config *'] = { status: 200, body: JSON.stringify({ hasKey: false, directories: {} }) };
-service['GET /choices?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({
+const CHOICES = {
   ok: true,
+  current: { plan: { agent: 'plan', model: 'anthropic/claude-opus-4-5' }, build: { agent: 'build' } },
   defaultModel: 'fireworks-ai/accounts/fireworks/routers/kimi-fast-latest',
   agents: [{ id: 'build', label: 'build', hint: 'built in' }, { id: 'plan', label: 'plan', hint: 'built in' }, { id: 'review', label: 'review' }],
   models: [
@@ -406,7 +453,10 @@ service['GET /choices?directory=/work/engineering-api '] = { status: 200, body: 
     { id: 'anthropic/claude-opus-4-5', label: 'Claude Opus 4.5', hint: 'Anthropic' },
     { id: 'anthropic/claude-sonnet-4-5', label: 'Claude Sonnet 4.5', hint: 'Anthropic' },
   ],
-}) };
+};
+service['GET /choices?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify(CHOICES) };
+// A plan's worktree resolves to the same folder, so Start build there offers the same lists.
+service['GET /choices?directory=/work/engineering-api-wt '] = { status: 200, body: JSON.stringify(CHOICES) };
 service['GET /config '] = { status: 200, body: JSON.stringify({ hasKey: false, directories: {} }) };
 service[`POST /handoff ${JSON.stringify({ sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, sessionTitle: handoff.sessionTitle, identifier: 'ENG-13', issueTitle: engIssues[2]!.title })}`] = {
   status: 200, body: JSON.stringify({ ok: true, sessionId: 'ses_build', directory: handoff.sessionDirectory }),
@@ -418,7 +468,7 @@ service[`POST /handoff ${JSON.stringify({ sessionId: 'ses_busy', sessionDirector
 // Phase 10, plan side: Start plan (the service call after the frame made the worktree), the plan a build reads
 // and, with the post switch on, the comment that writes it to the issue.
 const PLAN_TEXT = '## Plan\n\n1. Read `PaymentStep` and find where cards are listed\n2. Sort the saved cards by last use\n3. Add a test for the order\n4. Run the checkout suite\n\nRisk: the mobile app reads the same list.';
-service[`POST /plan ${JSON.stringify({ identifier: 'ENG-13', directory: handoff.sessionDirectory, issueTitle: engIssues[2]!.title, context: issueContext(eng13Detail as never) })}`] = {
+service[`POST /plan ${JSON.stringify({ identifier: 'ENG-13', directory: handoff.sessionDirectory, issueTitle: engIssues[2]!.title, context: issueContext(eng13Detail as never), scale: scaleText(teamScale(eng13Detail.team), (v) => estimateLabel(v, 'tShirt')) })}`] = {
   status: 200, body: JSON.stringify({ ok: true, sessionId: 'ses_plan_new', directory: handoff.sessionDirectory }),
 };
 service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
@@ -444,6 +494,28 @@ const WITH_PLAN = withPlan(eng13Detail.description, PLAN_TEXT)!;
 workspace[update('i-eng-13', { description: WITH_PLAN })] = updated({ ...engIssues[2]!, description: WITH_PLAN } as never);
 const handoffPost = { ...handoff, directory: '/work/checkout', id: 'ses_post:ENG-13', sessionId: 'ses_post', postPlan: true };
 service['GET /handoffs?directory=/work/checkout '] = { status: 200, body: JSON.stringify({ handoffs: [handoffPost] }) };
+
+// Phase 12, item 6: a finished plan for ENG-16 with an estimate and one split-out issue, written by the Work Status
+// frame with no click. A separate replay file, so the earlier shots keep their quiet service. Fake data only.
+const extrasPending = {
+  sessionId: 'ses_plan16', identifier: 'ENG-16', directory: '/work/engineering-api', sessionTitle: 'ENG-16 plan',
+  extras: { estimate: 2.6, issues: [{ title: 'Add refund screenshots', description: 'Screens for each refund step.', estimate: 1 }] },
+  state: 'pending', at: Date.parse('2026-11-09T11:40:00Z'),
+};
+const eng16 = engIssues.find((i) => i.identifier === 'ENG-16')!;
+const extraIssue = { ...issue('Add refund screenshots', 'Backlog', { priority: 0, assignee: null, project: null, cycle: null, estimate: 1 }), id: 'i-eng-40', identifier: 'ENG-40' };
+const extrasWorkspace = { ...workspace };
+const extrasService = { ...service };
+extrasService['GET /handoffs?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({ handoffs: [], extras: [extrasPending] }) };
+extrasService[`POST /handoffs ${JSON.stringify({ sessionId: 'ses_plan16', action: 'claim-extras' })}`] = { status: 200, body: JSON.stringify({ ok: true, claimed: true, state: { ...extrasPending, state: 'claimed', claimedAt: 1 } }) };
+extrasService[`POST /handoffs ${JSON.stringify({ sessionId: 'ses_plan16', action: 'extras-done', estimateDone: true, estimateSet: 3, created: ['ENG-40'] })}`] = { status: 200, body: JSON.stringify({ ok: true, state: { ...extrasPending, state: 'done', estimateDone: true, estimateSet: 3, created: ['ENG-40'] } }) };
+extrasWorkspace[key(Q.ISSUE_DETAIL, { id: 'ENG-16' })] = ok({ issue: {
+  ...detail, ...eng16, description: 'Write down how refunds work.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] }, relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
+} });
+extrasWorkspace[update('i-eng-16', { estimate: 3 })] = updated({ ...eng16, estimate: 3 } as never);
+extrasWorkspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Add refund screenshots', description: extraDescription(extrasPending.extras.issues[0]!, 'ENG-16', 'ENG-16 plan'), estimate: 1 } })] = ok({ issueCreate: { success: true, issue: extraIssue } });
+extrasWorkspace[key(Q.ISSUE_RELATION_CREATE, { input: { issueId: 'i-eng-40', relatedIssueId: 'i-eng-16', type: 'related' } })] = ok({ issueRelationCreate: { success: true } });
+await Bun.write('harness/fixtures/plan-extras.json', JSON.stringify({ service: extrasService, request: extrasWorkspace }, null, 1));
 
 await Bun.write('harness/fixtures/drafts.json', JSON.stringify(MODEL_ANSWERS, null, 1));
 

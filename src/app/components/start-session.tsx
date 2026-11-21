@@ -4,6 +4,7 @@ import { toast } from '@openchamber-ext/shared-ui';
 import { useEffect, useState } from 'preact/hooks';
 import { host, useReady } from '../../shared/host.ts';
 import { Banner, Button, Switch } from '../../shared/kit.tsx';
+import { ModelPick } from '../../shared/model-pick.tsx';
 import { MoveRow, useMoveChoice } from '../../shared/move-row.tsx';
 import { retryBranchName } from '../../shared/moves.ts';
 import { findIssueWorktree, openStartedSession, startPlanFor, startSessionFor } from '../../shared/start-session.ts';
@@ -31,6 +32,7 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
   // The remembered status is read before the first click can use it.
   const [prefLoaded, setPrefLoaded] = useState(false);
   const choice = useMoveChoice(plan ? 'plan' : 'session', issue, lastState, allowMove);
+  const [model, setModel] = useState('');
   useEffect(() => { void getStartMoves().then(setAllowMove); }, []);
   useEffect(() => { void getStartState(issue.team.id).then(setLastState, () => undefined).finally(() => setPrefLoaded(true)); }, [issue.team.id]);
   useEffect(() => { void findIssueWorktree(directory, issue.branchName).then(setFound); }, [directory, issue.branchName]);
@@ -38,7 +40,7 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
   const start = async () => {
     setBusy(true);
     try {
-      const outcome = await (plan ? startPlanFor : startSessionFor)(issue, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory });
+      const outcome = await (plan ? startPlanFor : startSessionFor)(issue, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}) });
       if (!outcome.started) {
         setMade(outcome.directory);
         setReason(outcome.error ?? null);
@@ -83,9 +85,10 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
         onChange={setWorktree}
       />
       <MoveRow choice={choice} disabled={busy} />
+      {plan && <ModelPick role="plan" directory={directory} value={model} onChange={setModel} disabled={busy} />}
       <div class="sui-muted sui-small">
         {plan
-          ? "The plan session gets the issue's title, status, description and latest comments, and the folder's plan agent and model from Settings. It plans and stops: it changes no files. An empty first session also appears: the host needs it to make the worktree."
+          ? "The plan session gets the issue's title, status, description and latest comments, and the plan agent from Settings, on the model above. It plans and stops: it changes no files. An empty first session also appears: the host needs it to make the worktree."
           : "The session gets the issue's title, status, description and latest comments."}
       </div>
     </Modal>

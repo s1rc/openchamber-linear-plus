@@ -15,7 +15,7 @@ const Drawn = ({ call }: { call: GuestBlockCall }) => {
     case 'LinearIssue': return <IssueBlock args={call.args} />;
     case 'LinearIssueList': return <ListBlock args={call.args} />;
     case 'LinearPickIssue': return <PickBlock args={call.args} answered={call.answered} />;
-    default: return <div class="sui-muted">This Linear extension has no block called {call.name.slice(0, 40)}.</div>;
+    default: return <div class="sui-muted">The Linear+ extension has no block called {call.name.slice(0, 40)}.</div>;
   }
 };
 

@@ -8,9 +8,10 @@ import type { Draft } from '../../shared/draft.ts';
 import { estimateLabel } from '../../shared/format.ts';
 import { compareStates, PRIORITY_NAMES } from '../../shared/grouping.ts';
 import { host } from '../../shared/host.ts';
-import { Button, Select, TextField } from '../../shared/kit.tsx';
+import { Button, Select, Switch, TextField } from '../../shared/kit.tsx';
 import { acceptStateOf, estimateScale } from '../../shared/moves.ts';
 import { useTeamProjects } from '../../shared/projects.ts';
+import { getAssignToMe } from '../../shared/storage.ts';
 import { useOpenCycles, useTeamPeople } from '../../shared/team-data.ts';
 import type { IssueRow, Label } from '../../shared/types.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
@@ -57,6 +58,10 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
   const [project, setProject] = useState<string>(projectId ?? NONE);
   const [labels, setLabels] = useState<Label[]>([]);
   const [busy, setBusy] = useState(false);
+  // The Settings default for "Assign to me", read once; null until read.
+  const [assignDefault, setAssignDefault] = useState<boolean | null>(null);
+  const viewer = workspace?.viewer ?? null;
+  useEffect(() => { void getAssignToMe().then(setAssignDefault, () => setAssignDefault(false)); }, []);
 
   useEffect(() => {
     if (!draft) return;
@@ -64,14 +69,14 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
     if (!typed.description) setDescription(draft.description);
   }, [draft]);
 
-  // A new team brings its own states, people, labels and cycles.
+  // A new team brings its own states, people, labels and cycles. The assignee starts as the Settings default.
   useEffect(() => {
     setStateId(acceptStateOf(team, states)?.id ?? states[0]?.id ?? NONE);
-    setAssigneeId(NONE);
+    setAssigneeId(assignDefault && viewer ? viewer.id : NONE);
     setEstimate(NONE);
     setCycleId(NONE);
     setLabels([]);
-  }, [teamId, states.length]);
+  }, [teamId, states.length, assignDefault, viewer?.id]);
 
   const people = useTeamPeople(teamId || null);
   const cycles = useOpenCycles(team?.cyclesEnabled ? teamId : null, team?.activeCycle?.number);
@@ -135,7 +140,12 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
         <Select
           value={assigneeId}
           searchable
-          options={[{ id: NONE, label: 'No assignee' }, ...(people.data?.members ?? []).map((m) => ({ id: m.id, label: m.name }))]}
+          options={[
+            { id: NONE, label: 'No assignee' },
+            // You are offered even before the team's people load, or when you are not a member of that team.
+            ...(viewer && !(people.data?.members ?? []).some((m) => m.id === viewer.id) ? [{ id: viewer.id, label: viewer.name, hint: 'you' }] : []),
+            ...(people.data?.members ?? []).map((m) => ({ id: m.id, label: m.name, ...(m.id === viewer?.id ? { hint: 'you' } : {}) })),
+          ]}
           onChange={setAssigneeId}
         />
         {scale.length > 0 && (
@@ -147,6 +157,15 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
         <Select value={project} searchable options={projectOptions} onChange={setProject} />
       </div>
       {teamId && <LabelPicker teamId={teamId} chosen={labels} onChange={setLabels} />}
+      {viewer && assignDefault !== null && (
+        <Switch
+          label="Assign to me"
+          description={`Default in Settings: ${assignDefault ? 'on' : 'off'}.`}
+          checked={assigneeId === viewer.id}
+          disabled={busy}
+          onChange={(on) => setAssigneeId(on ? viewer.id : NONE)}
+        />
+      )}
     </div>
   );
 

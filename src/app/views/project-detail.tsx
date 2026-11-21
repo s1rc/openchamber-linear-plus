@@ -16,8 +16,9 @@ import { postProjectUpdate, writeErrorText, type Health } from '../../shared/wri
 import { gql } from '../../shared/linear.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import { projectPush, pushSnapshot } from '../../shared/snapshot.ts';
-import { PROJECT_DETAIL } from '../../shared/queries.ts';
-import type { ProjectDetail as Detail, ProjectDetailResult, StateType } from '../../shared/types.ts';
+import { MILESTONE_ISSUES, PROJECT_DETAIL } from '../../shared/queries.ts';
+import { issueCountText, milestoneCounts } from '../../shared/milestones.ts';
+import type { MilestoneIssuesResult, ProjectDetail as Detail, ProjectDetailResult, StateType } from '../../shared/types.ts';
 import { IssueBrowser } from '../components/issue-browser.tsx';
 
 const TYPE_TONE: Record<StateType, 'info' | 'muted' | 'warning' | 'success'> = {
@@ -29,6 +30,20 @@ const TYPE_WORD: Record<StateType, string> = {
 
 const useProjectDetail = (id: string) =>
   useQuery(`project:${id}`, async () => (await gql<ProjectDetailResult>(PROJECT_DETAIL, { id })).project);
+
+/** Issues per milestone, read in pages of 250 (at most 1,000, then the counts are a floor). */
+const useMilestoneCounts = (projectId: string, enabled: boolean) =>
+  useQuery(enabled ? `milestone-counts:${projectId}` : null, async () => {
+    const nodes: MilestoneIssuesResult['issues']['nodes'] = [];
+    let after: string | null = null;
+    for (let page = 0; page < 4; page += 1) {
+      const data: MilestoneIssuesResult = await gql<MilestoneIssuesResult>(MILESTONE_ISSUES, { projectId, after });
+      nodes.push(...data.issues.nodes);
+      if (!data.issues.pageInfo.hasNextPage) break;
+      after = data.issues.pageInfo.endCursor;
+    }
+    return milestoneCounts(nodes);
+  });
 
 const HEALTHS: { id: Health; label: string }[] = [{ id: 'onTrack', label: 'On track' }, { id: 'atRisk', label: 'At risk' }, { id: 'offTrack', label: 'Off track' }];
 
@@ -66,12 +81,13 @@ const UpdateComposer = ({ project }: { project: Detail }) => {
   );
 };
 
-const Overview = ({ project }: { project: Detail }) => {
+const Overview = ({ project, onMilestone }: { project: Detail; onMilestone?: (id: string) => void }) => {
   const open = useIssueList(all(OPEN, scopeFilter([], [project.id])));
   const days = daysUntil(project.targetDate);
   const counts = new Map<StateType, number>();
   for (const issue of open.data?.issues ?? []) counts.set(issue.state.type, (counts.get(issue.state.type) ?? 0) + 1);
   const milestones = [...project.projectMilestones.nodes].sort((a, b) => a.sortOrder - b.sortOrder);
+  const perMilestone = useMilestoneCounts(project.id, milestones.length > 0);
 
   return (
     <div class="lin-stack">
@@ -103,15 +119,30 @@ const Overview = ({ project }: { project: Detail }) => {
       ]} />
       {milestones.length > 0 && (
         <Section title="Milestones">
-          {milestones.map((m) => (
-            <div class="lin-milestone" key={m.id}>
-              <div class="sui-row">
-                <span class="sui-grow">{m.name}</span>
-                {m.targetDate && <span class="sui-muted sui-small">{shortDate(m.targetDate)}</span>}
+          {milestones.map((m) => {
+            const count = issueCountText(perMilestone.data?.get(m.id) ?? (perMilestone.data ? 0 : undefined));
+            const title = `Show the issues in ${m.name}`;
+            return (
+              <div class="lin-milestone" key={m.id}>
+                <div class="lin-milestone-head">
+                  {onMilestone
+                    ? <button type="button" class="lin-milestone-name lin-milestone-link" title={title} onClick={() => onMilestone(m.id)}>{m.name}</button>
+                    : <span class="lin-milestone-name">{m.name}</span>}
+                  <span class="sui-grow" />
+                  <span class="lin-milestone-stats sui-small sui-muted">
+                    {m.targetDate && <span>{shortDate(m.targetDate)}</span>}
+                    {m.targetDate && count && <span aria-hidden="true">·</span>}
+                    {count && (onMilestone
+                      ? <button type="button" class="lin-milestone-count" title={title} onClick={() => onMilestone(m.id)}>{count}</button>
+                      : <span>{count}</span>)}
+                  </span>
+                </div>
+                {m.description?.trim() && <div class="lin-milestone-desc sui-small">{m.description.trim()}</div>}
+                {/* The kit's bar prints the percent, so the head does not repeat it. */}
+                <Progress value={m.progress * 100} />
               </div>
-              <Progress value={m.progress * 100} />
-            </div>
-          ))}
+            );
+          })}
         </Section>
       )}
       <Section title="Latest updates">
@@ -155,6 +186,8 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
   const placeKey = useContext(PlaceKey);
   const tabKey = `project-detail:${id}`;
   const [tab, setTabState] = useState<'overview' | 'issues'>(() => (tabFor(placeKey, tabKey) === 'issues' && withIssues ? 'issues' : 'overview'));
+  // A milestone picked on the overview (its name or its issue count): the Issues tab shows only its issues.
+  const [milestone, setMilestone] = useState<string | null>(null);
   const setTab = (next: 'overview' | 'issues') => { setTabState(next); saveTab(placeKey, tabKey, next); };
   const project = detail.data;
   // The service keeps this overview and the project's documents for the `@` menu when no API key is set.
@@ -174,9 +207,22 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
         <Button label="Open in Linear" variant="ghost" size="xs" onClick={() => { void host.openUrl(project.url); }} />
       </div>
       {tab === 'issues' && withIssues ? (
-        <IssueBrowser ctx={ctx} listKey={`project:${project.id}`} scope={scopeFilter([], [project.id])} viewerId={viewerId} showProject={false} projectId={project.id} teamIds={project.teams.nodes.map((t) => t.id)} emptyTitle="No open issues" emptyBody={`${project.name} has no open issues.`} />
+        <IssueBrowser
+          ctx={ctx}
+          listKey={`project:${project.id}`}
+          scope={scopeFilter([], [project.id])}
+          viewerId={viewerId}
+          showProject={false}
+          projectId={project.id}
+          teamIds={project.teams.nodes.map((t) => t.id)}
+          milestones={[...project.projectMilestones.nodes].sort((a, b) => a.sortOrder - b.sortOrder)}
+          milestone={milestone}
+          onMilestone={setMilestone}
+          emptyTitle={milestone ? 'No issues in this milestone' : 'No open issues'}
+          emptyBody={milestone ? 'Pick another milestone, or Any milestone.' : `${project.name} has no open issues.`}
+        />
       ) : (
-        <Overview project={project} />
+        <Overview project={project} onMilestone={withIssues ? (id) => { setMilestone(id); setTab('issues'); } : undefined} />
       )}
     </Section>
   );

@@ -7,6 +7,7 @@ import { findBuildSource, previewPlan, type PlanPreview } from './handoff.ts';
 import { planExcerpt, type BuildSource } from './handoff-rules.ts';
 import { host } from './host.ts';
 import { Banner, Button, Spinner, Switch } from './kit.tsx';
+import { ModelPick } from './model-pick.tsx';
 import { MoveRow, useMoveChoice } from './move-row.tsx';
 import { gql } from './linear.ts';
 import { ISSUE_DETAIL } from './queries.ts';
@@ -45,6 +46,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
   const [added, setAdded] = useState(false);
   const [force, setForce] = useState(false);
   const choice = useMoveChoice('build', detail, lastState, allowMove);
+  const [model, setModel] = useState('');
 
   useEffect(() => {
     let live = true;
@@ -98,7 +100,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
     setBusy(true);
     setError(null);
     try {
-      const outcome = await startBuildFor(detail, source, { move: choice.move, post: post && Boolean(preview), force, state: choice.selected, lastState });
+      const outcome = await startBuildFor(detail, source, { move: choice.move, post: post && Boolean(preview), force, state: choice.selected, lastState, ...(model ? { model } : {}) });
       if (outcome.moved && outcome.target) void setStartState(detail.team.id, outcome.target.name).catch(() => undefined);
       if (outcome.moveError) await toast(host, 'error', `Build started, but ${detail.identifier} was not moved: ${outcome.moveError}`);
       const text = `${outcome.posted ? 'Added the plan to the issue and started' : 'Started'} a build for ${detail.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}.`;
@@ -118,7 +120,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
     <div class={fill ? 'lin-build lin-build--fill' : 'lin-build'} data-state="options">
       <div class="sui-small">
         Builds from the last reply in <strong>{source.title}</strong>{source.agent ? ` (${source.agent} agent)` : ''}, in {folderName(source.directory)}, as a new session.
-        It uses the folder's build agent and model from Settings.
+        It uses the build agent from Settings, on the model below.
       </div>
       {previewError && <Banner tone="warning" title="The plan cannot be read yet" body={previewError} />}
       {preview && !preview.isPlan && (
@@ -140,6 +142,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
         onChange={setPost}
       />
       <MoveRow choice={choice} disabled={busy} />
+      <ModelPick role="build" directory={source.directory} value={model} onChange={setModel} disabled={busy} />
       <div class="sui-row">
         <Button label={busy ? 'Starting...' : post && preview ? 'Add plan and build' : 'Start build'} size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void start(); }} />
         <Button label={added ? 'Plan added' : 'Add plan only'} variant="outline" size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void addOnly(); }} />

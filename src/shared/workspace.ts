@@ -36,6 +36,9 @@ export const startedFill = (teamId: string, stateId: string): number => {
 };
 
 /** How a team writes estimates (`tShirt`, `fibonacci`, ...), from the last loaded workspace. */
+/** The signed-in Linear user, when this frame has loaded the workspace. */
+export const viewerIdNow = (): string | null => latest?.viewer.id ?? null;
+
 export const teamEstimateType = (teamId: string): string | undefined => latest?.teamsById.get(teamId)?.issueEstimationType;
 
 const loadStates = async (): Promise<Map<string, WorkflowState[]>> => {

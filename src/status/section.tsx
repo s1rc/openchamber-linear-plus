@@ -17,6 +17,7 @@ import { LinearError } from '../shared/linear.ts';
 import { openInPanel } from '../shared/open-target.ts';
 import { useProjects } from '../shared/projects.ts';
 import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
+import { PlanExtrasFailures, PlanExtrasRunner } from '../shared/plan-extras-runner.tsx';
 import { cycleLine, countByStatus, limitCounts, sortMine } from '../shared/status.ts';
 import type { ProjectSummary, StatusMineIssue, Team } from '../shared/types.ts';
 import { entityName, useDetection, type DetectionState } from '../shared/use-detection.ts';
@@ -147,6 +148,7 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
           onDone={() => { setHandled((set) => new Set(set).add(rowKey(handoff))); handoffs.refresh(); }}
         />
       ))}
+      <PlanExtrasFailures directory={directory} />
       {waiting.map((draft) => (
         <DraftRow
           key={draft.id}
@@ -264,6 +266,7 @@ export const StatusSection = () => {
     return (
       <>
         <SnapshotPusher directory={directory} workspace={workspace.data} state={state} />
+        <PlanExtrasRunner directory={directory} viewerId={workspace.data.viewer.id} />
         <Rows directory={directory} workspace={workspace.data} state={state} />
       </>
     );

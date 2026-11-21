@@ -97,7 +97,7 @@ export const PROJECT_DETAIL = `
       ${PROJECT_SUMMARY}
       description content
       members(first: 50) { nodes { ${USER} } }
-      projectMilestones(first: 50) { nodes { id name targetDate progress sortOrder } }
+      projectMilestones(first: 50) { nodes { id name description targetDate progress sortOrder } }
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
@@ -121,7 +121,7 @@ export const ISSUE_DETAIL = `
       ${ISSUE_ROW}
       description
       creator { ${USER} }
-      team { id key name states(first: 100) { nodes { ${STATE} } } }
+      team { id key name issueEstimationType issueEstimationAllowZero issueEstimationExtended states(first: 100) { nodes { ${STATE} } } }
       children(first: 50) { nodes { ${ISSUE_ROW} } }
       comments(first: 100) { nodes { id body createdAt editedAt url user { ${USER} } parent { id } } }
       links: attachments(first: 50) { nodes { id title subtitle url sourceType metadata createdAt } }
@@ -195,6 +195,16 @@ export const ISSUE_EXTRAS = `
 `;
 
 /** Sub-issues of loaded issues, for the "2/3" progress on each row: only parent and state. */
+/** Which milestone each of a project's issues is in, every state, for the overview's "12 issues" counts. */
+export const MILESTONE_ISSUES = `
+  query MilestoneIssues($projectId: ID!, $after: String) {
+    issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
+      nodes { projectMilestone { id } }
+      ${PAGE}
+    }
+  }
+`;
+
 export const CHILD_STATES = `
   query ChildStates($ids: [ID!], $after: String) {
     issues(first: 250, after: $after, filter: { parent: { id: { in: $ids } } }) {
@@ -324,6 +334,32 @@ export const SEARCH_ISSUES = `
   }
 `;
 
+// The dialog's issue picker: two lines per issue (parent, title, key, assignee, time, sub-issues,
+// priority, labels), and the preview's status, team and project. Lean, since it lists 50 at a time.
+const PICKER_ROW = `
+  id identifier title priority updatedAt url branchName
+  state { ${STATE} }
+  team { id key name }
+  assignee { ${USER} }
+  labels(first: 6) { nodes { ${LABEL} } }
+  project { id name color icon }
+  parent { id identifier title state { ${STATE} } }
+  children(first: 25) { nodes { id state { type } } }
+`;
+
+/** Issues for the picker before a term is typed, newest change first. Also reads one pasted key (`first: 1`). */
+export const PICKER_ISSUES = `
+  query PickerIssues($filter: IssueFilter, $first: Int) {
+    issues(first: $first, filter: $filter, orderBy: updatedAt) { nodes { ${PICKER_ROW} } }
+  }
+`;
+
+export const PICKER_SEARCH = `
+  query PickerSearch($term: String!, $filter: IssueFilter) {
+    searchIssues(term: $term, first: 30, filter: $filter) { nodes { ${PICKER_ROW} } }
+  }
+`;
+
 export const SEARCH_PROJECTS = `
   query SearchProjects($term: String!) {
     searchProjects(term: $term, first: 20) { nodes { ${PROJECT_SUMMARY} } }
@@ -353,6 +389,12 @@ export const DOCUMENT = `
 export const ISSUE_UPDATE = `
   mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
     issueUpdate(id: $id, input: $input) { success issue { ${ISSUE_ROW} } }
+  }
+`;
+
+export const ISSUE_RELATION_CREATE = `
+  mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
+    issueRelationCreate(input: $input) { success }
   }
 `;
 
@@ -399,7 +441,7 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
-  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT,
-  ISSUE_UPDATE, ISSUE_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES,
+  ISSUE_UPDATE, ISSUE_CREATE, ISSUE_RELATION_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

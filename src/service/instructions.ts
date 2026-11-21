@@ -22,7 +22,7 @@ const issueLine = (issue: SnapIssue, title: number): string => `${issue.identifi
 type Budget = { mine: number; title: number; description: number; projects: number };
 
 const render = (input: InstructionInput, budget: Budget): string => {
-  const lines = ['Linear for this folder (from the Linear extension):'];
+  const lines = ['Linear for this folder (from the Linear+ extension):'];
   const projects = input.projects.slice(0, budget.projects).map((p) => `${clip(p.name, 50)} (${p.url})`);
   const teams = input.teamKeys.slice(0, 4);
   const where = [projects.length ? `Projects: ${projects.join(', ')}` : '', teams.length ? `${teams.length > 1 ? 'teams' : 'team'} ${teams.join(', ')}` : ''].filter(Boolean);

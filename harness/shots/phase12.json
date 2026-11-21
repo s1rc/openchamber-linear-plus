@@ -1,0 +1,521 @@
+[
+ {
+  "name": "p12-picker",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-next",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "press": "ArrowDown"
+   },
+   {
+    "press": "ArrowDown"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-narrow",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 800,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-wide",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1000,
+  "height": 760,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-search",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "type": "tax"
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-key",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "type": "https://linear.app/acme/issue/ENG-13/show-saved-cards"
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-missing",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "type": "ENG-999"
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-mine",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "css": ".lin-picker-head .oc-sdk-trigger"
+   },
+   {
+    "wait": 300
+   },
+   {
+    "click": "Mine"
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-picker-projects",
+  "query": {
+   "page": "dialog/index.html",
+   "surface": "dialog",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 640,
+  "height": 720,
+  "port": 4812,
+  "steps": [
+   {
+    "wait": 1500
+   },
+   {
+    "css": ".lin-picker-head .oc-sdk-trigger"
+   },
+   {
+    "wait": 300
+   },
+   {
+    "click": "Projects"
+   },
+   {
+    "wait": 1500
+   }
+  ]
+ },
+ {
+  "name": "p12-settings-agents",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "connected": "1",
+   "dir": "/work/engineering-api"
+  },
+  "width": 1100,
+  "height": 1700,
+  "port": 4812,
+  "steps": [
+   {
+    "click": "Settings"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p12-build-model",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 760,
+  "port": 4813,
+  "steps": [
+   {
+    "click": "Start build"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p12-plan-model",
+  "query": {
+   "page": "blocks/index.html",
+   "block": "LinearIssue",
+   "args": "{\"id\":\"ENG-13\"}",
+   "connected": "1",
+   "dir": "/work/engineering-api",
+   "projects": "[{\"id\":\"ocp1\",\"name\":\"engineering-api\",\"directory\":\"/work/engineering-api\"}]",
+   "sessions": "[{\"id\":\"ses_plan\",\"title\":\"Plan: saved cards first\",\"projectId\":\"ocp1\",\"directory\":\"/work/engineering-api-wt\",\"agent\":\"plan\",\"parentId\":null,\"createdAt\":1,\"updatedAt\":5,\"archivedAt\":null,\"worktree\":{\"directory\":\"/work/engineering-api-wt\",\"name\":\"eng-13\",\"branch\":\"matt/eng-13-saved-cards\",\"status\":\"ready\"},\"activity\":\"idle\",\"outcome\":null,\"items\":[{\"id\":\"linear-dashboard:ENG-13\",\"data\":{\"identifier\":\"ENG-13\",\"issueId\":\"i\"}}],\"links\":[]}]"
+  },
+  "width": 1100,
+  "height": 760,
+  "port": 4813,
+  "steps": [
+   {
+    "click": "Start plan"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p12-project-milestones",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 1300,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-project-milestone-issues",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1200,
+  "height": 900,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   },
+   {
+    "wait": 1200
+   },
+   {
+    "css": ".lin-milestone-count",
+    "nth": 1
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-project-milestone-issues-narrow",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 900,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 5
+   },
+   {
+    "css": ".lin-table-row:not(.lin-table-head)",
+    "nth": 0
+   },
+   {
+    "wait": 1200
+   },
+   {
+    "css": ".lin-milestone-count",
+    "nth": 1
+   },
+   {
+    "wait": 1200
+   }
+  ]
+ },
+ {
+  "name": "p12-description",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   }
+  ]
+ },
+ {
+  "name": "p12-description-edit",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 1100,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   },
+   {
+    "wait": 800
+   },
+   {
+    "css": ".lin-description-body h2, .lin-description-body p",
+    "nth": 0
+   },
+   {
+    "wait": 600
+   }
+  ]
+ },
+ {
+  "name": "p12-copy-buttons",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 700,
+  "port": 4812,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p12-copy-buttons-rail",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "panel",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 1800,
+  "port": 4812,
+  "steps": [
+   {
+    "click": "Overview"
+   },
+   {
+    "css": "[role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "css": "[data-issue=\"ENG-11\"]"
+   }
+  ]
+ },
+ {
+  "name": "p12-create-assign-off",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4813,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "New issue"
+   }
+  ]
+ },
+ {
+  "name": "p12-create-assign-on",
+  "query": {
+   "page": "panel/index.html",
+   "surface": "page",
+   "dir": "/work/engineering-api",
+   "connected": "1",
+   "storage": "{\"pref:assign-me\": true}"
+  },
+  "width": 1300,
+  "height": 900,
+  "port": 4813,
+  "steps": [
+   {
+    "css": ".lin-nav [role=\"option\"]",
+    "nth": 3
+   },
+   {
+    "click": "New issue"
+   }
+  ]
+ },
+ {
+  "name": "p12-extras-status",
+  "query": {
+   "page": "status/index.html",
+   "surface": "status",
+   "dir": "/work/engineering-api",
+   "connected": "1"
+  },
+  "width": 360,
+  "height": 700,
+  "port": 4814,
+  "steps": [
+   {
+    "wait": 4000
+   }
+  ]
+ }
+]

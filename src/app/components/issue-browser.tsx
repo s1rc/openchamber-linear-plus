@@ -6,6 +6,7 @@ import { toast } from '@openchamber-ext/shared-ui';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { splitColumns } from '../../shared/board.ts';
 import { all, BUILTIN_VIEWS, openOrRecent, type Filter } from '../../shared/filters.ts';
+import { milestoneFilter } from '../../shared/milestones.ts';
 import { groupIssues, PRIORITY_NAMES, type Seeds } from '../../shared/grouping.ts';
 import { useSeedData } from '../../shared/seeds.ts';
 import { useChildCounts, useChildIssues, useCustomViews, useIssueExtras, useIssueList, useViewIssueList } from '../../shared/issues.ts';
@@ -54,11 +55,15 @@ type Props = {
   viewTeamId?: string | null;
   /** The project new issues go to by default, for a project's list. */
   projectId?: string | null;
+  /** A project's milestones, for the milestone filter. With one picked the list shows its issues in every state. */
+  milestones?: { id: string; name: string }[];
+  milestone?: string | null;
+  onMilestone?: (id: string | null) => void;
   emptyTitle: string;
   emptyBody: string;
 };
 
-export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, emptyTitle, emptyBody }: Props) => {
+export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, emptyTitle, emptyBody }: Props) => {
   const placeKey = useContext(PlaceKey);
   const workspace = useWorkspace();
   const statesByTeam = workspace.data?.statesByTeam;
@@ -126,7 +131,10 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const selectView = (id: string) => { setViewChoice(id); saveTab(placeKey, `view:${listKey}`, id); };
 
   const builtin = BUILTIN_VIEWS.find((v) => v.id === viewId)?.filter ?? null;
-  const standard = scope && !customActive ? all(states === 'all' ? null : openOrRecent(showClosed), builtin, scope) : null;
+  const inMilestone = milestone && milestones.some((m) => m.id === milestone) ? milestone : null;
+  const standard = scope && !customActive
+    ? all(states === 'all' || inMilestone ? null : openOrRecent(showClosed), builtin, scope, inMilestone ? milestoneFilter(inMilestone) : null)
+    : null;
   const standardList = useIssueList(standard);
   const viewList = useViewIssueList(customActive ? viewId : null, customActive ? scope : null);
   const list = customActive ? viewList : standardList;
@@ -227,7 +235,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   }, [visible, cursorId, openId, optionsOpen, creating, moving]);
 
   const wide = ctx.surface === 'page';
-  const activeFilters = [assignee !== 'any', priority !== 'any', label !== 'any', status !== 'any', states === 'open' && !customActive && showClosed].filter(Boolean).length;
+  const activeFilters = [assignee !== 'any', priority !== 'any', label !== 'any', status !== 'any', states === 'open' && !customActive && showClosed, Boolean(inMilestone)].filter(Boolean).length;
   const open = (issue: Issue) => { setOpenId(issue.identifier); setCursorId(issue.identifier); };
   const toggleGroup = (key: string) => setCollapsed((set) => {
     const next = new Set(set);
@@ -332,7 +340,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
             <Select value={status} onChange={(v) => setStatus(v as typeof status)} options={[
               { id: 'any', label: 'Any status' }, { id: 'triage', label: 'Triage' }, { id: 'started', label: 'Started' },
               { id: 'unstarted', label: 'Not started' }, { id: 'backlog', label: 'Backlog' },
-              ...(showClosed || states === 'all' || customActive ? [{ id: 'completed', label: 'Done' }, { id: 'canceled', label: 'Canceled' }] : []),
+              ...(showClosed || states === 'all' || customActive || inMilestone ? [{ id: 'completed', label: 'Done' }, { id: 'canceled', label: 'Canceled' }] : []),
             ]} />
             <Select value={priority} onChange={setPriority} options={[
               { id: 'any', label: 'Any priority' }, ...[1, 2, 3, 4, 0].map((p) => ({ id: String(p), label: PRIORITY_NAMES[p]! })),
@@ -340,7 +348,12 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
             {labels.length > 0 && (
               <Select value={label} onChange={setLabel} searchable={labels.length > 8} options={[{ id: 'any', label: 'Any label' }, ...labels.map(([id, name]) => ({ id, label: name }))]} />
             )}
-            {states === 'open' && !customActive && <Switch label="Closed, last 2 weeks" checked={showClosed} onChange={setShowClosed} />}
+            {milestones.length > 0 && onMilestone && !customActive && (
+              <Select value={inMilestone ?? 'any'} onChange={(id) => onMilestone(id === 'any' ? null : id)} searchable={milestones.length > 8} options={[
+                { id: 'any', label: 'Any milestone' }, ...milestones.map((m) => ({ id: m.id, label: m.name })),
+              ]} />
+            )}
+            {states === 'open' && !customActive && !inMilestone && <Switch label="Closed, last 2 weeks" checked={showClosed} onChange={setShowClosed} />}
           </div>
         )}
 
@@ -348,6 +361,12 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           <Banner tone="error" title="Could not load issues" body={error.kind === 'rate-limited' ? 'Linear is limiting requests. Wait a minute, then retry.' : error.message} action={{ label: 'Retry', onClick: () => list.refresh() }} />
         )}
         {list.loading && !list.data && <div class="lin-center"><Spinner label="Loading issues" /></div>}
+        {inMilestone && onMilestone && (
+          <div class="lin-milestone-scope sui-small">
+            <span>Milestone <strong>{milestones.find((m) => m.id === inMilestone)?.name}</strong>, every status</span>
+            <Button label="Show all issues" variant="ghost" size="xs" onClick={() => onMilestone(null)} />
+          </div>
+        )}
         {list.data && (
           <div class="sui-muted sui-small">
             {shown.length === loaded.length ? `${loaded.length} ${loaded.length === 1 ? 'issue' : 'issues'}` : `${shown.length} of ${loaded.length} issues`}

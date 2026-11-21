@@ -2,7 +2,9 @@
 import { host } from './host.ts';
 import { issueContext } from './issue-context.ts';
 import { requestPlan } from './handoff.ts';
-import { planningStateOf, startedStateOf, worktreeOnBranch } from './moves.ts';
+import { estimateLabel } from './format.ts';
+import { planningStateOf, startedStateOf, teamScale, worktreeOnBranch } from './moves.ts';
+import { scaleText } from './plan-extras.ts';
 import type { IssueDetail, WorkflowState } from './types.ts';
 import { updateIssue, writeErrorText } from './writes.ts';
 
@@ -19,6 +21,8 @@ export type StartOptions = {
   state?: WorkflowState | null;
   /** The folder the frame is open in, for a plan with no new worktree. */
   directoryHint?: string | null;
+  /** Start plan: `provider/model` for this plan only, instead of the one in Settings. */
+  model?: string;
 };
 
 export type StartOutcome =
@@ -85,7 +89,9 @@ export const startPlanFor = async (issue: IssueDetail, options: StartOptions): P
   }
   let sessionId: string;
   try {
-    sessionId = (await requestPlan({ identifier: issue.identifier, directory, issueTitle: issue.title, context: issueContext(issue) })).sessionId;
+    // The team's scale goes with the plan, so it ends with an estimate on it.
+    const scale = scaleText(teamScale(issue.team), (v) => estimateLabel(v, issue.team.issueEstimationType));
+    sessionId = (await requestPlan({ identifier: issue.identifier, directory, issueTitle: issue.title, context: issueContext(issue), scale, ...(options.model ? { model: options.model } : {}) })).sessionId;
   } catch (error) {
     return { started: false, directory, error: error instanceof Error ? error.message : String(error) };
   }

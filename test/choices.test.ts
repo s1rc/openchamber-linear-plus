@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parseJsonc, readChoices, type ChoicesIo } from '../src/service/choices.ts';
-import { DEFAULT_ID, parseChoices, withSaved } from '../src/shared/choices-rules.ts';
+import { currentModelLabel, DEFAULT_ID, parseChoices, withSaved } from '../src/shared/choices-rules.ts';
 
 const catalogue = JSON.stringify({
   anthropic: { name: 'Anthropic', models: { 'claude-sonnet-4-5': { name: 'Claude Sonnet 4.5' }, 'claude-old': { name: 'Claude Old', status: 'deprecated' } } },
@@ -73,6 +73,16 @@ describe('readChoices models', () => {
 });
 
 describe('the frame side', () => {
+  test('parseChoices keeps what a start would use, and the label names it', () => {
+    const lists = { agents: [], models: [{ id: 'a/b', label: 'Model B' }, { id: 'c/d', label: 'Model D' }], defaultModel: 'c/d' };
+    const read = parseChoices({ ok: true, ...lists, current: { plan: { agent: 'plan', model: 'a/b' }, build: { agent: 'build' } } })!;
+    expect(read.current).toEqual({ plan: { agent: 'plan', model: 'a/b' }, build: { agent: 'build' } });
+    expect(currentModelLabel(read, 'plan')).toBe('Model B');
+    expect(currentModelLabel(read, 'build')).toBe('Model D (default)');
+    expect(parseChoices({ ok: true, ...lists, current: { plan: 'x' } })!.current).toBeUndefined();
+    expect(currentModelLabel({ ...lists, defaultModel: null }, 'build')).toBe('the default model');
+  });
+
   test('parseChoices keeps good rows and refuses a failed or odd answer', () => {
     expect(parseChoices({ ok: true, agents: [{ id: 'build', label: 'build' }, 1], models: [], defaultModel: 'a/b' })).toEqual({ agents: [{ id: 'build', label: 'build' }], models: [], defaultModel: 'a/b' });
     expect(parseChoices({ ok: false, error: 'x' })).toBeNull();

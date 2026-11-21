@@ -12,7 +12,8 @@ import { LinearError } from '../shared/linear.ts';
 import { knownProject } from '../shared/projects.ts';
 import { useDetection } from '../shared/use-detection.ts';
 import { useWorkspace } from '../shared/workspace.ts';
-import { AttachedView, AttachView } from './attach-view.tsx';
+import { AttachedView } from './attach-view.tsx';
+import { PickerView } from './picker-view.tsx';
 import { CommentView } from './comment-view.tsx';
 import { CreateView } from './create-view.tsx';
 import { BuildView } from './build-view.tsx';
@@ -37,7 +38,7 @@ const PlusView = ({ scope, projectIds, teamIds, hasSession }: { scope: ReturnTyp
         onChange={(id) => setTab(id as 'create' | 'attach')}
       />
       <CreateView job={null} scope={scope} hidden={tab !== 'create'} />
-      {tab === 'attach' && <AttachView scope={scope} projectIds={projectIds} teamIds={teamIds} />}
+      {tab === 'attach' && <PickerView scope={scope} projectIds={projectIds} teamIds={teamIds} hasSession={hasSession} />}
     </div>
   );
 };

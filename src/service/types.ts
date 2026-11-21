@@ -34,7 +34,10 @@ export type MappingConfig = {
  */
 export type ReviewMode = 'off' | 'mr' | 'auto';
 
-export type Config = { directories: Record<string, MappingConfig> };
+/** The plan and build agent and model for every folder; a folder's own value wins over these. */
+export type AgentDefaults = { planAgent?: string; planModel?: string; buildAgent?: string; buildModel?: string };
+
+export type Config = { directories: Record<string, MappingConfig>; defaults?: AgentDefaults };
 
 export type SnapTeam = { id: string; key: string; name: string };
 

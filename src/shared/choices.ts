@@ -4,4 +4,4 @@ import { parseChoices, type Choices } from './choices-rules.ts';
 import { host } from './host.ts';
 
 export const fetchChoices = async (directory: string | null): Promise<Choices | null> =>
-  parseChoices(await api(host, 'GET', '/choices', { query: { directory }, name: 'Linear' }));
+  parseChoices(await api(host, 'GET', '/choices', { query: { directory }, name: 'Linear+' }));

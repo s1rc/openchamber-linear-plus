@@ -6,9 +6,10 @@ import {
   type GuestSessionEventRequest, type MentionsResolveRequest, type MentionsSearchRequest, type ServiceHost,
 } from '@openchamber/sdk';
 import type { Choices } from './choices.ts';
+import { CLAIM_STALE_MS, parsePlanExtras, type ExtrasState } from '../shared/plan-extras.ts';
 import { issueOfBranch, readBranch, resolveMapped, trimDir, type ReadText } from './directories.ts';
 import { buildDraft, handoffId, HANDOFFS_MAX, linearIssuesOf, looksLikePlan, PLANS_KEPT, upsertDraft, upsertHandoff, withoutBlocks } from './events.ts';
-import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt } from './handoff.ts';
+import { handoffPrompt, PLAN_LIMIT, planPrompt, sessionChoice } from './handoff.ts';
 import { buildInstructions } from './instructions.ts';
 import { fetchBranchIssue, fetchDocText, fetchProjectText, refreshFromLinear, type Gql } from './linear-node.ts';
 import { docMarkdown, locate, mentionRows, projectMarkdown } from './mentions.ts';
@@ -39,7 +40,16 @@ export const NOT_A_PLAN = 'The last reply in that session is not a plan. Ask the
 const IDENTIFIER = /^[A-Za-z][A-Za-z0-9]{0,6}-\d{1,9}$/;
 
 /** `plans` keeps the latest reply of each planning session that read like a plan, for when a later chat message is the last reply. */
-type Handoffs = { pending: Handoff[]; builds: Record<string, BuildSession>; plans?: Record<string, { text: string; at: number }> };
+type Handoffs = {
+  pending: Handoff[];
+  builds: Record<string, BuildSession>;
+  plans?: Record<string, { text: string; at: number }>;
+  /** The estimate and split-out issues of each planning session, by session id, and how far a frame got writing them. */
+  extras?: Record<string, ExtrasState>;
+};
+
+const EXTRAS_KEPT = 40;
+const EXTRAS_SHOWN_MS = 14 * 24 * 60 * 60_000;
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const parse = (raw: string): Record<string, unknown> => {
@@ -269,12 +279,69 @@ export const createApp = (deps: Deps) => {
 
   const postHandoffs = (raw: string): Reply => {
     const body = parse(raw);
+    if (typeof body.action === 'string' && body.action.endsWith('-extras') || body.action === 'extras-done' || body.action === 'extras-failed') return postExtras(body);
     const id = typeof body.id === 'string' ? body.id : '';
     if (!id || body.action !== 'dismiss') return fail("Expected { id, action: 'dismiss' }.", 400);
     const before = handoffs.pending.length;
     handoffs.pending = handoffs.pending.filter((h) => h.id !== id);
     if (handoffs.pending.length !== before) saveHandoffs();
     return { body: { ok: true } };
+  };
+
+  // ---- plan extras: written to Linear by a frame, once per planning session
+
+  const extrasFor = (directory: string | null): ExtrasState[] => {
+    const folder = directory ? mappedFor(directory) : null;
+    if (directory && !folder) return [];
+    return Object.values(handoffs.extras ?? {})
+      .filter((x) => (!folder || x.directory === folder) && now() - x.at < EXTRAS_SHOWN_MS)
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 20);
+  };
+
+  const keepExtras = (state: ExtrasState) => {
+    const all = { ...(handoffs.extras ?? {}), [state.sessionId]: state };
+    handoffs.extras = Object.fromEntries(Object.entries(all).sort((x, y) => y[1].at - x[1].at).slice(0, EXTRAS_KEPT));
+    saveHandoffs();
+  };
+
+  const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && IDENTIFIER.test(v)).slice(0, 20) : []);
+
+  /** `claim-extras` lets one frame write; `extras-done` and `extras-failed` record what it wrote; `retry-extras` lets a failed one run again. */
+  const postExtras = (body: Record<string, unknown>): Reply => {
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : '';
+    const current = handoffs.extras?.[sessionId];
+    if (!current) return fail('No plan extras for that session.');
+    if (body.action === 'claim-extras') {
+      const free = current.state === 'pending' || (current.state === 'claimed' && now() - (current.claimedAt ?? 0) > CLAIM_STALE_MS);
+      if (!free) return { body: { ok: false, claimed: false, state: current } };
+      const claimed: ExtrasState = { ...current, state: 'claimed', claimedAt: now() };
+      keepExtras(claimed);
+      return { body: { ok: true, claimed: true, state: claimed } };
+    }
+    if (body.action === 'extras-done' || body.action === 'extras-failed') {
+      if (current.state !== 'claimed') return fail('Those extras are not being written.');
+      const next: ExtrasState = {
+        ...current,
+        state: body.action === 'extras-done' ? 'done' : 'failed',
+        estimateDone: body.estimateDone === true,
+        estimateSet: typeof body.estimateSet === 'number' ? body.estimateSet : null,
+        created: strings(body.created),
+        ...(body.action === 'extras-failed' ? { error: typeof body.error === 'string' ? body.error.slice(0, 300) : 'Linear refused a write.' } : {}),
+      };
+      if (body.action === 'extras-done') delete next.error;
+      delete next.claimedAt;
+      keepExtras(next);
+      return { body: { ok: true, state: next } };
+    }
+    if (body.action === 'retry-extras') {
+      if (current.state !== 'failed') return fail('Only extras that failed can run again.');
+      const next: ExtrasState = { ...current, state: 'pending' };
+      delete next.error;
+      keepExtras(next);
+      return { body: { ok: true, state: next } };
+    }
+    return fail('Unknown action.', 400);
   };
 
   const rememberSession = (sessionId: string, entry: BuildSession) => {
@@ -340,14 +407,13 @@ export const createApp = (deps: Deps) => {
         planSessionTitle: typeof body.sessionTitle === 'string' ? body.sessionTitle : pending?.sessionTitle ?? null,
         plan: got.plan,
         review: { mode: mapping?.reviewMode ?? 'off', reviewers: mapping?.aiReviewers ?? '' },
+        splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? [],
       });
-      const model = cleanModel(mapping?.buildModel);
       const started = await host.sessions.start({
         prompt,
         directory: sessionDirectory,
         title: `${identifier} build`,
-        agent: cleanAgent(mapping?.buildAgent),
-        ...(model ? { model } : {}),
+        ...sessionChoice('build', mapping, config.defaults, { model: body.model }),
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? sessionDirectory, createdAt: now(), role: 'build', sessionDirectory, title: `${identifier} build` });
       handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
@@ -377,7 +443,6 @@ export const createApp = (deps: Deps) => {
     try {
       const folder = mappedFor(directory);
       const mapping = folder ? config.directories[folder] : undefined;
-      const model = cleanModel(mapping?.planModel);
       const started = await host.sessions.start({
         prompt: planPrompt({
           identifier,
@@ -385,11 +450,11 @@ export const createApp = (deps: Deps) => {
           branch: readBranch(directory, read),
           directory,
           context: typeof body.context === 'string' ? body.context : '',
+          scale: typeof body.scale === 'string' ? body.scale : null,
         }),
         directory,
         title: `${identifier} plan`,
-        agent: cleanAgent(mapping?.planAgent, 'plan'),
-        ...(model ? { model } : {}),
+        ...sessionChoice('plan', mapping, config.defaults, { model: body.model }),
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: 'plan', sessionDirectory: directory, title: `${identifier} plan` });
       saveHandoffs();
@@ -442,7 +507,7 @@ export const createApp = (deps: Deps) => {
     }
     if (cached?.kind === 'project') return { body: { text: projectMarkdown(cached.project, cached.at) } };
     if (cached?.kind === 'doc') return { body: { text: docMarkdown(cached.doc, cached.at) } };
-    return { status: 404, body: { message: 'That Linear item is not cached. Open the Linear dashboard once so it is, or add a personal API key in Settings, Integrations.' } };
+    return { status: 404, body: { message: 'That Linear item is not cached. Open the Linear+ dashboard once so it is, or add a personal API key in Settings, Integrations.' } };
   };
 
   // ---- session events
@@ -495,6 +560,25 @@ export const createApp = (deps: Deps) => {
       saveHandoffs();
     }
 
+    // The first estimate and split-out list of a planning session is kept for a frame to write. A later turn replaces
+    // it only while nobody has started writing it, so a revised plan never creates the issues twice.
+    const raw = content?.type === 'turn-finished' ? content.reply : '';
+    const extras = build?.role !== 'build' && raw ? parsePlanExtras(raw) : null;
+    if (extras && (build?.role === 'plan' || looksLikePlan(reply))) {
+      const before = handoffs.extras?.[event.session.id];
+      if (!before || before.state === 'pending') {
+        keepExtras({
+          sessionId: event.session.id,
+          identifier: build?.identifier ?? issues[issues.length - 1]!,
+          directory: folder,
+          sessionTitle: title?.trim() || 'Untitled session',
+          extras,
+          state: 'pending',
+          at: now(),
+        });
+      }
+    }
+
     if (build?.role !== 'build' && reply.trim()) {
       const identifier = issues[issues.length - 1]!;
       const handoff: Handoff = {
@@ -539,14 +623,21 @@ export const createApp = (deps: Deps) => {
       }
       if (path === '/handoffs') {
         if (method === 'POST') return postHandoffs(raw);
-        return { body: { handoffs: handoffsFor(query.get('directory')) } };
+        return { body: { handoffs: handoffsFor(query.get('directory')), extras: extrasFor(query.get('directory')) } };
+      }
+      if (path === '/extras') {
+        const id = query.get('sessionId') ?? '';
+        return { body: { extras: handoffs.extras?.[id] ?? null } };
       }
       if (path === '/handoff' && method === 'POST') return await startBuild(raw);
       if (path === '/plan' && method === 'POST') return await startPlan(raw);
       if (path === '/plans') return { body: { sessions: plansFor(query.get('identifier'), query.get('sessionId')) } };
       if (path === '/choices') {
         const folder = mappedFor(query.get('directory'));
-        return { body: deps.choices ? { ok: true, ...deps.choices(folder ?? query.get('directory')) } : { ok: false, error: 'This service cannot read the agent and model lists.' } };
+        const mapping = folder ? config.directories[folder] : undefined;
+        // What a plan or build started here would use with no override: the folder's choice, else every folder's.
+        const current = { plan: sessionChoice('plan', mapping, config.defaults), build: sessionChoice('build', mapping, config.defaults) };
+        return { body: deps.choices ? { ok: true, ...deps.choices(folder ?? query.get('directory')), current } : { ok: false, error: 'This service cannot read the agent and model lists.', current } };
       }
       return null;
     } catch (error) {

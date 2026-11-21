@@ -18,7 +18,7 @@
       "openchamber": ">=2.7.0"
     },
     "id": "linear-dashboard",
-    "name": "Linear",
+    "name": "Linear+",
     "icon": "icon.svg",
     "contributes": {
       "panel": {
@@ -31,14 +31,14 @@
       },
       "statusSection": {
         "entry": "status/index.html",
-        "title": "Linear",
+        "title": "Linear+",
         "height": 160,
         "requiresProject": true
       },
       "capabilities": ["prompt", "sessions", "files", "model"],
       "origins": ["https://uploads.linear.app", "https://public.linear.app"],
       "integration": {
-        "name": "Linear dashboard",
+        "name": "Linear+",
         "description": "Uses your OpenChamber Linear connection. Optional: a personal API key keeps agent context and @ rows fresh while the dashboard is closed.",
         "host": {
           "provider": "linear"
@@ -62,7 +62,7 @@
       },
       "instructions": true,
       "mentions": {
-        "label": "Linear"
+        "label": "Linear+"
       },
       "background": {
         "entry": "background/index.html"

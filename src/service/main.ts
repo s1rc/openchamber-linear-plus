@@ -1,4 +1,4 @@
-// The Linear extension's service: it keeps what the agent should know about each mapped folder, answers the
+// The Linear+ extension's service: it keeps what the agent should know about each mapped folder, answers the
 // `@` menu and session events with no window open, and keeps finish-comment drafts and plan to build
 // candidates for the Work Status section. It never posts to Linear: writes happen on a click in a frame.
 import http from 'node:http';
@@ -58,7 +58,7 @@ http.createServer((req, res) => {
         res.writeHead(reply ? (reply.status ?? 200) : 404, { 'Content-Type': 'application/json' }).end(JSON.stringify(reply ? reply.body : { message: 'Not found' }));
         reply?.after?.();
       },
-      () => { res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: false, error: 'The Linear service hit an error.' })); },
+      () => { res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: false, error: 'The Linear+ service hit an error.' })); },
     );
   });
 }).listen(Number(process.env.OPENCHAMBER_SERVICE_PORT), '127.0.0.1', () => {

@@ -1,7 +1,7 @@
 // What a frame pushes with `POST /snapshot` and `PUT /config`, checked and merged. Frames are ours, but the
 // service answers whatever arrives: every field is read as untrusted and clipped. Pure.
 import type { DocumentSummary, ProjectSummary, StatusMineIssue } from '../shared/types.ts';
-import type { Config, DirSnapshot, FinishComments, MappingConfig, SnapDoc, SnapIssue, SnapProject, SnapshotPush, SnapTeam } from './types.ts';
+import type { AgentDefaults, Config, DirSnapshot, FinishComments, MappingConfig, SnapDoc, SnapIssue, SnapProject, SnapshotPush, SnapTeam } from './types.ts';
 
 export const PROJECTS_MAX = 100;
 export const DOCUMENTS_MAX = 200;
@@ -133,7 +133,19 @@ const mapping = (raw: unknown): MappingConfig | null => {
   };
 };
 
-/** The mappings of a `PUT /config` body, keyed by their own directory. Null when the body is not a config. */
+/** The plan and build agent and model set for every folder, or nothing. */
+export const readDefaults = (raw: unknown): AgentDefaults | undefined => {
+  if (!isObject(raw)) return undefined;
+  const defaults: AgentDefaults = {
+    ...optional('planAgent', text(raw.planAgent, 64)),
+    ...optional('planModel', text(raw.planModel, 200)),
+    ...optional('buildAgent', text(raw.buildAgent, 64)),
+    ...optional('buildModel', text(raw.buildModel, 200)),
+  };
+  return Object.keys(defaults).length ? defaults : undefined;
+};
+
+/** The mappings of a `PUT /config` body, keyed by their own directory, and the defaults for every folder. Null when the body is not a config. */
 export const readConfig = (raw: unknown): Config | null => {
   if (!isObject(raw) || !isObject(raw.directories)) return null;
   const directories: Record<string, MappingConfig> = {};
@@ -141,7 +153,8 @@ export const readConfig = (raw: unknown): Config | null => {
     const read = mapping(value);
     if (read) directories[read.directory] = read;
   }
-  return { directories };
+  const defaults = readDefaults(raw.defaults);
+  return defaults ? { directories, defaults } : { directories };
 };
 
 /** The team keys a folder's branch may name: its mapped teams, the teams of its mapped projects, and every team of the workspace when a frame has said so. */

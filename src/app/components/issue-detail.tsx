@@ -24,17 +24,9 @@ import {
 import { BuildPanel, useBuildSource } from '../../shared/build-panel.tsx';
 import { Modal } from './modal.tsx';
 import { StartSessionDialog } from './start-session.tsx';
+import { CopyButtons } from '../../shared/icon-buttons.tsx';
 
 const PRIORITY_NAME = ['No priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
-
-const copy = async (text: string, what: string) => {
-  try {
-    await host.writeClipboard(text);
-    await toast(host, 'success', `Copied ${what}`);
-  } catch {
-    await toast(host, 'error', `Could not copy ${what}`);
-  }
-};
 
 type Relation = { key: string; issue: RelatedIssue };
 
@@ -118,11 +110,22 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
   const [draft, setDraft] = useState<string | null>(null);
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const [busy, setBusy] = useState(false);
+  const edit = () => { setDraft(issue.description ?? ''); setTab('write'); };
   if (draft === null) {
+    // As in Linear, a click on the description edits it; a click on a link, or a selection of text, does not.
+    const onClick = (event: MouseEvent) => {
+      if ((event.target as HTMLElement | null)?.closest('a, button')) return;
+      if (window.getSelection()?.toString()) return;
+      edit();
+    };
     return (
       <div class="lin-description">
-        <Markdown source={issue.description} empty="No description." onOpenIssue={onOpenIssue} />
-        <div><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={() => { setDraft(issue.description ?? ''); setTab('write'); }} /></div>
+        <div class="lin-description-body lin-editable" title="Click to edit the description" onClick={onClick}>
+          {issue.description?.trim()
+            ? <Markdown source={issue.description} onOpenIssue={onOpenIssue} />
+            : <div class="sui-muted">Add a description...</div>}
+        </div>
+        <div><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={edit} /></div>
       </div>
     );
   }
@@ -136,7 +139,7 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
     <div class="lin-stack lin-stack--tight" onKeyDown={keepKeys((e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void commit(); if (e.key === 'Escape') setDraft(null); })}>
       <Tabs items={[{ id: 'write', label: 'Write' }, { id: 'preview', label: 'Preview' }]} activeId={tab} onChange={(id) => setTab(id as 'write' | 'preview')} />
       {tab === 'write'
-        ? <TextField value={draft} onChange={setDraft} multiline rows={12} placeholder="Markdown. Cmd+Enter saves." />
+        ? <TextField value={draft} onChange={setDraft} multiline rows={Math.min(30, Math.max(8, draft.split('\n').length + 2))} placeholder="Markdown. Cmd+Enter saves, Escape cancels." />
         : <div class="lin-description-preview"><Markdown source={draft} empty="Nothing to preview." onOpenIssue={onOpenIssue} /></div>}
       <div class="sui-row">
         <Button label={busy ? 'Saving...' : 'Save'} size="xs" disabled={busy} onClick={() => { void commit(); }} />
@@ -331,18 +334,13 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
         <Button label={stacked ? 'Start' : 'Start session'} variant="outline" size="xs" onClick={() => setStarting('session')} />
         {buildSource && <Button label={stacked ? 'Build' : 'Start build'} variant="outline" size="xs" onClick={() => setBuilding(true)} />}
         <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
+        <CopyButtons issue={issue} />
         <Menu
           label="More"
           variant="ghost"
           size="xs"
-          items={[
-            { id: 'key', label: `Copy key (${issue.identifier})` }, { id: 'branch', label: 'Copy branch name' }, { id: 'url', label: 'Copy link' },
-            { separator: true }, { id: 'link', label: 'Link to this session' }, { id: 'open', label: 'Open in Linear' },
-          ]}
+          items={[{ id: 'link', label: 'Link to this session' }, { id: 'open', label: 'Open in Linear' }]}
           onSelect={(what) => {
-            if (what === 'key') void copy(issue.identifier, issue.identifier);
-            if (what === 'branch') void copy(issue.branchName, 'the branch name');
-            if (what === 'url') void copy(issue.url, 'the link');
             if (what === 'link') void link();
             if (what === 'open') void host.openUrl(issue.url);
           }}
