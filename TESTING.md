@@ -1,0 +1,107 @@
+# Linear+ testing
+
+How Linear+ is checked, and what still needs a try by hand on real data before and after v1.0.0.
+
+## Automated checks
+
+Run all of these before a release. Each must pass.
+
+| Command | What it checks |
+|---|---|
+| `bun run typecheck` | TypeScript, the whole project |
+| `bun test` | 400 unit and route tests in `test/` (see below) |
+| `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace |
+| `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
+| `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
+| `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
+
+Also check by grep:
+
+- No hex, `rgb(` or `hsl(` colors in `src` (Linear's own data colors are set at runtime only).
+- Every local CSS class in `src/shared/local.css` starts with `lin-`.
+- No em or en dashes in code, docs or UI text.
+
+### What the unit tests cover
+
+`bun test` covers the pure rules and the service, with fakes for the host, the disk and Linear:
+
+- **Service** (`service.test.ts`, `service-app.test.ts`): folder resolution, agent instructions, `@` rows, session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
+- **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
+- **Dashboard rules**: grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
+
+### What they do not cover
+
+- **The frames (Preact components) are not unit tested.** They are checked by screenshots instead: `bun run fixtures` writes fake Linear data to `harness/fixtures/`, and the shot lists in `harness/shots/` are shot with shared-ui's harness (see "Screenshots" below). Look at every shot.
+- **Nothing runs against a real OpenChamber host or the real Linear workspace.** That is the hand testing below.
+
+### Screenshots
+
+From `../shared-ui`, without changing it:
+
+```bash
+bun harness/server.ts --root "<this folder>" --port 4812 --replay "<this folder>/harness/fixtures/workspace.json"
+bun harness/shoot.ts "<this folder>/harness/shots/phase12.json" <temp dir>/p12 --base http://localhost:4812
+```
+
+Some phase 12 shots need more than the shared harness gives:
+
+- Shots with `type` or `press` steps need a copy of `shoot.ts` that fills `.lin-picker-head input`.
+- Shots on port 4813 need a copy of `harness.html` that answers `workspace-read` (projects, sessions) and `storage`.
+- `p12-extras-status` (port 4814) replays `harness/fixtures/plan-extras.json`, where the Work Status frame writes a plan's estimate and split-out issue on fake data.
+
+Keep those copies in a temp folder, never in `../shared-ui`.
+
+## By hand on real data
+
+Reload Linear+ in Settings, Extensions first.
+
+### Writes to Linear without a click: test these first
+
+**Plan estimate and split-out issues.** This is the one place Linear+ writes to Linear without a click.
+
+Use a throwaway issue in a team that uses estimates, with no estimate set.
+
+1. Click **Start plan** on the issue. The plan session's first message asks it to size the work on the team's scale, by coding agent effort, and to end with a `linear-plan` block.
+2. Answer any questions until the plan finishes, with the Work Status section (or the Linear+ page) open.
+3. Within about a minute a toast says what was written, for example "Plan for ENG-16: set the estimate of ENG-16 to M; created ENG-40, related to ENG-16".
+4. In Linear, check:
+   - the estimate on the planned issue, and that an estimate already set by hand is kept;
+   - each split-out issue is in the same team and project, has its own estimate, is related to the planned issue, and is assigned to you only when "Assign new issues to me" is on;
+   - nothing is created twice when the plan is revised in a later turn, or when two Linear+ frames are open.
+5. A plan that splits nothing sets only the estimate.
+6. Click **Start build**. The plan shown has no JSON block, and the build session's first message says to leave the split-out parts alone.
+7. On a failure, Work Status shows a row with **Retry**, and a retry creates only the issues still missing.
+
+Things to watch:
+
+- How good the agent's sizing is, and whether it splits too often or too rarely. The prompt is `planPrompt` in `src/service/handoff.ts`.
+- A plan that finishes with no Linear+ frame open is written when one opens next, or when Start build runs. With the optional API key the service could write on its own; it does not yet.
+- An issue created just before a failed "related" link stays unrelated; link it by hand.
+
+### Plan and build
+
+- [ ] Settings, Start plan and Start build: **All folders** agent and model apply in a folder that is not pinned; **This folder** overrides them in a pinned folder.
+- [ ] Start plan and Start build: the **Plan model** or **Build model** dropdown starts on "From Settings: <model>"; a pick is used for that start only and Settings stay as they were.
+- [ ] Finish comments (Settings, Draft): a draft appears in Work Status after a turn; Post comments, Discard drops it.
+
+### Dashboard
+
+- [ ] Sidebar: Your teams opens and closes, and each team shows Home, Triage (with its count, only where the team uses triage), Issues, Projects and Views. Sub-teams sit under their parent. Which teams are open is remembered.
+- [ ] Views: a saved view opens the team's Issues with that view picked.
+- [ ] Issue pane: from a list, a project, a cycle and the Inbox the issue opens in the same right-hand pane, with a trail of where it came from. Close, Escape, and clicking another row work. On the rail panel the issue shows alone and Back returns to where you were.
+- [ ] Project overview: a milestone's name or issue count opens its issues, done ones included.
+- [ ] Projects page and a team's overview: the same table (health, lead, target, progress).
+- [ ] Issue view: copy link, ID and branch (left of Plan) copy and toast; clicking the description edits it.
+- [ ] New issue: the **Assign to me** switch starts from Settings, New issues.
+- [ ] Board: a drag to a status only another team has moves the issue to that team. Not yet checked: whether its sub-issues move with it (say what happened, so the confirm dialog can say it).
+
+### Dialog (+ menu and New worktree)
+
+- [ ] New worktree, PR or issue, **Linear+**: the two-pane picker; a pasted key or Linear link finds that issue; Up, Down and Enter work; Choose makes the worktree with the issue attached.
+- [ ] Escape closes the dialog; with a dropdown open, the first Escape closes only the dropdown.
+- [ ] Create Linear issue from a message, a selection, a chat and a diff: the Small Model drafts the title and description.
+
+### Known limits
+
+- The extension dialog is 672 px wide at most. OpenChamber fixes that size and offers no setting for it.
+- Linear+ never posts a comment, a project update or a status change on its own; those are clicks. The plan extras above are the only automatic writes.
