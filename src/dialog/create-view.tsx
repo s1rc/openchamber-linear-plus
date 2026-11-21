@@ -31,7 +31,6 @@ export const CreateView = ({ job, scope, hidden = false }: { job: Job | null; sc
     ...(job?.initial ? { initial: job.initial } : {}),
     draft: state.kind === 'draft' ? state.draft : null,
     onCreated: setCreated,
-    onEscape: () => { void host.close(); },
     rows: 8,
   });
   if (created) return <Done title="Issue created" issue={created} canLink />;

@@ -324,6 +324,7 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
         <span class="sui-muted sui-small lin-ellipsis lin-issue-crumb">{issue.team.name} ›</span>
         <span class="sui-mono sui-small lin-nowrap">{issue.identifier}</span>
         <span class="sui-grow" />
+        <CopyButtons issue={issue} plain />
         {issue.state.type === 'triage' && (
           <>
             <Button label="Accept" variant="outline" size="xs" disabled={triaging} onClick={() => { void triage('accept'); }} />
@@ -334,7 +335,6 @@ export const IssueDetail = ({ id, stacked, onClose, onOpenIssue }: Props) => {
         <Button label={stacked ? 'Start' : 'Start session'} variant="outline" size="xs" onClick={() => setStarting('session')} />
         {buildSource && <Button label={stacked ? 'Build' : 'Start build'} variant="outline" size="xs" onClick={() => setBuilding(true)} />}
         <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
-        <CopyButtons issue={issue} />
         <Menu
           label="More"
           variant="ghost"

@@ -43,9 +43,9 @@ export const copyText = async (text: string, what: string) => {
 
 type Copyable = { identifier: string; url: string; branchName?: string | null };
 
-/** Copy link, copy ID, and copy branch name when the issue has one. */
-export const CopyButtons = ({ issue }: { issue: Copyable }) => (
-  <span class="lin-icon-row">
+/** Copy link, copy ID, and copy branch name when the issue has one. `plain`: no round background, as in a toolbar. */
+export const CopyButtons = ({ issue, plain }: { issue: Copyable; plain?: boolean }) => (
+  <span class={plain ? 'lin-icon-row lin-icon-row--plain' : 'lin-icon-row'}>
     <IconButton label="Copy link" onClick={() => { void copyText(issue.url, 'the link'); }}><LinkIcon /></IconButton>
     <IconButton label={`Copy ID (${issue.identifier})`} onClick={() => { void copyText(issue.identifier, issue.identifier); }}><IdIcon /></IconButton>
     {issue.branchName && <IconButton label="Copy branch name" onClick={() => { void copyText(issue.branchName!, 'the branch name'); }}><BranchIcon /></IconButton>}

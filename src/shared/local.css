@@ -119,9 +119,11 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 /* Issue view, in Linear's layout: main column and a property column on the right. */
 .lin-issue-view { display: flex; flex-direction: column; gap: 12px; container-type: inline-size; }
 .lin-issue-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; padding-bottom: 8px; border-bottom: 1px solid var(--oc-border); }
-/* The copy buttons are smaller in the bar, beside xs buttons. */
-.lin-issue-bar .lin-icon-row { gap: 4px; }
+/* In the issue bar the copy buttons are plain icons on the panel's own background, left of Plan. */
+.lin-issue-bar .lin-icon-row { gap: 2px; }
 .lin-issue-bar .lin-icon-btn { width: 26px; height: 26px; }
+.lin-icon-row--plain .lin-icon-btn { background: transparent; border-radius: var(--oc-radius, 6px); }
+.lin-icon-row--plain .lin-icon-btn:hover { background: var(--oc-hover); }
 .lin-issue-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-areas: "head side" "body side"; column-gap: 28px; row-gap: 10px; align-items: start; }
 .lin-issue-head { grid-area: head; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .lin-issue-body { grid-area: body; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
@@ -337,7 +339,7 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 
 /* The Attach tab's picker (src/dialog/picker-view.tsx), laid out like the host's "Start from Linear":
    the list on the left, the highlighted item's preview on the right, both scrolling inside the frame. */
-.lin-dialog:has(.lin-picker) { height: 100vh; min-height: 0; overflow: hidden; }
+.lin-dialog:has(.lin-picker) { height: 100vh; min-height: 0; overflow: hidden; padding: 10px 12px; }
 .lin-dialog-body:has(> .lin-picker) { min-height: 0; }
 .lin-picker { display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; }
 .lin-picker-head { display: flex; align-items: center; gap: 8px; }
