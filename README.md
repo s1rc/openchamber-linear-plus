@@ -2,7 +2,7 @@
 
 A Linear dashboard and agent toolkit for [OpenChamber](https://openchamber.dev). Browse and edit issues, follow projects and cycles, attach Linear work to sessions, and move from a plan to a build without leaving OpenChamber.
 
-[Install Linear+](openchamber://extensions/install?url=https%3A%2F%2Fgithub.com%2Fs1rc%2Flinear-plus)
+[Install Linear+](openchamber://extensions/install?url=https%3A%2F%2Fgithub.com%2Fs1rc%2Fopenchamber-linear-plus)
 
 ![Linear+ team overview with cycle progress and active projects](docs/screenshots/dashboard.png)
 
@@ -16,11 +16,11 @@ For development, you also need [Bun](https://bun.sh), a `shared-ui` checkout at 
 
 ## Install
 
-1. Click [Install Linear+](openchamber://extensions/install?url=https%3A%2F%2Fgithub.com%2Fs1rc%2Flinear-plus) and approve the requested capabilities.
+1. Click [Install Linear+](openchamber://extensions/install?url=https%3A%2F%2Fgithub.com%2Fs1rc%2Fopenchamber-linear-plus) and approve the requested capabilities.
 2. In OpenChamber, open **Settings → Integrations → Linear+** and connect Linear. Add a personal API key only if you want the optional background refresh.
 3. Open **Linear+** from the rail or the full page. Its Work Status section appears when a project is open.
 
-You can also add `https://github.com/s1rc/linear-plus` directly in **Settings → Extensions**.
+You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in **Settings → Extensions**.
 
 ## Usage
 
