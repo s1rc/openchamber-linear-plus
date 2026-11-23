@@ -19,7 +19,7 @@ describe('orderCycles', () => {
   });
 });
 
-const notification = (extra: Partial<Notification>): Notification => ({ id: 'n', type: 't', title: '', subtitle: '', url: '', inboxUrl: '', readAt: null, createdAt: '', actor: null, ...extra });
+const notification = (extra: Partial<Notification>): Notification => ({ id: 'n', type: 't', category: 'system', readAt: null, createdAt: '', actor: null, ...extra });
 
 describe('inScope', () => {
   const issue = (team: string, project: string | null) => ({ id: 'i', identifier: 'X-1', title: '', url: '', state: { id: 's', name: '', type: 'started' as const, color: '', position: 0 }, team: { id: team, key: team }, project: project ? { id: project } : null });

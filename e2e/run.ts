@@ -366,6 +366,26 @@ const tests: Test[] = [
     },
   },
   {
+    name: 'inbox',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Inbox').click();
+      await ctx.frame.getByText('Show all').click().catch(() => undefined);
+      const rows = ctx.frame.locator('.lin-notification');
+      await rows.first().waitFor();
+      const texts = await rows.allInnerTexts();
+      expect(texts.some((t) => t.includes('Ada Park commented') && t.includes('Reproduced with a 60 item cart')), `a comment says who commented, from published fields only (got ${texts.join(' | ')})`);
+      expect(texts.some((t) => t.includes('Ada Park assigned you')), 'an assignment says so');
+      expect(texts.some((t) => t.includes('changed the status to Done')), 'a status change names the new status');
+      expect(texts.some((t) => t.includes('Checkout') && t.includes('posted an update: At risk')), 'a project update names the project and its health');
+      const before = calls.length;
+      await rows.filter({ hasText: 'Ada Park commented' }).first().click();
+      await ctx.frame.locator('.lin-pane .lin-issue-trail', { hasText: 'Inbox' }).waitFor();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation NotificationMarkRead')), 'opening one marks it read');
+      await ctx.page.context().close();
+    },
+  },
+  {
     name: 'list-surface',
     run: async (browser) => {
       const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });

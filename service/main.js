@@ -873,17 +873,21 @@ var CYCLE_DETAIL = `
 `;
 var NOTIFICATIONS = `
   query Notifications($after: String) {
-    notificationsUnreadCount
     notifications(first: 50, after: $after) {
       nodes {
-        id type title subtitle url inboxUrl readAt createdAt
+        id type category readAt createdAt
         actor { ${USER} }
         ... on IssueNotification {
+          reactionEmoji
           issue { id identifier title url state { ${STATE} } team { id key } project { id } }
           comment { id body }
         }
         ... on ProjectNotification {
+          reactionEmoji
           project { id name url teams(first: 5) { nodes { id } } }
+          projectUpdate { health url }
+          comment { id body }
+          document { title url }
         }
       }
       ${PAGE}

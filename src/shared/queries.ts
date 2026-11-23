@@ -323,19 +323,25 @@ export const CYCLE_DETAIL = `
   }
 `;
 
+// Only fields Linear publishes: since November 2026 its schema leaves out the [Internal] ones (the unread count, a
+// notification's title, subtitle and urls), so the text is made from the category and what the notification is about.
 export const NOTIFICATIONS = `
   query Notifications($after: String) {
-    notificationsUnreadCount
     notifications(first: 50, after: $after) {
       nodes {
-        id type title subtitle url inboxUrl readAt createdAt
+        id type category readAt createdAt
         actor { ${USER} }
         ... on IssueNotification {
+          reactionEmoji
           issue { id identifier title url state { ${STATE} } team { id key } project { id } }
           comment { id body }
         }
         ... on ProjectNotification {
+          reactionEmoji
           project { id name url teams(first: 5) { nodes { id } } }
+          projectUpdate { health url }
+          comment { id body }
+          document { title url }
         }
       }
       ${PAGE}

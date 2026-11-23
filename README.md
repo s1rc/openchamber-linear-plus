@@ -36,6 +36,8 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 
 ![Issue list and issue details using fake Linear data](docs/screenshots/issue.png)
 
+![The right-click issue menu with its Status submenu, using fake Linear data](docs/screenshots/menu.png)
+
 ### Plan and build
 
 1. Open an issue and click **Start plan**. Linear+ starts a planning session with the issue context and the team's estimate scale.

@@ -9,12 +9,12 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 435 unit and route tests in `test/` (see below) |
-| `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace |
+| `bun test` | 440 unit and route tests in `test/` (see below) |
+| `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 15 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 16 screen tests, fake data only |
 
 Also check by grep:
 
@@ -28,7 +28,7 @@ Also check by grep:
 
 - **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
-- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), task boxes in a description (`tasks.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
+- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
 ### Screen tests (`bun run e2e`)
 
@@ -50,6 +50,7 @@ Also check by grep:
 | `issue-menu` | A right click on a row opens Linear's menu without opening the issue; Status flies out, ticks the current one and saves a pick; P opens Priority, Escape closes the submenu, then the menu |
 | `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
 | `board-delete` | Board columns are one darker panel from the header down; Delete from a card's menu asks first, moves the issue to the trash and says how to get it back |
+| `inbox` | Notifications read only published fields: each says who did what (comment, assignment, new status, project update with its health); opening one opens the issue and marks it read |
 | `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 
 Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).
@@ -113,6 +114,7 @@ Things to watch:
 
 - [ ] Sidebar: Your teams opens and closes, and each team shows Home, Triage (with its count, only where the team uses triage), Issues, Projects and Views. Sub-teams sit under their parent. Which teams are open is remembered.
 - [ ] Views: a saved view opens the team's Issues with that view picked.
+- [ ] Inbox: each notification says who did what (comments, assignments, mentions, status changes, reactions, project updates); a project or document one opens in Linear.
 - [ ] Issue pane: from a list, a project, a cycle and the Inbox the issue opens in the same right-hand pane, with a trail of where it came from. Close, Escape, and clicking another row work. On the rail panel the issue shows alone and Back returns to where you were.
 - [ ] Project overview: a milestone's name or issue count opens its issues, done ones included.
 - [ ] Projects page and a team's overview: the same table (health, lead, target, progress).

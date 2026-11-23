@@ -11,7 +11,7 @@ import { Banner, Button, Empty, Spinner, Switch } from '../../shared/kit.tsx';
 import { markRead, writeErrorText } from '../../shared/writes.ts';
 import { gql } from '../../shared/linear.ts';
 import { NOTIFICATIONS } from '../../shared/queries.ts';
-import { inScope } from '../../shared/inbox.ts';
+import { inScope, notificationText } from '../../shared/inbox.ts';
 import type { Notification, NotificationsResult } from '../../shared/types.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 import { usePaneIssue } from '../issue-pane.tsx';
@@ -35,8 +35,9 @@ export const Inbox = ({ state, scoped }: Props) => {
 
   const open = (n: Notification) => {
     if (!n.readAt) read([n.id]);
+    const url = notificationText(n).url;
     if (n.issue) setOpenId(n.issue.identifier);
-    else void host.openUrl(n.url);
+    else if (url) void host.openUrl(url);
   };
 
   return (
@@ -54,7 +55,9 @@ export const Inbox = ({ state, scoped }: Props) => {
         <Empty title={unreadOnly ? 'Nothing unread' : 'Nothing for this folder'} body={scopedOn ? 'Use Show all to see every notification.' : 'You are all caught up.'} />
       )}
       <div class="lin-inbox">
-        {shown.map((n) => (
+        {shown.map((n) => {
+          const text = notificationText(n);
+          return (
           <button type="button" class="lin-notification" key={n.id} data-unread={n.readAt ? 'false' : 'true'} onClick={() => open(n)}>
             <span class="lin-notification-dot">{!n.readAt && <Dot tone="info" />}</span>
             <Avatar name={n.actor?.name ?? 'Linear'} url={n.actor?.avatarUrl} size={22} />
@@ -62,13 +65,14 @@ export const Inbox = ({ state, scoped }: Props) => {
               <span class="lin-notification-title">
                 {n.issue && <StatusGlyph type={n.issue.state.type} color={n.issue.state.color} teamId={n.issue.team.id} stateId={n.issue.state.id} />}
                 {n.issue && <span class="sui-mono sui-muted sui-small">{n.issue.identifier}</span>}
-                <span class="lin-ellipsis">{n.issue?.title ?? n.title}</span>
+                <span class="lin-ellipsis">{text.title}</span>
               </span>
-              <span class="sui-muted sui-small lin-ellipsis">{n.subtitle || n.title}{n.comment?.body ? `: ${n.comment.body.replace(/\s+/g, ' ').slice(0, 140)}` : ''}</span>
+              <span class="sui-muted sui-small lin-ellipsis">{text.detail}{n.comment?.body ? `: ${n.comment.body.replace(/\s+/g, ' ').slice(0, 140)}` : ''}</span>
             </span>
             <span class="sui-muted sui-small lin-nowrap">{relativeTime(n.createdAt)}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

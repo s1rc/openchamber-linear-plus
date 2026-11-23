@@ -221,17 +221,16 @@ for (const list of [cycleIssues, triageIssues]) {
 }
 const doneState = engStates['Done'];
 const note = (id: string, extra: Record<string, unknown>) => ({
-  id, type: 'issueComment', title: 'New comment', subtitle: '', url: 'https://linear.app/acme/inbox', inboxUrl: 'https://linear.app/acme/inbox', readAt: null,
+  id, type: 'issueNewComment', category: 'commentsAndReplies', readAt: null,
   createdAt: '2026-11-09T09:00:00Z', actor: ada, ...extra,
 });
 workspace[key(Q.NOTIFICATIONS, { after: null })] = ok({
-  notificationsUnreadCount: 2,
   notifications: page([
-    note('n1', { title: 'Ada Park commented', subtitle: 'on your issue', issue: { id: 'i-eng-11', identifier: 'ENG-11', title: engIssues[0]!.title, url: 'https://linear.app/acme/issue/ENG-11', state: engStates['In Progress'], team: { id: 't-eng', key: 'ENG' }, project: { id: 'p-checkout' } }, comment: { id: 'cm1', body: 'Reproduced with a 60 item cart: 31 s.' } }),
-    note('n2', { type: 'issueAssignedToYou', title: 'Ada Park assigned you', subtitle: 'ENG-13', createdAt: '2026-11-08T15:00:00Z', issue: { id: 'i-eng-13', identifier: 'ENG-13', title: engIssues[2]!.title, url: 'https://linear.app/acme/issue/ENG-13', state: engStates['Todo'], team: { id: 't-eng', key: 'ENG' }, project: { id: 'p-checkout' } }, comment: null }),
-    note('n3', { type: 'issueStatusChanged', title: 'ENG-9 moved to Done', subtitle: 'Status changed', createdAt: '2026-11-05T11:00:00Z', readAt: '2026-11-05T12:00:00Z', actor: matt, issue: { id: 'i-eng-9', identifier: 'ENG-9', title: 'Remove the legacy tax endpoint', url: 'https://linear.app/acme/issue/ENG-9', state: doneState, team: { id: 't-eng', key: 'ENG' }, project: null }, comment: null }),
-    note('n4', { type: 'projectUpdate', title: 'Checkout project update', subtitle: 'At risk', createdAt: '2026-11-04T09:00:00Z', readAt: '2026-11-04T10:00:00Z', project: { id: 'p-checkout', name: 'Checkout', url: 'https://linear.app/acme/project/checkout', teams: { nodes: [{ id: 't-eng' }] } } }),
-    note('n5', { title: 'Sam Lee commented', subtitle: 'on MOB-4', createdAt: '2026-11-03T09:00:00Z', readAt: '2026-11-03T10:00:00Z', actor: user('u-sam', 'Sam Lee'), issue: { id: 'i-mob-4', identifier: 'MOB-4', title: 'Crash on launch with no network', url: 'https://linear.app/acme/issue/MOB-4', state: engStates['Todo'], team: { id: 't-mob', key: 'MOB' }, project: null }, comment: { id: 'cm9', body: 'Seen on iOS 19.' } }),
+    note('n1', { issue: { id: 'i-eng-11', identifier: 'ENG-11', title: engIssues[0]!.title, url: 'https://linear.app/acme/issue/ENG-11', state: engStates['In Progress'], team: { id: 't-eng', key: 'ENG' }, project: { id: 'p-checkout' } }, comment: { id: 'cm1', body: 'Reproduced with a 60 item cart: 31 s.' } }),
+    note('n2', { type: 'issueAssignedToYou', category: 'assignments', createdAt: '2026-11-08T15:00:00Z', issue: { id: 'i-eng-13', identifier: 'ENG-13', title: engIssues[2]!.title, url: 'https://linear.app/acme/issue/ENG-13', state: engStates['Todo'], team: { id: 't-eng', key: 'ENG' }, project: { id: 'p-checkout' } }, comment: null }),
+    note('n3', { type: 'issueStatusChanged', category: 'statusChanges', createdAt: '2026-11-05T11:00:00Z', readAt: '2026-11-05T12:00:00Z', actor: matt, issue: { id: 'i-eng-9', identifier: 'ENG-9', title: 'Remove the legacy tax endpoint', url: 'https://linear.app/acme/issue/ENG-9', state: doneState, team: { id: 't-eng', key: 'ENG' }, project: null }, comment: null }),
+    note('n4', { type: 'projectUpdateCreated', category: 'postsAndUpdates', createdAt: '2026-11-04T09:00:00Z', readAt: '2026-11-04T10:00:00Z', project: { id: 'p-checkout', name: 'Checkout', url: 'https://linear.app/acme/project/checkout', teams: { nodes: [{ id: 't-eng' }] } }, projectUpdate: { health: 'atRisk', url: 'https://linear.app/acme/project/checkout/updates' } }),
+    note('n5', { createdAt: '2026-11-03T09:00:00Z', readAt: '2026-11-03T10:00:00Z', actor: user('u-sam', 'Sam Lee'), issue: { id: 'i-mob-4', identifier: 'MOB-4', title: 'Crash on launch with no network', url: 'https://linear.app/acme/issue/MOB-4', state: engStates['Todo'], team: { id: 't-mob', key: 'MOB' }, project: null }, comment: { id: 'cm9', body: 'Seen on iOS 19.' } }),
   ]),
 });
 

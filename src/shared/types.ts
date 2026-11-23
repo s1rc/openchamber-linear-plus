@@ -191,10 +191,8 @@ export type DocumentDetail = DocumentSummary & { content: string | null; creator
 export type Notification = {
   id: string;
   type: string;
-  title: string;
-  subtitle: string;
-  url: string;
-  inboxUrl: string;
+  /** Linear's NotificationCategory: assignments, commentsAndReplies, mentions, statusChanges, reactions, ... */
+  category: string;
   readAt: string | null;
   createdAt: string;
   actor: User | null;
@@ -208,7 +206,10 @@ export type Notification = {
     project: { id: string } | null;
   };
   comment?: { id: string; body: string } | null;
+  reactionEmoji?: string | null;
   project?: { id: string; name: string; url: string; teams?: Connection<{ id: string }> };
+  projectUpdate?: { health: string; url: string } | null;
+  document?: { title: string; url: string } | null;
 };
 
 // Query results.
@@ -252,7 +253,7 @@ export type StatusMineIssue = {
 };
 export type StatusMineResult = { issues: Page<StatusMineIssue> };
 export type ChildIssuesResult = { issues: Page<IssueRow> };
-export type NotificationsResult = { notificationsUnreadCount: number; notifications: Page<Notification> };
+export type NotificationsResult = { notifications: Page<Notification> };
 export type RepoAttachmentsResult = {
   attachments: Connection<{ url: string; issue: { id: string; identifier: string; team: { id: string }; project: { id: string } | null } | null }>;
 };
