@@ -490,3 +490,31 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-menu-search::placeholder { color: var(--oc-muted); }
 .lin-menu-note { padding: 6px 8px; color: var(--oc-muted); font-size: 0.8rem; }
 .lin-delete-title { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+/* The rich description editor (src/app/components/rich-editor.tsx): the text looks as the description reads. */
+.lin-rich { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); min-width: 0; }
+.lin-rich:focus-within { border-color: var(--oc-focus); }
+.lin-rich-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 4px 6px; border-bottom: 1px solid var(--oc-border); }
+.lin-rich-group { display: inline-flex; gap: 2px; }
+.lin-rich-group + .lin-rich-group { padding-left: 8px; border-left: 1px solid var(--oc-border); }
+.lin-rich-btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: calc(var(--oc-radius, 8px) - 2px); color: var(--oc-muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.lin-rich-btn:hover { background: var(--oc-hover); color: var(--oc-fg); }
+.lin-rich-btn[aria-pressed="true"] { background: var(--oc-selection); color: var(--oc-selection-fg); }
+.lin-rich-btn:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-rich-btn[data-tool="italic"] { font-style: italic; }
+.lin-rich-btn[data-tool="strike"] { text-decoration: line-through; }
+.lin-rich-link { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--oc-border); }
+.lin-rich-link-input { all: unset; box-sizing: border-box; flex: 1 1 auto; min-width: 0; padding: 4px 8px; border: 1px solid var(--oc-border); border-radius: calc(var(--oc-radius, 8px) - 2px); color: inherit; }
+.lin-rich-mount { min-height: 160px; max-height: 60vh; overflow-y: auto; }
+.lin-rich-doc { position: relative; min-height: 160px; padding: 10px 12px; outline: none; white-space: pre-wrap; word-wrap: break-word; font-size: 0.95rem; }
+.lin-rich-doc[data-empty="true"]::before { content: attr(data-placeholder); position: absolute; color: var(--oc-muted); pointer-events: none; }
+.lin-rich-doc li > .lin-rich-item > p { margin: 0; }
+.lin-rich-doc ul:has(> li.lin-task) { list-style: none; padding-left: 4px; }
+.lin-rich-doc li.lin-task { position: relative; padding-left: 26px; margin: 6px 0; }
+.lin-rich-doc li.lin-task > .lin-task-box { cursor: pointer; }
+.lin-rich-doc li > .lin-task-box[hidden] { display: none; }
+.lin-rich-doc li.lin-task > .lin-task-box:hover { border-color: var(--oc-fg); }
+.lin-rich-raw { margin: 0 0 8px; padding: 6px 10px; border: 1px dashed var(--oc-border); border-radius: var(--oc-radius, 8px); cursor: default; white-space: normal; }
+.lin-rich-raw-inline { font-family: var(--oc-mono, ui-monospace, monospace); font-size: 0.86em; color: var(--oc-muted); }
+.lin-rich-doc .lin-rich-selected { outline: 2px solid var(--oc-focus); }
+.lin-rich-doc img { max-width: 100%; }

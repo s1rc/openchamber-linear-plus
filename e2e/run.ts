@@ -55,10 +55,11 @@ const PROJECTS = JSON.stringify([{ id: 'ocp1', name: 'engineering-api', director
 
 type Ctx = { page: Page; frame: FrameLocator; log: () => Promise<{ type: string; payload: any }[]> };
 
-const open = async (browser: Browser, query: Record<string, string>, width = 1300, height = 800): Promise<Ctx> => {
+/** `realClock`: leave time running. A frozen clock breaks ProseMirror, which tells a click from a double click by time. */
+const open = async (browser: Browser, query: Record<string, string>, width = 1300, height = 800, realClock = false): Promise<Ctx> => {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
   const page = await context.newPage();
-  await page.clock.setFixedTime(new Date('2026-11-09T12:00:00Z'));
+  if (!realClock) await page.clock.setFixedTime(new Date('2026-11-09T12:00:00Z'));
   await page.goto(`http://localhost:${server.port}/?${new URLSearchParams({ dir: DIR, ...query })}`);
   const frame = page.frameLocator('#f');
   await frame.locator('#root > *').first().waitFor({ timeout: 20_000 });
@@ -268,8 +269,54 @@ const tests: Test[] = [
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('- [x] Batch the tax lookups') && c.hit), 'and saves the description with the box ticked');
       expect(!(await toasts(ctx)).some((t) => /could not|refused|did not/i.test(t)), 'Linear took the change');
       await pane.locator('.lin-description button', { hasText: 'Edit description' }).click();
-      await pane.locator('.lin-description-body, textarea').last().waitFor();
-      expect(await pane.locator('textarea').count() === 1, 'Edit description still opens the editor');
+      await pane.locator('.lin-rich-doc').waitFor();
+      expect(await pane.locator('.lin-description-edit .lin-rich-doc[contenteditable="true"]').count() === 1, 'Edit description still opens the editor');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'rich-editor',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' }, 1300, 1000, true);
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click();
+      const pane = ctx.frame.locator('.lin-pane');
+      const edit = pane.locator('.lin-description button', { hasText: 'Edit description' });
+      await edit.click();
+      const doc = pane.locator('.lin-rich-doc[contenteditable="true"]');
+      await doc.waitFor();
+      const editor = pane.locator('.lin-description-edit');
+      expect(await editor.locator('textarea').count() === 0, 'editing opens rich text, not Markdown');
+      expect(await doc.locator('h2', { hasText: 'Findings' }).count() === 1 && await doc.locator('strong', { hasText: '50 items' }).count() === 1, 'headings and bold show as such');
+      expect(await doc.locator('li.lin-task').count() === 2, 'the checklist shows its boxes');
+      const before = calls.length;
+      await editor.locator('button', { hasText: 'Cancel' }).click();
+      await edit.waitFor();
+      expect(!calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate')), 'an untouched description is never saved');
+      await edit.click();
+      await doc.waitFor();
+      const last = doc.locator('li', { hasText: 'Add a timing test' }).locator('p');
+      const box = (await last.boundingBox())!;
+      await last.click({ position: { x: box.width - 2, y: box.height / 2 } });
+      // The editor reads a click's caret when the browser reports it, a moment later; a person never types faster.
+      await ctx.page.waitForTimeout(150);
+      await ctx.page.keyboard.press('Enter');
+      await ctx.page.keyboard.type('Ship ');
+      await pane.locator('.lin-rich-btn[data-tool="bold"]').click();
+      await ctx.page.keyboard.type('it');
+      await until(async () => (await doc.locator('li.lin-task').count()) === 3, 'Enter in a checklist adds a task');
+      expect(await pane.locator('.lin-rich-btn[data-tool="bold"]').getAttribute('aria-pressed') === 'true', 'the toolbar shows bold is on');
+      await editor.getByRole('tab', { name: 'Markdown' }).click();
+      const source = editor.locator('textarea');
+      await source.waitFor();
+      expect((await source.inputValue()).endsWith('- [x] Add a timing test for a 60 item cart\n- [ ] Ship **it**'), `the Markdown tab shows what Linear will store (got ${JSON.stringify((await source.inputValue()).slice(-80))})`);
+      await editor.getByRole('tab', { name: 'Rich text' }).click();
+      await doc.waitFor();
+      expect(await doc.locator('strong', { hasText: 'it' }).count() >= 1, 'and back in rich text the edit is still there');
+      await editor.locator('button', { hasText: 'Save' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('Ship **it**') && c.hit), 'Save sends the description as Markdown');
+      await edit.waitFor();
+      expect(!(await toasts(ctx)).some((t) => /could not|refused|did not/i.test(t)), 'Linear took it');
       await ctx.page.context().close();
     },
   },

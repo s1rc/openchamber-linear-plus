@@ -13,7 +13,7 @@ const CHANGE_LINK = /\/-\/merge_requests\/(\d+)|github\.com\/[^/]+\/[^/]+\/pull\
 // The sanitizer drops every input, so a task's box is a span, numbered and given its role after sanitizing.
 const marked = new Marked({ gfm: true, breaks: true, renderer: { checkbox: ({ checked }) => `<span data-task-box="${checked ? 'x' : ''}"></span>` } });
 
-const toHtml = (source: string): { html: string; tasks: number } => {
+export const toHtml = (source: string): { html: string; tasks: number } => {
   const html = marked.parse(source, { async: false }) as string;
   const clean = DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'input'], FORBID_ATTR: ['style'] });
   const template = document.createElement('template');

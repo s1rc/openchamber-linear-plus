@@ -30,7 +30,8 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 - Browse team **Home**, **Triage**, **Issues**, **Projects**, **Views**, and **Cycles**. Sub-teams appear under their parent.
 - Switch issues between list and board, filter and group them, and drag cards between statuses.
 - Right-click an issue row or card for Linear's menu: status, priority, assignee, due date, labels, project, estimate and cycle, plus open, copy and delete. The keys Linear shows (S, P, A, L, and Shift with D, P, E, C) work while the menu is open.
-- Open an issue beside the list to edit its description and properties (tick a checklist box right in the description), copy its ID, link or branch, and work with comments, relations, links, and sub-issues.
+- Open an issue beside the list to edit its description and properties, copy its ID, link or branch, and work with comments, relations, links, and sub-issues.
+- The description edits as rich text, with a toolbar and Markdown shortcuts (`# `, `- `, `[] `, `> `); a Markdown tab shows what Linear stores. Tick a checklist box right in the description without opening the editor.
 - Open a project for health, progress, updates, documents, and milestones. Select a milestone count to see its issues.
 - Pin the detected team or project when a folder should keep a particular Linear scope.
 

@@ -26,6 +26,7 @@ import {
 } from './property-editors.tsx';
 import { BuildPanel, useBuildSource } from '../../shared/build-panel.tsx';
 import { Modal } from './modal.tsx';
+import { RichEditor } from './rich-editor.tsx';
 import { StartSessionDialog } from './start-session.tsx';
 import { CopyButtons } from '../../shared/icon-buttons.tsx';
 
@@ -111,9 +112,12 @@ const TitleEdit = ({ issue }: { issue: Detail }) => {
 
 const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (id: string) => void }) => {
   const [draft, setDraft] = useState<string | null>(null);
-  const [tab, setTab] = useState<'write' | 'preview'>('write');
+  // Rich text by default; Markdown shows the same text as Linear stores it. Each switch to rich text reads the draft again.
+  const [tab, setTab] = useState<'rich' | 'markdown'>('rich');
+  const [loads, setLoads] = useState(0);
   const [busy, setBusy] = useState(false);
-  const edit = () => { setDraft(issue.description ?? ''); setTab('write'); };
+  const edit = () => { setDraft(issue.description ?? ''); setTab('rich'); setLoads((n) => n + 1); };
+  const switchTo = (next: 'rich' | 'markdown') => { if (next === 'rich' && tab !== 'rich') setLoads((n) => n + 1); setTab(next); };
   if (draft === null) {
     // Only the button edits: a click in the text selects it, as text does everywhere else. A task box ticks and saves.
     const toggleTask = (index: number, checked: boolean) => {
@@ -138,11 +142,12 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
     if (ok) setDraft(null);
   };
   return (
-    <div class="lin-stack lin-stack--tight" onKeyDown={keepKeys((e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void commit(); if (e.key === 'Escape') setDraft(null); })}>
-      <Tabs items={[{ id: 'write', label: 'Write' }, { id: 'preview', label: 'Preview' }]} activeId={tab} onChange={(id) => setTab(id as 'write' | 'preview')} />
-      {tab === 'write'
-        ? <TextField value={draft} onChange={setDraft} multiline rows={Math.min(30, Math.max(8, draft.split('\n').length + 2))} placeholder="Markdown. Cmd+Enter saves, Escape cancels." />
-        : <div class="lin-description-preview"><Markdown source={draft} empty="Nothing to preview." onOpenIssue={onOpenIssue} /></div>}
+    <div class="lin-stack lin-stack--tight lin-description-edit" onKeyDown={keepKeys((e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void commit(); if (e.key === 'Escape') setDraft(null); })}>
+      <Tabs items={[{ id: 'rich', label: 'Rich text' }, { id: 'markdown', label: 'Markdown' }]} activeId={tab} onChange={(id) => switchTo(id as 'rich' | 'markdown')} />
+      {tab === 'rich'
+        ? <RichEditor key={loads} initial={draft} onChange={setDraft} />
+        : <TextField value={draft} onChange={setDraft} multiline rows={Math.min(30, Math.max(8, draft.split('\n').length + 2))} placeholder="Markdown. Cmd+Enter saves, Escape cancels." />}
+      <div class="sui-muted sui-small">Cmd+Enter saves, Escape cancels. Linear keeps descriptions as Markdown; tables and collapsible sections are kept as written.</div>
       <div class="sui-row">
         <Button label={busy ? 'Saving...' : 'Save'} size="xs" disabled={busy} onClick={() => { void commit(); }} />
         <Button label="Cancel" variant="ghost" size="xs" disabled={busy} onClick={() => setDraft(null)} />

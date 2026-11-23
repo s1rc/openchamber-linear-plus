@@ -9,12 +9,12 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 442 unit and route tests in `test/` (see below) |
+| `bun test` | 473 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 16 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 17 screen tests, fake data only |
 
 Also check by grep:
 
@@ -28,7 +28,7 @@ Also check by grep:
 
 - **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
-- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
+- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), the rich editor's Markdown round trip and editing commands (`rich.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
 ### Screen tests (`bun run e2e`)
 
@@ -46,6 +46,7 @@ Also check by grep:
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
 | `plan-extras` | The Work Status frame claims a finished plan, sets the estimate on the team's scale, creates the split-out issue once, relates it, reports it done, and toasts what it did |
 | `description` | A click in the description does not edit it; a checklist draws boxes with no bullets, a click ticks a box and saves the description; Edit description still edits |
+| `rich-editor` | Edit description opens rich text with headings, bold and the checklist drawn; Cancel on untouched text saves nothing; Enter after a task adds an unticked one, the toolbar's Bold applies; the Markdown tab shows what Linear will store; Save sends it. Runs on a real clock: ProseMirror tells clicks apart by time |
 | `rail-settings` | The rail header has Settings, the view dropdown does not; a second click goes back |
 | `issue-menu` | A right click on a row opens Linear's menu without opening the issue; Status flies out, ticks the current one and saves a pick; P opens Priority, Escape closes the submenu, then the menu |
 | `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
@@ -119,6 +120,7 @@ Things to watch:
 - [ ] Project overview: a milestone's name or issue count opens its issues, done ones included.
 - [ ] Projects page and a team's overview: the same table (health, lead, target, progress).
 - [ ] Issue view: copy link, ID and branch (left of Plan) copy and toast; text in the description can be selected, and only Edit description edits it.
+- [ ] Rich text editing on real descriptions: open, change one word, save, and check in Linear that the rest is unchanged (lists, links, mentions, images). Try one with a table and one with a `+++` collapsible section: both show as they render and come back exactly as written. Shortcuts: Cmd+B, I, E, K, Cmd+Shift+7/8/9, `# `, `- `, `[] `, `> `, ``` then space, Tab and Shift+Tab in lists.
 - [ ] Checklists: an issue with `- [ ]` steps (NIL-784) shows boxes, not bullets; ticking one saves in Linear and the box stays ticked after Refresh.
 - [ ] Right click on a list row and a board card: each property saves, labels tick several in a row, Copy copies, Open in Linear opens, Delete asks and the issue lands in Linear's trash. On the rail the submenus open in place.
 - [ ] Rail header: Settings opens Settings and a second click goes back.

@@ -13,6 +13,7 @@ import { extraDescription, scaleText } from '../src/shared/plan-extras.ts';
 import { teamScale } from '../src/shared/moves.ts';
 import { estimateLabel } from '../src/shared/format.ts';
 import { withPlan } from '../src/shared/handoff-rules.ts';
+import { parseMarkdown, serializeMarkdown } from '../src/shared/rich/markdown.ts';
 import { issueContext } from '../src/shared/issue-context.ts';
 import { commentBody } from '../src/dialog/jobs.ts';
 import { parseDraft } from '../src/shared/draft.ts';
@@ -272,6 +273,9 @@ workspace[update('i-eng-15', { stateId: 't-eng-progress' })] = updated({ ...eng1
 // The issue view ticks a task box in the description and saves it (v1.1.0).
 const TICKED = detail.description.replace('- [ ] Batch', '- [x] Batch');
 workspace[update('i-eng-11', { description: TICKED })] = updated({ ...eng11, description: TICKED } as never);
+// The rich editor adds a task at the end of ENG-11 and saves the description as Markdown (v1.2.0).
+const RICH_EDIT = serializeMarkdown(parseMarkdown(`${detail.description}\n- [ ] Ship **it**`));
+workspace[update('i-eng-11', { description: RICH_EDIT })] = updated({ ...eng11, description: RICH_EDIT } as never);
 // The issue menu's Delete moves ENG-14 to Linear's trash (v1.1.0).
 workspace[key(Q.ISSUE_DELETE, { id: 'i-eng-14' })] = ok({ issueDelete: { success: true } });
 workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-15' })] = ok({ issue: {
