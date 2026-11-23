@@ -127,7 +127,12 @@ try {
   check('GET /choices never returns a stored secret', !JSON.stringify(r.json).includes('secret-not-for-the-service'));
 
   r = await call('POST', '/mentions/search', { query: 're', directory: worktree });
-  check('mentions search finds the project', r.status === 200 && r.json.items?.[0]?.title === 'Repo' && r.json.items[0].id === 'project:p-repo', r.json);
+  const projectRow = r.json.items?.find((i: { id: string }) => i.id.startsWith('project:'));
+  check('mentions search finds the project', r.status === 200 && projectRow?.title === 'Repo' && projectRow.id === 'project:p-repo', r.json);
+  r = await call('POST', '/mentions/search', { query: 'login', directory: worktree });
+  check('mentions search finds an issue first', r.json.items?.[0]?.id === 'issue:ENG-123', r.json);
+  r = await call('POST', '/mentions/resolve', { id: 'issue:ENG-123' });
+  check('mentions resolve reads a cached issue', String(r.json.text).includes('ENG-123: Fix login timeout'), r.json);
   r = await call('POST', '/mentions/search', { query: 'rollout', directory: repo });
   check('mentions search finds the document', r.json.items?.[0]?.id === 'doc:d-1', r.json);
   r = await call('POST', '/mentions/resolve', { id: 'project:p-repo' });

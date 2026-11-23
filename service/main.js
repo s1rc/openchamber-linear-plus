@@ -836,6 +836,16 @@ var SLASH_SEARCH = `
     searchIssues(term: $term, first: 3) { nodes { identifier title } }
   }
 `;
+var MENTION_ISSUE = `
+  query MentionIssue($id: String!) {
+    issue(id: $id) { identifier title url state { name } }
+  }
+`;
+var MENTION_SEARCH = `
+  query MentionSearch($term: String!) {
+    searchIssues(term: $term, first: 8) { nodes { identifier title url state { name } } }
+  }
+`;
 var BRANCH_ISSUE = `
   query BranchIssue($filter: IssueFilter) {
     issues(first: 1, filter: $filter) { nodes { identifier title url description state { name } } }
@@ -937,6 +947,11 @@ var ISSUE_UPDATE = `
     issueUpdate(id: $id, input: $input) { success issue { ${ISSUE_ROW} } }
   }
 `;
+var ISSUE_DELETE = `
+  mutation IssueDelete($id: String!) {
+    issueDelete(id: $id) { success }
+  }
+`;
 var ISSUE_RELATION_CREATE = `
   mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
     issueRelationCreate(input: $input) { success }
@@ -992,6 +1007,8 @@ var ALL_DOCUMENTS = {
   ISSUES_BY_KEYS,
   SLASH_BY_NUMBER,
   SLASH_SEARCH,
+  MENTION_ISSUE,
+  MENTION_SEARCH,
   BRANCH_ISSUE,
   BLOCK_STATES,
   TEAM_CYCLES,
@@ -1010,6 +1027,7 @@ var ALL_DOCUMENTS = {
   MILESTONE_ISSUES,
   TRIAGE_COUNTS,
   ISSUE_UPDATE,
+  ISSUE_DELETE,
   ISSUE_CREATE,
   ISSUE_RELATION_CREATE,
   COMMENT_CREATE,
@@ -1063,10 +1081,31 @@ var documentContext = (doc) => fit(compact([
   doc.content?.trim() ?? ""
 ]));
 
+// src/shared/issue-context.ts
+var PRIORITY_NAME = ["No priority", "Urgent", "High", "Medium", "Low"];
+var issueContext = (issue) => {
+  const lines = [
+    `${issue.identifier}: ${issue.title}`,
+    `Status: ${issue.state.name}. Priority: ${PRIORITY_NAME[issue.priority]}. Team: ${issue.team.name}.`,
+    issue.project ? `Project: ${issue.project.name}.` : "",
+    issue.assignee ? `Assignee: ${issue.assignee.name}.` : "",
+    `Link: ${issue.url}`,
+    `Branch: ${issue.branchName}`,
+    "",
+    issue.description?.trim() ?? ""
+  ];
+  const comments = issue.comments.nodes.slice(-5).map((c) => `${c.user?.name ?? "Someone"} (${shortDate(c.createdAt)}): ${c.body}`);
+  const text = [...lines, ...comments.length ? ["", "Latest comments:", ...comments] : []].filter((l, i, a) => l || a[i - 1]).join(`
+`);
+  return text.length > 15000 ? `${text.slice(0, 15000)}
+[cut]` : text;
+};
+
 // src/service/snapshot.ts
 var PROJECTS_MAX = 100;
 var DOCUMENTS_MAX = 200;
 var ISSUES_MAX = 50;
+var OPENED_MAX = 40;
 var TEXT_MAX = 15000;
 var isObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var text = (value, max) => typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
@@ -1122,7 +1161,8 @@ var issue = (raw) => {
     title: text(raw.title, 200) ?? "",
     state: text(raw.state, 60) ?? "",
     ...optional("url", text(raw.url, 400)),
-    ...optional("description", text(raw.description, 1000))
+    ...optional("description", text(raw.description, 1000)),
+    ...optional("text", text(raw.text, TEXT_MAX))
   };
 };
 var list = (raw, read, max) => Array.isArray(raw) ? raw.map(read).filter((v) => v !== null).slice(0, max) : [];
@@ -1147,7 +1187,24 @@ var readPush = (raw) => {
     push.myIssues = list(raw.myIssues, issue, ISSUES_MAX);
   if ("branchIssue" in raw)
     push.branchIssue = raw.branchIssue === null ? null : issue(raw.branchIssue);
+  if ("openedIssue" in raw) {
+    const opened = issue(raw.openedIssue);
+    if (opened)
+      push.openedIssue = opened;
+  }
+  if ("assignedIssues" in raw)
+    push.assignedIssues = list(raw.assignedIssues, issue, ISSUES_MAX);
+  const org = text(raw.orgKey, 60);
+  if (org && /^[\w-]+$/.test(org))
+    push.orgKey = org;
   return push;
+};
+var emptyRecent = (now) => ({ at: now, opened: [], assigned: [] });
+var touchesRecent = (push) => Boolean(push.openedIssue || push.assignedIssues || push.orgKey);
+var mergeRecent = (current, push, now) => {
+  const base = current ?? emptyRecent(now);
+  const opened = push.openedIssue ? [push.openedIssue, ...base.opened.filter((i) => i.identifier !== push.openedIssue.identifier)].slice(0, OPENED_MAX) : base.opened;
+  return { at: now, opened, assigned: push.assignedIssues ?? base.assigned, ...optional("orgKey", push.orgKey ?? base.orgKey) };
 };
 var emptySnapshot = (now) => ({ at: now, source: "frame", teams: [], projects: [], documents: [], myIssues: [], branchIssue: null });
 var mergePush = (current, push, now) => {
@@ -1316,6 +1373,16 @@ var refreshFromLinear = async (gql, mapping, branch, now) => {
 };
 var fetchProjectText = async (gql, id) => projectContext((await gql(PROJECT_DETAIL, { id })).project);
 var fetchDocText = async (gql, id) => documentContext((await gql(DOCUMENT, { id })).document);
+var searchMentionIssues = async (gql, query, key) => {
+  if (key) {
+    const data = await gql(MENTION_ISSUE, { id: key });
+    return data.issue ? [toSnapIssue(data.issue)] : [];
+  }
+  if (query.trim().length < 2)
+    return [];
+  return (await gql(MENTION_SEARCH, { term: query.trim() })).searchIssues.nodes.map(toSnapIssue);
+};
+var fetchIssueText = async (gql, identifier) => issueContext((await gql(ISSUE_DETAIL, { id: identifier })).issue);
 
 // src/service/mentions.ts
 var ROWS_MAX = 20;
@@ -1327,7 +1394,63 @@ var clip2 = (text, max = TITLE_MAX2) => {
 };
 var projectRowId = (id) => `project:${id}`;
 var docRowId = (id) => `doc:${id}`;
-var mentionRows = (query, snapshots) => {
+var issueRowId = (identifier) => `issue:${identifier}`;
+var ISSUE_ROWS_MAX = 12;
+var EMPTY_ISSUES = 6;
+var KEY3 = /^[A-Za-z][A-Za-z0-9]{0,6}-\d{1,9}$/;
+var keyOf = (query) => KEY3.test(query.trim()) ? query.trim().toUpperCase() : null;
+var issueRow = (issue, note) => ({
+  id: issueRowId(issue.identifier),
+  title: clip2(issue.title ? `${issue.identifier} ${issue.title}` : issue.identifier),
+  subtitle: clip2(["Issue", issue.state, note].filter(Boolean).join(" · ")),
+  ...issue.url ? { url: issue.url } : {}
+});
+var knownIssues = (snapshots, recent, live) => {
+  const preferred = snapshots.filter((s) => s.preferred).map((s) => s.snapshot);
+  const others = snapshots.filter((s) => !s.preferred).map((s) => s.snapshot);
+  const ordered = [
+    ...live,
+    ...preferred.flatMap((s) => [s.branchIssue, ...s.myIssues]),
+    ...recent?.opened ?? [],
+    ...others.flatMap((s) => [s.branchIssue, ...s.myIssues]),
+    ...recent?.assigned ?? []
+  ].filter((i) => Boolean(i?.identifier));
+  const seen = new Map;
+  for (const issue of ordered) {
+    const had = seen.get(issue.identifier);
+    if (!had)
+      seen.set(issue.identifier, issue);
+    else
+      seen.set(issue.identifier, { ...issue, ...had, title: had.title || issue.title, text: had.text ?? issue.text, url: had.url ?? issue.url });
+  }
+  return [...seen.values()];
+};
+var issueRows = (query, snapshots, recent, live) => {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const issues = knownIssues(snapshots, recent, live);
+  const key = keyOf(query);
+  if (key) {
+    const found = issues.find((i) => i.identifier === key);
+    return { exact: [found ? issueRow(found) : issueRow({ identifier: key, title: "", state: "" }, "not cached")], rest: [] };
+  }
+  if (!words.length) {
+    const branch = snapshots.find((s) => s.preferred)?.snapshot.branchIssue;
+    return {
+      exact: branch ? [issueRow(branch, "this branch")] : [],
+      rest: issues.filter((i) => i.identifier !== branch?.identifier).slice(0, EMPTY_ISSUES).map((i) => issueRow(i))
+    };
+  }
+  const matched = issues.filter((i) => {
+    const hay = `${i.identifier} ${i.title} ${i.state}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+  return { exact: [], rest: matched.slice(0, ISSUE_ROWS_MAX).map((i) => issueRow(i)) };
+};
+var mentionRows = (query, snapshots, recent = null, live = []) => {
+  const issues = issueRows(query, snapshots, recent, live);
+  return [...issues.exact, ...issues.rest, ...projectRows(query, snapshots)].slice(0, ROWS_MAX);
+};
+var projectRows = (query, snapshots) => {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   const seen = new Set;
   const found = [];
@@ -1393,6 +1516,30 @@ var docMarkdown = (doc, cachedAt) => {
 
 ${cachedNote(cachedAt)}` : base);
 };
+var issueMarkdown = (issue, cachedAt, orgKey) => {
+  const url = issue.url ?? (orgKey ? `https://linear.app/${orgKey}/issue/${issue.identifier}` : null);
+  const base = issue.text?.trim() ?? [
+    issue.title ? `${issue.identifier}: ${issue.title}` : `Linear issue ${issue.identifier}`,
+    issue.state ? `Status: ${issue.state}.` : "",
+    url ? `Link: ${url}` : "",
+    issue.description?.trim() ? `
+${issue.description.trim()}` : "",
+    issue.text || issue.description ? "" : `
+Only the summary is cached. Read the issue with your Linear tools, open it once in the Linear+ dashboard, or add a Linear personal API key in Settings, Integrations.`
+  ].filter(Boolean).join(`
+`);
+  return fit2(cachedAt ? `${base}
+
+${cachedNote(cachedAt)}` : base);
+};
+var locateIssue = (identifier, snapshots, recent) => {
+  const rows = snapshots.map((snapshot) => ({ snapshot, preferred: false }));
+  const found = knownIssues(rows, recent, []).find((i) => i.identifier === identifier);
+  if (!found)
+    return null;
+  const at = recent && (recent.opened.some((i) => i.identifier === identifier) || recent.assigned.some((i) => i.identifier === identifier)) ? recent.at : snapshots.find((s) => s.branchIssue?.identifier === identifier || s.myIssues.some((i) => i.identifier === identifier))?.at ?? recent?.at ?? 0;
+  return { issue: found, at };
+};
 var locate = (rowId, snapshots) => {
   const project = rowId.startsWith("project:") ? rowId.slice(8) : null;
   const doc = rowId.startsWith("doc:") ? rowId.slice(4) : null;
@@ -1415,6 +1562,7 @@ var locate = (rowId, snapshots) => {
 var INSTRUCTIONS_STALE_MS = 5 * 60000;
 var CACHE_STALE_MS = 10 * 60000;
 var KEY_TTL_MS = 60000;
+var LIVE_SEARCH_MS = 1200;
 var SEEN_MAX = 50;
 var DEBUG_FLAG = "debug-events";
 var NOT_A_PLAN = "The last reply in that session is not a plan. Ask the session to repeat the final plan in full, then try again.";
@@ -1439,6 +1587,7 @@ var createApp = (deps) => {
   });
   let config = store.load("config.json", { directories: {} });
   let snapshots = store.load("snapshot.json", {});
+  let recent = store.load("issues.json", null);
   let drafts = store.load("drafts.json", { drafts: [] }).drafts;
   let handoffs = store.load("handoffs.json", { pending: [], builds: {} });
   let worktrees = store.load("worktrees.json", {});
@@ -1452,6 +1601,7 @@ var createApp = (deps) => {
   const mappedFor = (directory) => resolveMapped(directory, mapped(), read);
   const saveConfig = () => store.save("config.json", config);
   const saveSnapshots = () => store.save("snapshot.json", snapshots);
+  const saveRecent = () => store.save("issues.json", recent);
   const saveDrafts = () => store.save("drafts.json", { drafts });
   const saveHandoffs = () => store.save("handoffs.json", handoffs);
   const saveWorktrees = () => store.save("worktrees.json", worktrees);
@@ -1604,6 +1754,10 @@ var createApp = (deps) => {
     const push = readPush(parse(raw));
     if (!push)
       return fail("Expected a snapshot with a directory.", 400);
+    if (touchesRecent(push)) {
+      recent = mergeRecent(recent ?? undefined, push, now());
+      saveRecent();
+    }
     const folder = mappedFor(push.directory);
     if (!folder)
       return { body: { ok: true, mapped: false } };
@@ -1829,23 +1983,45 @@ var createApp = (deps) => {
     const folder = mappedFor(directory);
     return Object.entries(snapshots).map(([dir, snapshot]) => ({ snapshot, preferred: dir === folder }));
   };
-  const search = (raw) => {
+  const liveIssues = async (value, query) => {
+    const key = keyOf(query);
+    if (!key && query.trim().length < 2)
+      return [];
+    let timer;
+    const late = new Promise((done) => {
+      timer = setTimeout(() => done([]), LIVE_SEARCH_MS);
+    });
+    try {
+      return await Promise.race([searchMentionIssues(deps.gqlFor(value), query, key).catch((error) => {
+        log(`@ search failed, using the cache: ${message(error)}`);
+        return [];
+      }), late]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const search = async (raw) => {
     const request = parse(raw);
     const directory = typeof request.directory === "string" ? request.directory : null;
     const query = typeof request.query === "string" ? request.query : "";
     const folder = mappedFor(directory);
-    if (folder && peekKey() && now() - (snapshots[folder]?.at ?? 0) > CACHE_STALE_MS)
+    const value = key ? peekKey() : await apiKey();
+    if (folder && value && now() - (snapshots[folder]?.at ?? 0) > CACHE_STALE_MS)
       refreshCache(folder, readBranch(folder, read));
-    return { body: { items: mentionRows(query, snapshotRows(directory)) } };
+    const live = value ? await liveIssues(value, query) : [];
+    return { body: { items: mentionRows(query, snapshotRows(directory), recent, live) } };
   };
   const resolve = async (raw) => {
     const request = parse(raw);
     const id = typeof request.id === "string" ? request.id : "";
     const cached = locate(id, Object.values(snapshots));
+    const issueKey = id.startsWith("issue:") ? keyOf(id.slice(6)) : null;
     const value = await apiKey();
     if (value) {
       try {
         const gql = deps.gqlFor(value);
+        if (issueKey)
+          return { body: { text: await fetchIssueText(gql, issueKey) } };
         if (id.startsWith("project:"))
           return { body: { text: await fetchProjectText(gql, id.slice(8)) } };
         if (id.startsWith("doc:"))
@@ -1858,6 +2034,11 @@ var createApp = (deps) => {
       return { body: { text: projectMarkdown(cached.project, cached.at) } };
     if (cached?.kind === "doc")
       return { body: { text: docMarkdown(cached.doc, cached.at) } };
+    if (issueKey) {
+      const known = locateIssue(issueKey, Object.values(snapshots), recent);
+      const issue = known?.issue ?? { identifier: issueKey, title: "", state: "" };
+      return { body: { text: issueMarkdown(issue, known?.at ?? null, recent?.orgKey) } };
+    }
     return { status: 404, body: { message: "That Linear item is not cached. Open the Linear+ dashboard once so it is, or add a personal API key in Settings, Integrations." } };
   };
   const debugOn = () => store.exists(DEBUG_FLAG);
@@ -1962,7 +2143,7 @@ var createApp = (deps) => {
       if (path === SESSION_EVENTS_PATH)
         return sessionEvent(raw);
       if (path === MENTIONS_SEARCH_PATH)
-        return search(raw);
+        return await search(raw);
       if (path === MENTIONS_RESOLVE_PATH)
         return await resolve(raw);
       if (path === "/config") {

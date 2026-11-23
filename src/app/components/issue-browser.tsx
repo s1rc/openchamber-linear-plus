@@ -20,6 +20,8 @@ import { host } from '../../shared/host.ts';
 import { planDrop, type IssueInput, type TeamChoice } from '../../shared/moves.ts';
 import { updateIssue, writeErrorText } from '../../shared/writes.ts';
 import { CreateIssueDialog } from './create-issue.tsx';
+import { DeleteIssueDialog } from './delete-issue.tsx';
+import { IssueMenu } from './issue-menu.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import {
   openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
@@ -63,9 +65,11 @@ type Props = {
   onMilestone?: (id: string | null) => void;
   emptyTitle: string;
   emptyBody: string;
+  /** Inside a card of its own already (a project's section): no second card around the list. */
+  plain?: boolean;
 };
 
-export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, origin = 'Issues', emptyTitle, emptyBody }: Props) => {
+export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, origin = 'Issues', emptyTitle, emptyBody, plain = false }: Props) => {
   const placeKey = useContext(PlaceKey);
   const workspace = useWorkspace();
   const statesByTeam = workspace.data?.statesByTeam;
@@ -112,6 +116,9 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [moving, setMoving] = useState<{ issue: Issue; choices: TeamChoice[]; extra: IssueInput } | null>(null);
+  // The right-click menu, by key so it shows each change as it saves; and the issue waiting for Delete's confirm.
+  const [menu, setMenu] = useState<{ identifier: string; x: number; y: number } | null>(null);
+  const [deleting, setDeleting] = useState<Issue | null>(null);
   // The open issue is drawn by the shell's pane, the same from every view (src/app/issue-pane.tsx).
   const [openId, setOpenId] = usePaneIssue(placeKey, listKey, origin);
   const [cursorId, setCursorId] = useState<string | null>(() => openIssueFor(placeKey, listKey));
@@ -204,7 +211,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
         else if (optionsOpen) setOptionsOpen(false);
         return;
       }
-      if (typing(event.target) || creating || moving) return;
+      if (typing(event.target) || creating || moving || deleting) return;
       if (event.key === 'c' && !openId) {
         event.preventDefault();
         setCreating(true);
@@ -231,7 +238,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [visible, cursorId, openId, optionsOpen, creating, moving]);
+  }, [visible, cursorId, openId, optionsOpen, creating, moving, deleting]);
 
   const wide = ctx.surface === 'page';
   const activeFilters = [assignee !== 'any', priority !== 'any', label !== 'any', status !== 'any', states === 'open' && !customActive && showClosed, Boolean(inMilestone)].filter(Boolean).length;
@@ -251,8 +258,37 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     if (plan.kind === 'team') setMoving({ issue, choices: plan.choices, extra: plan.extra.input });
     if (plan.kind === 'refused') void toast(host, 'info', plan.reason);
   };
+  const findIssue = (identifier: string): Issue | undefined =>
+    loaded.find((i) => i.identifier === identifier) ?? [...extraChildren.values()].flat().find((i) => i.identifier === identifier);
+  const onContextMenu = (event: MouseEvent) => {
+    const identifier = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-issue]')?.dataset.issue;
+    const issue = identifier ? findIssue(identifier) : undefined;
+    if (!issue) return;
+    event.preventDefault();
+    setCursorId(issue.identifier);
+    setMenu({ identifier: issue.identifier, x: event.clientX, y: event.clientY });
+  };
+  const menuIssue = menu ? findIssue(menu.identifier) : undefined;
+
   const dialogs = (
     <>
+      {menu && menuIssue && (
+        <IssueMenu
+          issue={menuIssue}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          onOpen={open}
+          onDelete={setDeleting}
+        />
+      )}
+      {deleting && (
+        <DeleteIssueDialog
+          issue={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => { if (openId === deleting.identifier) setOpenId(null); setDeleting(null); }}
+        />
+      )}
       {creating && (
         <CreateIssueDialog
           teamIds={seedTeams}
@@ -294,7 +330,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   ));
 
   return (
-    <div ref={root}>
+    <div ref={root} class={plain ? 'lin-browser lin-browser--plain' : 'lin-browser'} onContextMenu={onContextMenu}>
       <div class="lin-stack lin-issue-pane">
         {viewTeamId && <ViewsBar active={viewId} custom={custom} onSelect={selectView} />}
         <div class="lin-toolbar-wrap">

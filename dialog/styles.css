@@ -103,7 +103,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 /* Settings: an agent and a model select side by side, wrapping on a narrow panel. */
 .lin-field-pair { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 16px; }
 
-/* Issue lists. */
+/* Issue lists. Every list and board sits on the same card; a project's Issues tab is inside its section's card already. */
+.lin-browser { padding: 12px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); min-width: 0; }
+.lin-browser--plain { padding: 0; border: 0; border-radius: 0; background: none; }
 .lin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .lin-toolbar-search { flex: 1 1 200px; min-width: 160px; }
 .lin-groups { display: flex; flex-direction: column; container-type: inline-size; }
@@ -181,7 +183,18 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-md a { text-decoration: none; }
 .lin-md a:hover { text-decoration: underline; }
 .lin-md a.lin-mention { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--oc-border); border-radius: 4px; background: var(--oc-hover); color: inherit; font-family: var(--oc-mono, ui-monospace, monospace); font-size: 0.86em; }
-.lin-md input[type=checkbox] { margin-right: 6px; }
+/* Task lists draw Linear's boxes instead of bullets (src/shared/markdown.tsx). */
+.lin-md .lin-task-list { list-style: none; padding-left: 4px; }
+.lin-md .lin-task { position: relative; padding-left: 26px; margin: 6px 0; }
+.lin-md .lin-task > .lin-task-list { padding-left: 0; }
+.lin-task-box { box-sizing: border-box; position: absolute; left: 0; top: 0.2em; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1.5px solid var(--oc-muted); border-radius: 4px; }
+.lin-task-box[aria-checked="true"] { border-color: var(--oc-primary); background: var(--oc-primary); }
+.lin-task-box[aria-checked="true"]::after { content: ''; width: 4px; height: 8px; margin-top: -2px; border: solid var(--oc-primary-fg, var(--oc-bg)); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.lin-md--tasks .lin-task-box { cursor: pointer; }
+.lin-md--tasks .lin-task-box:hover { border-color: var(--oc-fg); }
+.lin-md--tasks .lin-task-box[aria-checked="true"]:hover { border-color: var(--oc-primary); }
+.lin-task-box:focus-visible { outline: 2px solid var(--oc-focus); outline-offset: 2px; }
+.lin-md .lin-task--done { color: var(--oc-muted); }
 .lin-md blockquote { padding-left: 10px; border-left: 3px solid var(--oc-border); color: var(--oc-muted); }
 .lin-md table { border-collapse: collapse; display: block; overflow-x: auto; }
 .lin-md th, .lin-md td { border: 1px solid var(--oc-border); padding: 4px 8px; text-align: left; }
@@ -241,15 +254,17 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-issue-trail ~ .lin-issue-bar .lin-issue-crumb, .lin-issue-trail ~ .lin-issue-bar .lin-issue-barkey { display: none; }
 
 /* Board. */
-.lin-board-scroll { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-.lin-board-inner { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.lin-board-scroll { --lin-column-bg: color-mix(in srgb, var(--oc-bg) 65%, var(--oc-elevated)); display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.lin-board-inner { display: flex; flex-direction: column; flex: none; }
 .lin-board-grid { display: grid; gap: 10px; }
-.lin-board-heads { position: sticky; top: 0; z-index: 1; background: var(--oc-bg); padding-bottom: 2px; }
-.lin-board-band { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
-.lin-board-band + .lin-board-band { border-top: 1px solid var(--oc-border); padding-top: 10px; }
-.lin-board-band-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.85rem; padding: 2px 4px; }
-.lin-column-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 10px; font-weight: 600; font-size: 0.85rem; border-radius: var(--oc-radius, 6px); background: var(--oc-muted-surface); min-width: 0; }
-.lin-column-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* Each column is one darker panel from its header down, as in Linear; the header row stays on top while the page scrolls. */
+.lin-board-heads { position: sticky; top: 0; z-index: 1; }
+.lin-board-band { display: flex; flex-direction: column; }
+.lin-board-band + .lin-board-band { padding-top: 10px; }
+.lin-board-band-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.85rem; padding: 6px 4px; }
+.lin-column-head { display: flex; align-items: center; gap: 8px; padding: 8px 6px 6px 12px; font-weight: 600; font-size: 0.85rem; border-radius: var(--oc-radius, 8px) var(--oc-radius, 8px) 0 0; background: var(--lin-column-bg); min-width: 0; }
+.lin-column-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 96px; padding: 4px 6px 8px; background: var(--lin-column-bg); }
+.lin-board-band:last-child .lin-column-body { border-radius: 0 0 var(--oc-radius, 8px) var(--oc-radius, 8px); }
 .lin-column-empty { padding: 12px 8px; text-align: center; border: 1px dashed var(--oc-border); border-radius: var(--oc-radius, 8px); }
 .lin-card { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); cursor: pointer; min-width: 0; }
 .lin-card:hover, .lin-card[data-cursor="true"] { background: var(--oc-hover); }
@@ -500,3 +515,26 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 
 /* The "Move the issue to" row: the switch, and the status it moves to on its right. */
 .lin-move-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+
+/* The right-click menu on an issue (src/app/components/issue-menu.tsx), laid out as Linear's. */
+.lin-menu-layer { position: fixed; inset: 0; z-index: 70; }
+.lin-menu { position: fixed; box-sizing: border-box; display: flex; flex-direction: column; max-height: calc(100vh - 12px); overflow-y: auto; padding: 4px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); box-shadow: 0 12px 32px color-mix(in srgb, var(--oc-bg) 70%, transparent), 0 2px 6px color-mix(in srgb, var(--oc-bg) 40%, transparent); font-size: 0.86rem; }
+.lin-menu--sub { max-height: 320px; overflow: hidden; }
+.lin-menu-section { display: flex; flex-direction: column; }
+.lin-menu-section + .lin-menu-section { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--oc-border); }
+.lin-menu-scroll { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+.lin-menu-item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 4px 8px; border-radius: calc(var(--oc-radius, 8px) - 2px); cursor: pointer; min-width: 0; }
+.lin-menu-item[data-active="true"] { background: var(--oc-hover); }
+.lin-menu-item[data-danger="true"] { color: var(--oc-error-text, var(--oc-error)); }
+.lin-menu-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; color: var(--oc-muted); }
+.lin-menu-item[data-danger="true"] .lin-menu-icon { color: inherit; }
+.lin-menu-ext svg { width: 14px; height: 14px; }
+.lin-menu-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lin-menu-check { flex: none; color: var(--oc-primary-text, var(--oc-primary)); font-size: 0.8rem; }
+.lin-menu-key { flex: none; font-family: inherit; font-size: 0.76rem; color: var(--oc-muted); }
+.lin-menu-more { flex: none; color: var(--oc-muted); }
+.lin-menu-back { color: var(--oc-muted); border-bottom: 1px solid var(--oc-border); border-radius: 0; margin-bottom: 4px; }
+.lin-menu-search { all: unset; box-sizing: border-box; flex: none; width: 100%; padding: 6px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--oc-border); color: inherit; }
+.lin-menu-search::placeholder { color: var(--oc-muted); }
+.lin-menu-note { padding: 6px 8px; color: var(--oc-muted); font-size: 0.8rem; }
+.lin-delete-title { margin: 0; font-weight: 600; overflow-wrap: anywhere; }

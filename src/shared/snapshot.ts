@@ -5,7 +5,8 @@ import { toSnapDoc, toSnapIssue, toSnapProject } from '../service/snapshot.ts';
 import type { SnapshotPush } from '../service/types.ts';
 import { projectContext } from './attach-text.ts';
 import { host } from './host.ts';
-import type { DocumentSummary, ProjectDetail, ProjectSummary, StatusMineIssue, Team } from './types.ts';
+import { issueContext } from './issue-context.ts';
+import type { DocumentSummary, IssueDetail, ProjectDetail, ProjectSummary, StatusMineIssue, Team } from './types.ts';
 
 const RESEND_MS = 5 * 60_000;
 const sent = new Map<string, { signature: string; at: number }>();
@@ -34,4 +35,21 @@ export const projectPush = (directory: string, project: ProjectDetail): Snapshot
   directory,
   moreProjects: [toSnapProject(project, projectContext(project))],
   documents: project.documents.nodes.map((d: DocumentSummary) => toSnapDoc({ ...d, project: { id: project.id, name: project.name } })),
+});
+
+/** A frame with no folder open still pushes issues for the `@` menu; the service files them under no folder. */
+const NO_FOLDER = '(none)';
+
+/** An issue just opened in the dashboard, with what an agent reads about it, for the `@` menu in every folder. */
+export const openedIssuePush = (directory: string | null, issue: IssueDetail, orgKey: string | null): SnapshotPush => ({
+  directory: directory || NO_FOLDER,
+  openedIssue: { ...toSnapIssue(issue), text: issueContext(issue) },
+  ...(orgKey ? { orgKey } : {}),
+});
+
+/** Your open assigned issues in every team, for the `@` menu in every folder. */
+export const assignedPush = (directory: string | null, mine: readonly StatusMineIssue[], orgKey: string | null): SnapshotPush => ({
+  directory: directory || NO_FOLDER,
+  assignedIssues: mine.map(toSnapIssue),
+  ...(orgKey ? { orgKey } : {}),
 });

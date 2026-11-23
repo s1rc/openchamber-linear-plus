@@ -1,11 +1,13 @@
 // What a frame pushes with `POST /snapshot` and `PUT /config`, checked and merged. Frames are ours, but the
 // service answers whatever arrives: every field is read as untrusted and clipped. Pure.
 import type { DocumentSummary, ProjectSummary, StatusMineIssue } from '../shared/types.ts';
-import type { AgentDefaults, Config, DirSnapshot, FinishComments, MappingConfig, SnapDoc, SnapIssue, SnapProject, SnapshotPush, SnapTeam } from './types.ts';
+import type { AgentDefaults, Config, DirSnapshot, FinishComments, MappingConfig, RecentIssues, SnapDoc, SnapIssue, SnapProject, SnapshotPush, SnapTeam } from './types.ts';
 
 export const PROJECTS_MAX = 100;
 export const DOCUMENTS_MAX = 200;
 export const ISSUES_MAX = 50;
+/** Opened issues kept for the `@` menu, newest first. */
+export const OPENED_MAX = 40;
 const TEXT_MAX = 15_000;
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -59,6 +61,7 @@ const issue = (raw: unknown): SnapIssue | null => {
     state: text(raw.state, 60) ?? '',
     ...optional('url', text(raw.url, 400)),
     ...optional('description', text(raw.description, 1000)),
+    ...optional('text', text(raw.text, TEXT_MAX)),
   };
 };
 
@@ -78,7 +81,28 @@ export const readPush = (raw: unknown): SnapshotPush | null => {
   if ('documents' in raw) push.documents = list(raw.documents, doc, DOCUMENTS_MAX);
   if ('myIssues' in raw) push.myIssues = list(raw.myIssues, issue, ISSUES_MAX);
   if ('branchIssue' in raw) push.branchIssue = raw.branchIssue === null ? null : issue(raw.branchIssue);
+  if ('openedIssue' in raw) {
+    const opened = issue(raw.openedIssue);
+    if (opened) push.openedIssue = opened;
+  }
+  if ('assignedIssues' in raw) push.assignedIssues = list(raw.assignedIssues, issue, ISSUES_MAX);
+  const org = text(raw.orgKey, 60);
+  if (org && /^[\w-]+$/.test(org)) push.orgKey = org;
   return push;
+};
+
+export const emptyRecent = (now: number): RecentIssues => ({ at: now, opened: [], assigned: [] });
+
+/** Whether a push carries anything for the recent issues, so the service saves only when it does. */
+export const touchesRecent = (push: SnapshotPush): boolean => Boolean(push.openedIssue || push.assignedIssues || push.orgKey);
+
+/** Folds a push into the recent issues: an opened issue goes first (once), the assigned list is replaced. */
+export const mergeRecent = (current: RecentIssues | undefined, push: SnapshotPush, now: number): RecentIssues => {
+  const base = current ?? emptyRecent(now);
+  const opened = push.openedIssue
+    ? [push.openedIssue, ...base.opened.filter((i) => i.identifier !== push.openedIssue!.identifier)].slice(0, OPENED_MAX)
+    : base.opened;
+  return { at: now, opened, assigned: push.assignedIssues ?? base.assigned, ...optional('orgKey', push.orgKey ?? base.orgKey) };
 };
 
 export const emptySnapshot = (now: number): DirSnapshot => ({ at: now, source: 'frame', teams: [], projects: [], documents: [], myIssues: [], branchIssue: null });

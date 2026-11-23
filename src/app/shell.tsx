@@ -9,7 +9,7 @@ import { LinearError } from '../shared/linear.ts';
 import { getLastView } from '../shared/storage.ts';
 import { takeOpenTarget } from '../shared/open-target.ts';
 import { loadViewState, PlaceKey, saveOpenIssue, saveRoute, saveTab, setViewStateScope } from './view-state.ts';
-import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
+import { AssignedPusher, SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { PlanExtrasRunner } from '../shared/plan-extras-runner.tsx';
 import { useDetection, type DetectionState } from '../shared/use-detection.ts';
 import { loadWorkspace, useWorkspace, type Workspace } from '../shared/workspace.ts';
@@ -49,7 +49,7 @@ const navGroups = (workspace: Workspace, state: DetectionState): NavGroup[] => {
   for (const { team } of flat(teamTree(workspace.teams, shownTeamIds(workspace, state)))) {
     groups.push({ items: teamPages(team).map((page) => ({ id: `${page.view}:${team.id}`, title: `${team.name} · ${page.title}` })) });
   }
-  groups.push({ items: [{ id: 'settings', title: 'Settings' }] });
+  // Settings has its own button in the rail's header.
   return groups;
 };
 
@@ -340,7 +340,10 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
     })();
   }, [state.settled, state.place, state.detection, workspace.data]);
 
+  // Where the rail's Settings button goes back to.
+  const lastRoute = useRef<Route>({ view: 'my-issues' });
   const onRoute = (next: Route) => {
+    if (route.view !== 'settings') lastRoute.current = route;
     setRoute(next);
     if (state.place && next.view !== 'picker') saveRoute(state.place.key, next);
   };
@@ -428,6 +431,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   return (
     <PlaceKey.Provider value={state.place?.key ?? null}>
     <IssuePaneProvider>
+    <AssignedPusher directory={ctx.directory ?? null} orgKey={data.viewer.organization?.urlKey ?? null} />
     {state.place && state.mapped && <SnapshotPusher directory={state.place.directory} workspace={data} state={state} />}
     {state.place && state.mapped && <PlanExtrasRunner directory={state.place.directory} viewerId={data.viewer.id} />}
     <div class={wide ? 'lin-shell lin-shell--wide' : 'lin-shell'}>
@@ -436,6 +440,14 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
         <header class="lin-header">
           {wide ? <h1 class="lin-title">{title}</h1> : <ViewPicker workspace={data} state={state} route={route} onRoute={onRoute} />}
           <span class="sui-grow" />
+          {!wide && (
+            <Button
+              label="Settings"
+              variant={route.view === 'settings' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => onRoute(route.view === 'settings' ? lastRoute.current : { view: 'settings' })}
+            />
+          )}
           <Button label="Refresh" variant="ghost" size="sm" onClick={refresh} />
         </header>
         <PaneLayout wide={wide}>

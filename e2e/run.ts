@@ -240,6 +240,152 @@ const tests: Test[] = [
       await ctx.page.context().close();
     },
   },
+  {
+    name: 'description',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click();
+      const pane = ctx.frame.locator('.lin-pane');
+      const body = pane.locator('.lin-description-body .lin-md');
+      await body.waitFor();
+      await body.locator('p').first().click();
+      await ctx.page.waitForTimeout(200);
+      expect(await pane.locator('.lin-description textarea').count() === 0, 'a click in the description does not start editing, so text can be selected');
+      const list = body.locator('ul.lin-task-list');
+      expect(await list.count() === 1, 'the checklist is a task list');
+      expect(await list.evaluate((el) => getComputedStyle(el).listStyleType) === 'none', 'without bullets');
+      const boxes = body.locator('.lin-task-box');
+      expect(await boxes.count() === 2, 'each task has a box');
+      expect(await boxes.nth(1).getAttribute('aria-checked') === 'true', 'a done task is ticked');
+      const before = calls.length;
+      await boxes.first().click();
+      await until(async () => (await boxes.first().getAttribute('aria-checked')) === 'true', 'a click ticks the box');
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('- [x] Batch the tax lookups') && c.hit), 'and saves the description with the box ticked');
+      expect(!(await toasts(ctx)).some((t) => /could not|refused|did not/i.test(t)), 'Linear took the change');
+      await pane.locator('.lin-description button', { hasText: 'Edit description' }).click();
+      await pane.locator('.lin-description-body, textarea').last().waitFor();
+      expect(await pane.locator('textarea').count() === 1, 'Edit description still opens the editor');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'rail-settings',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'panel' }, 360, 800);
+      await ctx.frame.locator('.lin-header .oc-sdk-trigger').click();
+      await ctx.frame.locator('[role="option"]').first().waitFor();
+      expect(await ctx.frame.locator('[role="option"]', { hasText: /^Settings$/ }).count() === 0, 'Settings left the view dropdown');
+      await ctx.page.keyboard.press('Escape');
+      const button = ctx.frame.locator('.lin-header button', { hasText: 'Settings' });
+      await button.click();
+      await ctx.frame.locator('.sui-section-title', { hasText: 'New issues' }).waitFor();
+      await button.click();
+      await until(async () => (await ctx.frame.locator('.sui-section-title', { hasText: 'New issues' }).count()) === 0, 'a second click goes back to the view');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-menu',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click({ button: 'right' });
+      const menu = ctx.frame.locator('.lin-menu:not(.lin-menu--sub)');
+      await menu.waitFor();
+      const labels = await menu.locator('.lin-menu-label').allInnerTexts();
+      expect(['Status', 'Priority', 'Assignee', 'Due date', 'Labels', 'Project', 'Estimate', 'Cycle', 'Open', 'Open in Linear', 'Copy', 'Delete...'].every((l, i) => labels[i] === l), `the menu lists Linear's actions (got ${labels.join(', ')})`);
+      expect(await ctx.frame.locator('.lin-pane').count() === 0, 'a right click does not open the issue');
+      await menu.locator('[data-menu-item="status"]').hover();
+      const sub = ctx.frame.locator('.lin-menu--sub');
+      await sub.locator('[data-menu-item="status:t-eng-review"]').waitFor();
+      expect(await sub.locator('[aria-checked="true"]').innerText().then((t) => t.includes('In Progress')), 'the current status is ticked');
+      const before = calls.length;
+      await sub.locator('[data-menu-item="status:t-eng-review"]').click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"stateId":"t-eng-review"') && c.hit), 'a status from the menu saves');
+      expect(await menu.count() === 0, 'and the menu closes');
+      // Keys: P opens Priority, Escape closes the submenu, then the menu, and nothing else.
+      await ctx.frame.locator('[data-issue="ENG-13"]').click({ button: 'right' });
+      await menu.waitFor();
+      await ctx.page.keyboard.press('p');
+      await ctx.frame.locator('.lin-menu--sub[aria-label="Priority"]').waitFor();
+      await ctx.page.keyboard.press('Escape');
+      await until(async () => (await sub.count()) === 0 && (await menu.count()) === 1, 'Escape closes the submenu first');
+      await ctx.page.keyboard.press('Escape');
+      await until(async () => (await menu.count()) === 0, 'then the menu');
+      expect(await ctx.frame.locator('[data-issue="ENG-13"]').count() === 1, 'and the list is still there');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-menu-rail',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'panel' }, 360, 800);
+      await ctx.frame.locator('.lin-header .oc-sdk-trigger').click();
+      await ctx.frame.locator('[role="option"]', { hasText: 'Issues' }).first().click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click({ button: 'right' });
+      const menu = ctx.frame.locator('.lin-menu');
+      await menu.waitFor();
+      const box = await menu.boundingBox();
+      expect(box && box.x >= 0 && box.x + box.width <= 360, 'the menu fits the rail');
+      await menu.locator('[data-menu-item="copy"]').click();
+      await menu.locator('.lin-menu-back', { hasText: 'Copy' }).waitFor();
+      expect(await ctx.frame.locator('.lin-menu--sub').count() === 0, 'too narrow to fly out: the submenu opens in place');
+      await menu.locator('[data-menu-item="copy:id"]').click();
+      await ctx.page.waitForTimeout(300);
+      const copied = (await ctx.log()).find((m) => m.type === 'clipboard-write');
+      expect(JSON.stringify(copied?.payload ?? '').includes('ENG-11'), 'Copy ID copies the key');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'board-delete',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.getByRole('tab', { name: 'Board' }).click();
+      const card = ctx.frame.locator('.lin-card[data-issue="ENG-14"]');
+      await card.waitFor();
+      const look = await ctx.frame.locator('.lin-board-scroll').evaluate((el) => {
+        const bg = (q: string) => getComputedStyle(el.querySelector(q)!).backgroundColor;
+        return { body: bg('.lin-column-body'), head: bg('.lin-column-head'), card: bg('.lin-card') };
+      });
+      expect(look.body !== 'rgba(0, 0, 0, 0)' && look.body === look.head, `each column is one panel from its header down (got ${JSON.stringify(look)})`);
+      expect(look.body !== look.card, 'darker than the cards in it');
+      await card.click({ button: 'right' });
+      await ctx.frame.locator('[data-menu-item="delete"]').click();
+      const modal = ctx.frame.locator('.lin-modal');
+      await modal.waitFor();
+      expect((await modal.innerText()).includes('Delete ENG-14?'), 'Delete asks first');
+      const before = calls.length;
+      await modal.locator('button', { hasText: 'Delete issue' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueDelete') && c.key.includes('i-eng-14') && c.hit), 'then moves the issue to the trash');
+      await until(async () => (await toasts(ctx)).some((t) => t.startsWith('Deleted ENG-14')), 'and says how to get it back');
+      expect(await modal.count() === 0, 'the dialog closes');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'list-surface',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      const bg = () => ctx.frame.locator('.lin-browser').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+      await navItem(ctx, 'My issues').click();
+      await ctx.frame.locator('.lin-browser [data-issue]').first().waitFor();
+      const mine = await bg();
+      expect(mine !== 'rgba(0, 0, 0, 0)', 'My issues sits on a card');
+      await navItem(ctx, 'Cycles').click();
+      await ctx.frame.locator('.lin-browser [data-issue]').first().waitFor();
+      expect(await bg() === mine, 'a cycle\'s issues sit on the same card');
+      await navItem(ctx, 'Projects').click();
+      await ctx.frame.locator('.lin-table-row:not(.lin-table-head)', { hasText: 'Checkout' }).click();
+      await ctx.frame.getByRole('tab', { name: 'Issues' }).click();
+      await ctx.frame.locator('.lin-browser [data-issue]').first().waitFor();
+      const inside = await ctx.frame.locator('.sui-section .lin-browser').evaluate((el) => ({ own: getComputedStyle(el).backgroundColor, section: getComputedStyle(el.closest('.sui-section')!).backgroundColor }));
+      expect(inside.own === 'rgba(0, 0, 0, 0)' && inside.section === mine, 'a project\'s list uses its section\'s card, not a second one');
+      await ctx.page.context().close();
+    },
+  },
 ];
 
 const chrome = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';

@@ -5,7 +5,7 @@ import type { IssueList } from './issues.ts';
 import { gql, LinearError } from './linear.ts';
 import type { Change, IssueInput, IssuePatch } from './moves.ts';
 import {
-  COMMENT_CREATE, ISSUE_CREATE, ISSUE_UPDATE, markReadMany, NOTIFICATION_MARK_READ, PROJECT_UPDATE_CREATE,
+  COMMENT_CREATE, ISSUE_CREATE, ISSUE_DELETE, ISSUE_UPDATE, markReadMany, NOTIFICATION_MARK_READ, PROJECT_UPDATE_CREATE,
 } from './queries.ts';
 import type {
   CommentCreateResult, IssueCreateResult, IssueRow, IssueUpdateResult, Notification, Page, ProjectUpdateCreateResult, SuccessResult,
@@ -71,6 +71,18 @@ export const moveIssueToTeam = async (issue: Pick<IssueRow, 'id' | 'identifier'>
   invalidate('children:');
   refreshKey(`issue:${issue.identifier}`);
   return row;
+};
+
+/** Moves an issue to Linear's trash (restorable there for 30 days), then reloads every list that held it. */
+export const deleteIssue = async (issue: Pick<IssueRow, 'id' | 'identifier'>): Promise<void> => {
+  const data = await gql<SuccessResult>(ISSUE_DELETE, { id: issue.id });
+  if (!Object.values(data).every((r) => r.success)) throw new LinearError('graphql', 'Linear did not delete the issue.');
+  patchEntries((key, value) => (
+    (key.startsWith('issues:') || key.startsWith('view-issues:')) && isList(value) ? { ...value, issues: value.issues.filter((i) => i.id !== issue.id) } : value
+  ));
+  invalidate('issues:');
+  invalidate('view-issues:');
+  invalidate('children:');
 };
 
 export const createIssue = async (input: IssueInput): Promise<IssueRow> => {

@@ -564,6 +564,14 @@ Use only keys you know exist. If none fit, say so instead of guessing.`}}throw n
   query SlashSearch($term: String!) {
     searchIssues(term: $term, first: 3) { nodes { identifier title } }
   }
+`,MENTION_ISSUE:`
+  query MentionIssue($id: String!) {
+    issue(id: $id) { identifier title url state { name } }
+  }
+`,MENTION_SEARCH:`
+  query MentionSearch($term: String!) {
+    searchIssues(term: $term, first: 8) { nodes { identifier title url state { name } } }
+  }
 `,BRANCH_ISSUE:`
   query BranchIssue($filter: IssueFilter) {
     issues(first: 1, filter: $filter) { nodes { identifier title url description state { name } } }
@@ -737,6 +745,10 @@ Use only keys you know exist. If none fit, say so instead of guessing.`}}throw n
   outRelations: relations(first: 5) { nodes { type } }
   inRelations: inverseRelations(first: 5) { nodes { type } }
  } }
+  }
+`,ISSUE_DELETE:`
+  mutation IssueDelete($id: String!) {
+    issueDelete(id: $id) { success }
   }
 `,ISSUE_CREATE:`
   mutation IssueCreate($input: IssueCreateInput!) {

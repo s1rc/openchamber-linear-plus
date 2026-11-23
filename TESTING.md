@@ -1,6 +1,6 @@
 # Linear+ testing
 
-How Linear+ is checked, and what still needs a try by hand on real data before and after v1.0.0.
+How Linear+ is checked, and what still needs a try by hand on real data before and after a release.
 
 ## Automated checks
 
@@ -9,12 +9,12 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 400 unit and route tests in `test/` (see below) |
+| `bun test` | 435 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 9 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 15 screen tests, fake data only |
 
 Also check by grep:
 
@@ -26,9 +26,9 @@ Also check by grep:
 
 `bun test` covers the pure rules and the service, with fakes for the host, the disk and Linear:
 
-- **Service** (`service.test.ts`, `service-app.test.ts`): folder resolution, agent instructions, `@` rows, session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
+- **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
-- **Dashboard rules**: grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
+- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), task boxes in a description (`tasks.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
 ### Screen tests (`bun run e2e`)
 
@@ -45,6 +45,12 @@ Also check by grep:
 | `copy-buttons` | Copy ID copies the key |
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
 | `plan-extras` | The Work Status frame claims a finished plan, sets the estimate on the team's scale, creates the split-out issue once, relates it, reports it done, and toasts what it did |
+| `description` | A click in the description does not edit it; a checklist draws boxes with no bullets, a click ticks a box and saves the description; Edit description still edits |
+| `rail-settings` | The rail header has Settings, the view dropdown does not; a second click goes back |
+| `issue-menu` | A right click on a row opens Linear's menu without opening the issue; Status flies out, ticks the current one and saves a pick; P opens Priority, Escape closes the submenu, then the menu |
+| `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
+| `board-delete` | Board columns are one darker panel from the header down; Delete from a card's menu asks first, moves the issue to the trash and says how to get it back |
+| `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 
 Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).
 
@@ -110,9 +116,20 @@ Things to watch:
 - [ ] Issue pane: from a list, a project, a cycle and the Inbox the issue opens in the same right-hand pane, with a trail of where it came from. Close, Escape, and clicking another row work. On the rail panel the issue shows alone and Back returns to where you were.
 - [ ] Project overview: a milestone's name or issue count opens its issues, done ones included.
 - [ ] Projects page and a team's overview: the same table (health, lead, target, progress).
-- [ ] Issue view: copy link, ID and branch (left of Plan) copy and toast; clicking the description edits it.
+- [ ] Issue view: copy link, ID and branch (left of Plan) copy and toast; text in the description can be selected, and only Edit description edits it.
+- [ ] Checklists: an issue with `- [ ]` steps (NIL-784) shows boxes, not bullets; ticking one saves in Linear and the box stays ticked after Refresh.
+- [ ] Right click on a list row and a board card: each property saves, labels tick several in a row, Copy copies, Open in Linear opens, Delete asks and the issue lands in Linear's trash. On the rail the submenus open in place.
+- [ ] Rail header: Settings opens Settings and a second click goes back.
+- [ ] List surface: My issues, a cycle, a team's issues and Triage sit on the same grey card as a project's Issues tab.
 - [ ] New issue: the **Assign to me** switch starts from Settings, New issues.
 - [ ] Board: a drag to a status only another team has moves the issue to that team. Not yet checked: whether its sub-issues move with it (say what happened, so the confirm dialog can say it).
+
+### `@` in the composer
+
+- [ ] Without the API key: `@` alone lists the branch's issue and your open issues; `@` plus words finds an issue you opened in the dashboard; picking it attaches its full text (description and latest comments).
+- [ ] A typed key (`@NIL-784`) is offered even when nothing cached it; picking it gives the agent the key and link.
+- [ ] With the API key: `@` plus words finds any issue through Linear's search, and a pick reads it fresh.
+- [ ] A folder with no Linear team still lists your issues.
 
 ### Dialog (+ menu and New worktree)
 

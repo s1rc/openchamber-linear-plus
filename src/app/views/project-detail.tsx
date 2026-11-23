@@ -221,6 +221,7 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
           onMilestone={setMilestone}
           emptyTitle={milestone ? 'No issues in this milestone' : 'No open issues'}
           emptyBody={milestone ? 'Pick another milestone, or Any milestone.' : `${project.name} has no open issues.`}
+          plain
         />
       ) : (
         <Overview project={project} onMilestone={withIssues ? (id) => { setMilestone(id); setTab('issues'); } : undefined} />

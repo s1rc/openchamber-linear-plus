@@ -29,7 +29,8 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 - Use **Inbox**, **My issues**, and the folder overview for your current work.
 - Browse team **Home**, **Triage**, **Issues**, **Projects**, **Views**, and **Cycles**. Sub-teams appear under their parent.
 - Switch issues between list and board, filter and group them, and drag cards between statuses.
-- Open an issue beside the list to edit its description and properties, copy its ID, link or branch, and work with comments, relations, links, and sub-issues.
+- Right-click an issue row or card for Linear's menu: status, priority, assignee, due date, labels, project, estimate and cycle, plus open, copy and delete. The keys Linear shows (S, P, A, L, and Shift with D, P, E, C) work while the menu is open.
+- Open an issue beside the list to edit its description and properties (tick a checklist box right in the description), copy its ID, link or branch, and work with comments, relations, links, and sub-issues.
 - Open a project for health, progress, updates, documents, and milestones. Select a milestone count to see its issues.
 - Pin the detected team or project when a folder should keep a particular Linear scope.
 
@@ -41,7 +42,7 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 2. Review the plan. When enabled, Linear+ sets the estimate and creates split-out issues after the plan finishes.
 3. Click **Start build** to hand the finished plan to a build session.
 
-Agent and model defaults live in **Settings**. A one-off model choice on Start plan or Start build does not change those defaults.
+Agent and model defaults live in **Settings** (in the rail panel, the Settings button beside Refresh). A one-off model choice on Start plan or Start build does not change those defaults.
 
 The plan estimate and split-out issues are the only writes Linear+ makes without a click. Comments, status changes, and project updates require an action from you.
 
@@ -53,7 +54,7 @@ Use the **+** menu, then **Linear+**, to attach an issue to a session or a new w
 
 ### Agent tools
 
-- `@Linear+` attaches issues, projects, and documents as context.
+- `@Linear+` attaches issues, projects, and documents as context. `@` alone lists the branch's issue and your open issues; type words or a key such as `ENG-123` to find one. Without the API key it finds the issues Linear+ has seen (yours, and any you opened in the dashboard); with the key it searches all of Linear.
 - `/linear-issue ENG-123` shows a live issue card.
 - `/linear-list ENG-1 ENG-2 My heading` shows a live issue list.
 - `/linear-pick ENG-1 ENG-2 Which issue?` asks you to choose an issue for the agent.

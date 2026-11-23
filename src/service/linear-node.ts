@@ -1,8 +1,9 @@
 // Linear from the service, with the optional personal API key. Read-only: the service never writes to Linear.
 import { all, MY_FILTERS, OPEN, scopeFilter } from '../shared/filters.ts';
-import { BRANCH_ISSUE, DOCUMENTS, DOCUMENT, PROJECT_DETAIL, PROJECTS, STATUS_MINE, TEAMS } from '../shared/queries.ts';
+import { BRANCH_ISSUE, DOCUMENTS, DOCUMENT, ISSUE_DETAIL, MENTION_ISSUE, MENTION_SEARCH, PROJECT_DETAIL, PROJECTS, STATUS_MINE, TEAMS } from '../shared/queries.ts';
 import { documentContext, projectContext } from '../shared/attach-text.ts';
-import type { DocumentResult, DocumentsResult, ProjectDetailResult, ProjectsResult, ProjectSummary, StatusMineResult, Team } from '../shared/types.ts';
+import { issueContext } from '../shared/issue-context.ts';
+import type { DocumentResult, DocumentsResult, IssueDetailResult, ProjectDetailResult, ProjectsResult, ProjectSummary, StatusMineResult, Team } from '../shared/types.ts';
 import { toSnapDoc, toSnapIssue, toSnapProject } from './snapshot.ts';
 import { issueOfBranch } from './directories.ts';
 import type { DirSnapshot, MappingConfig, SnapIssue } from './types.ts';
@@ -95,3 +96,19 @@ export const fetchProjectText = async (gql: Gql, id: string): Promise<string> =>
 /** A document's content, fresh from Linear. */
 export const fetchDocText = async (gql: Gql, id: string): Promise<string> =>
   documentContext((await gql<DocumentResult>(DOCUMENT, { id })).document);
+
+type MentionNode = { identifier: string; title: string; url: string; state: { name: string } };
+
+/** Issues for an `@` query, fresh from Linear: the one a typed key names, else Linear's search for the words. */
+export const searchMentionIssues = async (gql: Gql, query: string, key: string | null): Promise<SnapIssue[]> => {
+  if (key) {
+    const data = await gql<{ issue: MentionNode | null }>(MENTION_ISSUE, { id: key });
+    return data.issue ? [toSnapIssue(data.issue)] : [];
+  }
+  if (query.trim().length < 2) return [];
+  return (await gql<{ searchIssues: { nodes: MentionNode[] } }>(MENTION_SEARCH, { term: query.trim() })).searchIssues.nodes.map(toSnapIssue);
+};
+
+/** An issue as an attached issue reads, fresh from Linear. */
+export const fetchIssueText = async (gql: Gql, identifier: string): Promise<string> =>
+  issueContext((await gql<IssueDetailResult>(ISSUE_DETAIL, { id: identifier })).issue);

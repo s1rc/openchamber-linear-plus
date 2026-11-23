@@ -108,7 +108,7 @@ const mine = engIssues.filter((i) => i.assignee === matt);
 
 const detail = {
   ...engIssues[0],
-  description: 'Carts over **50 items** take longer than 30 s to price, and the gateway gives up. See https://linear.app/acme/issue/ENG-14/retry-webhooks and [MR !42](https://gitlab.com/acme/checkout/-/merge_requests/42).\n\n## Findings\n- Happens on web and mobile\n- Started after `TaxService.lookup()` moved to one call per line\n    - `priceCart(cart)` calls it `cart.lines.length` times\n\n```ts\nawait priceCart(cart) // 31.2 s\n```',
+  description: 'Carts over **50 items** take longer than 30 s to price, and the gateway gives up. See https://linear.app/acme/issue/ENG-14/retry-webhooks and [MR !42](https://gitlab.com/acme/checkout/-/merge_requests/42).\n\n## Findings\n- Happens on web and mobile\n- Started after `TaxService.lookup()` moved to one call per line\n    - `priceCart(cart)` calls it `cart.lines.length` times\n\n```ts\nawait priceCart(cart) // 31.2 s\n```\n\n## Steps\n- [ ] Batch the tax lookups into one call per cart\n- [x] Add a timing test for a 60 item cart',
   creator: ada,
   team: { id: 't-eng', key: 'ENG', name: 'Engineering', issueEstimationType: 'tShirt', issueEstimationAllowZero: false, issueEstimationExtended: false, states: { nodes: stateSet('t-eng').map(({ team: _team, ...st }) => st) } },
   children: { nodes: [engIssues[1]] },
@@ -270,6 +270,11 @@ workspace[update('i-eng-13', { stateId: 't-eng-progress' })] = updated({ ...eng1
 workspace[update('i-eng-13', { teamId: 't-mob', stateId: 't-mob-qa' })] = updated({ ...eng13, id: 'i-eng-13', identifier: 'MOB-6', team: { id: 't-mob', key: 'MOB' }, state: mobStates['In QA'], cycle: null });
 workspace[update('i-eng-15', { stateId: 't-eng-backlog' })] = updated({ ...eng15, state: engStates['Backlog'] });
 workspace[update('i-eng-15', { stateId: 't-eng-progress' })] = updated({ ...eng15, state: engStates['In Progress'] });
+// The issue view ticks a task box in the description and saves it (v1.1.0).
+const TICKED = detail.description.replace('- [ ] Batch', '- [x] Batch');
+workspace[update('i-eng-11', { description: TICKED })] = updated({ ...eng11, description: TICKED } as never);
+// The issue menu's Delete moves ENG-14 to Linear's trash (v1.1.0).
+workspace[key(Q.ISSUE_DELETE, { id: 'i-eng-14' })] = ok({ issueDelete: { success: true } });
 workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-15' })] = ok({ issue: {
   ...detail, ...eng15, description: 'Reported by support: euro prices show a dollar sign.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
   relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,

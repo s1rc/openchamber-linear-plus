@@ -277,6 +277,19 @@ export const SLASH_SEARCH = `
   }
 `;
 
+/** Issues for the service's `@` rows, with the optional API key: by key, or Linear's search for some words. */
+export const MENTION_ISSUE = `
+  query MentionIssue($id: String!) {
+    issue(id: $id) { identifier title url state { name } }
+  }
+`;
+
+export const MENTION_SEARCH = `
+  query MentionSearch($term: String!) {
+    searchIssues(term: $term, first: 8) { nodes { identifier title url state { name } } }
+  }
+`;
+
 /** The issue a branch name carries, with its description, for the service's agent instructions. */
 export const BRANCH_ISSUE = `
   query BranchIssue($filter: IssueFilter) {
@@ -403,6 +416,13 @@ export const ISSUE_UPDATE = `
   }
 `;
 
+/** Moves an issue to Linear's trash, where it can be restored for 30 days. */
+export const ISSUE_DELETE = `
+  mutation IssueDelete($id: String!) {
+    issueDelete(id: $id) { success }
+  }
+`;
+
 export const ISSUE_RELATION_CREATE = `
   mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
     issueRelationCreate(input: $input) { success }
@@ -451,8 +471,8 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
-  ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
+  ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, MENTION_ISSUE, MENTION_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, TRIAGE_COUNTS,
-  ISSUE_UPDATE, ISSUE_CREATE, ISSUE_RELATION_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

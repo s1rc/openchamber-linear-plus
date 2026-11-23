@@ -16,7 +16,7 @@ import { Banner, Button, Progress, Spinner } from '../shared/kit.tsx';
 import { LinearError } from '../shared/linear.ts';
 import { openInPanel } from '../shared/open-target.ts';
 import { useProjects } from '../shared/projects.ts';
-import { SnapshotPusher } from '../shared/snapshot-pusher.tsx';
+import { AssignedPusher, SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { PlanExtrasFailures, PlanExtrasRunner } from '../shared/plan-extras-runner.tsx';
 import { cycleLine, countByStatus, limitCounts, sortMine } from '../shared/status.ts';
 import type { ProjectSummary, StatusMineIssue, Team } from '../shared/types.ts';
@@ -260,11 +260,13 @@ export const StatusSection = () => {
         : <Banner tone="error" title="Could not load Linear" body={error.message} action={{ label: 'Retry', onClick: () => workspace.refresh() }} />;
     }
     if (!workspace.data || !state.settled) return <Spinner size="sm" label="Loading Linear" />;
+    const assigned = <AssignedPusher directory={directory} orgKey={workspace.data.viewer.organization?.urlKey ?? null} />;
     if (!state.mapped) {
-      return <Note action={{ label: 'Pick', onClick: () => { void openPicker(state.place?.key ?? ''); } }}>Pick a Linear project</Note>;
+      return <>{assigned}<Note action={{ label: 'Pick', onClick: () => { void openPicker(state.place?.key ?? ''); } }}>Pick a Linear project</Note></>;
     }
     return (
       <>
+        {assigned}
         <SnapshotPusher directory={directory} workspace={workspace.data} state={state} />
         <PlanExtrasRunner directory={directory} viewerId={workspace.data.viewer.id} />
         <Rows directory={directory} workspace={workspace.data} state={state} />

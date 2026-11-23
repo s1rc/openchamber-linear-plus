@@ -1,10 +1,11 @@
 // One issue in Linear's layout: title, description, sub-issues and activity on the left; merge requests,
 // properties, labels, project and relations on the right. A narrow frame stacks the side column under
 // the title, as Linear does on small screens. Every property, the title and the description edit in
-// place; comments post from the composer under the activity.
+// place (the description from its button, so its text can be selected); comments post from the composer
+// under the activity.
 import { toast } from '@openchamber-ext/shared-ui';
 import { Chip } from '@openchamber-ext/shared-ui/preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { issueContext } from '../../shared/issue-context.ts';
 import { changeOf, estimateLabel, relativeTime, shortDate } from '../../shared/format.ts';
 import { Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, ProgressRing, StatusGlyph } from '../../shared/glyphs.tsx';
@@ -15,6 +16,8 @@ import { acceptStateOf, declineStateOf } from '../../shared/moves.ts';
 import { addComment, writeErrorText } from '../../shared/writes.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
 import { Markdown } from '../../shared/markdown.tsx';
+import { setTask } from '../../shared/tasks.ts';
+import { openedIssuePush, pushSnapshot } from '../../shared/snapshot.ts';
 import type { Comment, HistoryEvent, IssueDetail as Detail, RelatedIssue } from '../../shared/types.ts';
 import { teamEstimateType } from '../../shared/workspace.ts';
 import { IssueRow } from './issue-row.tsx';
@@ -112,18 +115,17 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
   const [busy, setBusy] = useState(false);
   const edit = () => { setDraft(issue.description ?? ''); setTab('write'); };
   if (draft === null) {
-    // As in Linear, a click on the description edits it; a click on a link, or a selection of text, does not.
-    const onClick = (event: MouseEvent) => {
-      if ((event.target as HTMLElement | null)?.closest('a, button')) return;
-      if (window.getSelection()?.toString()) return;
-      edit();
+    // Only the button edits: a click in the text selects it, as text does everywhere else. A task box ticks and saves.
+    const toggleTask = (index: number, checked: boolean) => {
+      const next = setTask(issue.description ?? '', index, checked);
+      if (next !== null) void save(issue, { input: { description: next }, patch: { description: next } });
     };
     return (
       <div class="lin-description">
-        <div class="lin-description-body lin-editable" title="Click to edit the description" onClick={onClick}>
+        <div class="lin-description-body">
           {issue.description?.trim()
-            ? <Markdown source={issue.description} onOpenIssue={onOpenIssue} />
-            : <div class="sui-muted">Add a description...</div>}
+            ? <Markdown source={issue.description} onOpenIssue={onOpenIssue} onToggleTask={toggleTask} />
+            : <div class="sui-muted">No description.</div>}
         </div>
         <div><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={edit} /></div>
       </div>
@@ -264,9 +266,15 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
   const workspace = useWorkspace();
   const [starting, setStarting] = useState<'session' | 'plan' | null>(null);
   const [building, setBuilding] = useState(false);
-  const buildSource = useBuildSource(useReady()?.directory ?? null, id);
+  const directory = useReady()?.directory ?? null;
+  const buildSource = useBuildSource(directory, id);
   const [triaging, setTriaging] = useState(false);
   const issue = detail.data;
+  const orgKey = workspace.data?.viewer.organization?.urlKey ?? null;
+  // The service lists the issues you open in the composer's `@` menu, with what an agent reads about them.
+  useEffect(() => {
+    if (issue) void pushSnapshot(openedIssuePush(directory, issue, orgKey));
+  }, [issue?.identifier, issue?.updatedAt, directory, orgKey]);
 
   if (!issue) {
     return (

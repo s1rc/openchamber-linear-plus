@@ -58,7 +58,21 @@ export type SnapProject = {
 
 export type SnapDoc = { id: string; title: string; url: string; project: string | null; text?: string };
 
-export type SnapIssue = { identifier: string; title: string; state: string; url?: string; description?: string };
+export type SnapIssue = {
+  identifier: string;
+  title: string;
+  state: string;
+  url?: string;
+  description?: string;
+  /** What an agent reads about it (src/shared/issue-context.ts), when a frame held the whole issue. */
+  text?: string;
+};
+
+/**
+ * Issues for the `@` menu that belong to no folder: the ones you opened in the dashboard (with their full text) and
+ * your open assigned issues in every team. Kept in `issues.json`; any frame may push them, mapped folder or not.
+ */
+export type RecentIssues = { at: number; opened: SnapIssue[]; assigned: SnapIssue[]; orgKey?: string };
 
 /** What the service knows about one mapped folder, from a frame's push or from Linear with a key. */
 export type DirSnapshot = {
@@ -87,6 +101,12 @@ export type SnapshotPush = {
   documents?: SnapDoc[];
   myIssues?: SnapIssue[];
   branchIssue?: SnapIssue | null;
+  /** An issue the user opened, put first in the recent list whatever the folder. */
+  openedIssue?: SnapIssue;
+  /** Your open assigned issues in every team: replaces the list. */
+  assignedIssues?: SnapIssue[];
+  /** The workspace's URL key, to link an issue the service knows only by its key. */
+  orgKey?: string;
 };
 
 export type Draft = {

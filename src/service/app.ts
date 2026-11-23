@@ -11,11 +11,11 @@ import { issueOfBranch, readBranch, resolveMapped, trimDir, type ReadText } from
 import { buildDraft, handoffId, HANDOFFS_MAX, linearIssuesOf, looksLikePlan, PLANS_KEPT, upsertDraft, upsertHandoff, withoutBlocks } from './events.ts';
 import { handoffPrompt, PLAN_LIMIT, planPrompt, sessionChoice } from './handoff.ts';
 import { buildInstructions } from './instructions.ts';
-import { fetchBranchIssue, fetchDocText, fetchProjectText, refreshFromLinear, type Gql } from './linear-node.ts';
-import { docMarkdown, locate, mentionRows, projectMarkdown } from './mentions.ts';
-import { knownTeamKeys, mergePush, readConfig, readPush } from './snapshot.ts';
+import { fetchBranchIssue, fetchDocText, fetchIssueText, fetchProjectText, refreshFromLinear, searchMentionIssues, type Gql } from './linear-node.ts';
+import { docMarkdown, issueMarkdown, keyOf, locate, locateIssue, mentionRows, projectMarkdown } from './mentions.ts';
+import { knownTeamKeys, mergePush, mergeRecent, readConfig, readPush, touchesRecent } from './snapshot.ts';
 import type { Store } from './store.ts';
-import type { BuildSession, Config, Draft, Handoff, MappingConfig, SnapIssue, SnapshotStore } from './types.ts';
+import type { BuildSession, Config, Draft, Handoff, MappingConfig, RecentIssues, SnapIssue, SnapshotStore } from './types.ts';
 
 export type Reply = { status?: number; body: unknown; after?: () => void };
 
@@ -34,6 +34,8 @@ export type Deps = {
 const INSTRUCTIONS_STALE_MS = 5 * 60_000;
 const CACHE_STALE_MS = 10 * 60_000;
 const KEY_TTL_MS = 60_000;
+/** The host gives an `@` search two seconds; Linear gets this much of it, and the cache answers the rest. */
+const LIVE_SEARCH_MS = 1_200;
 const SEEN_MAX = 50;
 const DEBUG_FLAG = 'debug-events';
 export const NOT_A_PLAN = 'The last reply in that session is not a plan. Ask the session to repeat the final plan in full, then try again.';
@@ -69,6 +71,7 @@ export const createApp = (deps: Deps) => {
 
   let config = store.load<Config>('config.json', { directories: {} });
   let snapshots = store.load<SnapshotStore>('snapshot.json', {});
+  let recent = store.load<RecentIssues | null>('issues.json', null);
   let drafts = store.load<{ drafts: Draft[] }>('drafts.json', { drafts: [] }).drafts;
   let handoffs = store.load<Handoffs>('handoffs.json', { pending: [], builds: {} });
   /** Worktree directories seen in events, to the mapped folder they belong to. They get their own instructions. */
@@ -86,6 +89,7 @@ export const createApp = (deps: Deps) => {
 
   const saveConfig = () => store.save('config.json', config);
   const saveSnapshots = () => store.save('snapshot.json', snapshots);
+  const saveRecent = () => store.save('issues.json', recent);
   const saveDrafts = () => store.save('drafts.json', { drafts });
   const saveHandoffs = () => store.save('handoffs.json', handoffs);
   const saveWorktrees = () => store.save('worktrees.json', worktrees);
@@ -235,6 +239,11 @@ export const createApp = (deps: Deps) => {
   const postSnapshot = async (raw: string): Promise<Reply> => {
     const push = readPush(parse(raw));
     if (!push) return fail('Expected a snapshot with a directory.', 400);
+    // Opened and assigned issues serve the `@` menu in every folder, mapped or not.
+    if (touchesRecent(push)) {
+      recent = mergeRecent(recent ?? undefined, push, now());
+      saveRecent();
+    }
     const folder = mappedFor(push.directory);
     if (!folder) return { body: { ok: true, mapped: false } };
     snapshots[folder] = mergePush(snapshots[folder], push, now());
@@ -481,24 +490,45 @@ export const createApp = (deps: Deps) => {
     return Object.entries(snapshots).map(([dir, snapshot]) => ({ snapshot, preferred: dir === folder }));
   };
 
-  const search = (raw: string): Reply => {
+  /** With the API key: Linear's issues for the query, or nothing once the time for it is up. */
+  const liveIssues = async (value: string, query: string): Promise<SnapIssue[]> => {
+    const key = keyOf(query);
+    if (!key && query.trim().length < 2) return [];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<SnapIssue[]>((done) => { timer = setTimeout(() => done([]), LIVE_SEARCH_MS); });
+    try {
+      return await Promise.race([searchMentionIssues(deps.gqlFor(value), query, key).catch((error: unknown) => {
+        log(`@ search failed, using the cache: ${message(error)}`);
+        return [];
+      }), late]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const search = async (raw: string): Promise<Reply> => {
     const request = parse(raw) as Partial<MentionsSearchRequest>;
     const directory = typeof request.directory === 'string' ? request.directory : null;
     const query = typeof request.query === 'string' ? request.query : '';
     const folder = mappedFor(directory);
+    // The first search waits for the settings once (a local read); later ones take what was last read.
+    const value = key ? peekKey() : await apiKey();
     // A stale cache refreshes in the background while this answer comes from what is held.
-    if (folder && peekKey() && now() - (snapshots[folder]?.at ?? 0) > CACHE_STALE_MS) void refreshCache(folder, readBranch(folder, read));
-    return { body: { items: mentionRows(query, snapshotRows(directory)) } };
+    if (folder && value && now() - (snapshots[folder]?.at ?? 0) > CACHE_STALE_MS) void refreshCache(folder, readBranch(folder, read));
+    const live = value ? await liveIssues(value, query) : [];
+    return { body: { items: mentionRows(query, snapshotRows(directory), recent, live) } };
   };
 
   const resolve = async (raw: string): Promise<Reply> => {
     const request = parse(raw) as Partial<MentionsResolveRequest>;
     const id = typeof request.id === 'string' ? request.id : '';
     const cached = locate(id, Object.values(snapshots));
+    const issueKey = id.startsWith('issue:') ? keyOf(id.slice(6)) : null;
     const value = await apiKey();
     if (value) {
       try {
         const gql = deps.gqlFor(value);
+        if (issueKey) return { body: { text: await fetchIssueText(gql, issueKey) } };
         if (id.startsWith('project:')) return { body: { text: await fetchProjectText(gql, id.slice(8)) } };
         if (id.startsWith('doc:')) return { body: { text: await fetchDocText(gql, id.slice(4)) } };
       } catch (error) {
@@ -507,6 +537,12 @@ export const createApp = (deps: Deps) => {
     }
     if (cached?.kind === 'project') return { body: { text: projectMarkdown(cached.project, cached.at) } };
     if (cached?.kind === 'doc') return { body: { text: docMarkdown(cached.doc, cached.at) } };
+    if (issueKey) {
+      // An issue known only by the key typed still gives the agent the key and its link to read it by.
+      const known = locateIssue(issueKey, Object.values(snapshots), recent);
+      const issue = known?.issue ?? { identifier: issueKey, title: '', state: '' };
+      return { body: { text: issueMarkdown(issue, known?.at ?? null, recent?.orgKey) } };
+    }
     return { status: 404, body: { message: 'That Linear item is not cached. Open the Linear+ dashboard once so it is, or add a personal API key in Settings, Integrations.' } };
   };
 
@@ -610,7 +646,7 @@ export const createApp = (deps: Deps) => {
     try {
       if (path === '/health') return { body: {} };
       if (path === SESSION_EVENTS_PATH) return sessionEvent(raw);
-      if (path === MENTIONS_SEARCH_PATH) return search(raw);
+      if (path === MENTIONS_SEARCH_PATH) return await search(raw);
       if (path === MENTIONS_RESOLVE_PATH) return await resolve(raw);
       if (path === '/config') {
         if (method === 'PUT') return await putConfig(raw);
