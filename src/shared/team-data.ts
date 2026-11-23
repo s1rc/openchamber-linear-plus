@@ -1,6 +1,7 @@
 // What the issue pickers offer for a team: its members, its labels with the workspace's, and its
 // current and upcoming cycles. Each is read once per team and cached.
 import { load, useQuery } from './cache.ts';
+import { cycleFloor } from './cycles.ts';
 import { gql } from './linear.ts';
 import { TEAM_CYCLES, TEAM_PEOPLE, WORKSPACE_LABELS } from './queries.ts';
 import type { CycleSummary, Label, TeamCyclesResult, TeamPeopleResult, User, WorkspaceLabelsResult } from './types.ts';
@@ -27,6 +28,6 @@ export const useTeamPeople = (teamId: string | null) =>
 /** The cycles an issue can be added to: the current one and every upcoming one. */
 export const useOpenCycles = (teamId: string | null, activeNumber: number | null | undefined) =>
   useQuery<CycleSummary[]>(teamId ? `open-cycles:${teamId}` : null, async () => {
-    const data = await gql<TeamCyclesResult>(TEAM_CYCLES, { teamId, minNumber: activeNumber ?? 0 });
+    const data = await gql<TeamCyclesResult>(TEAM_CYCLES, { teamId, minNumber: cycleFloor(activeNumber) });
     return data.team.cycles.nodes.filter((c) => c.isActive || c.isFuture).sort((a, b) => a.number - b.number);
   });

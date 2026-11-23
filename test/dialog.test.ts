@@ -196,7 +196,7 @@ describe('attach text', () => {
     startDate: null, targetDate: '2026-11-12', updatedAt: '', status: { id: 's', name: 'In Progress', type: 'started', color: '' }, lead: user,
     teams: { nodes: [{ id: 't', key: 'ENG', name: 'Engineering' }] }, description: 'Short.', content: '## Goal\nFaster checkout.',
     members: { nodes: [] },
-    projectMilestones: { nodes: [{ id: 'm2', name: 'Payments', targetDate: null, progress: 0.5, sortOrder: 2 }, { id: 'm1', name: 'Pricing', targetDate: '2026-11-05', progress: 1, sortOrder: 1 }] },
+    projectMilestones: { nodes: [{ id: 'm2', name: 'Payments', targetDate: null, progress: 50, sortOrder: 2 }, { id: 'm1', name: 'Pricing', targetDate: '2026-11-05', progress: 100, sortOrder: 1 }] },
     lastUpdate: null, projectUpdates: { nodes: [{ id: 'u1', body: 'Slipped a week.', health: 'atRisk', createdAt: '2026-11-06T16:00:00Z', url: '', user }] }, documents: { nodes: [] },
   } as unknown as ProjectDetail;
 

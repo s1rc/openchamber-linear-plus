@@ -137,8 +137,8 @@ const checkoutDetail = {
   content: '## Goal\nCut checkout time in half and remove the payment timeouts.\n\n## Out of scope\nNew payment providers.',
   members: { nodes: [matt, ada] },
   projectMilestones: { nodes: [
-    { id: 'm1', name: 'Pricing under 2 s', description: 'Batch the tax lookups so a 60 item cart prices in under 2 s.', targetDate: '2026-11-05', progress: 1, sortOrder: 1 },
-    { id: 'm2', name: 'Idempotent payments', description: null, targetDate: '2026-11-12', progress: 0.5, sortOrder: 2 },
+    { id: 'm1', name: 'Pricing under 2 s', description: 'Batch the tax lookups so a 60 item cart prices in under 2 s.', targetDate: '2026-11-05', progress: 100, sortOrder: 1 },
+    { id: 'm2', name: 'Idempotent payments', description: null, targetDate: '2026-11-12', progress: 50, sortOrder: 2 },
   ] },
   lastUpdate: { id: 'u1', health: 'atRisk', createdAt: '2026-11-06T16:00:00Z' },
   projectUpdates: { nodes: [{ id: 'u1', body: 'Pricing is fixed. Payments slipped a week: the gateway sandbox was down.', health: 'atRisk', createdAt: '2026-11-06T16:00:00Z', url: 'https://linear.app/acme/project/checkout/updates', user: ada }] },

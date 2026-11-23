@@ -1054,6 +1054,9 @@ var shortDate = (value, now = new Date) => {
 var percent = (fraction) => `${Math.floor(Math.max(0, Math.min(1, fraction)) * 100)}%`;
 var HEALTH_LABEL = { onTrack: "On track", atRisk: "At risk", offTrack: "Off track" };
 
+// src/shared/milestones.ts
+var milestoneFraction = (progress) => Number.isFinite(progress) ? Math.max(0, Math.min(1, progress / 100)) : 0;
+
 // src/shared/attach-text.ts
 var LIMIT = 15000;
 var fit = (text) => text.length > LIMIT ? `${text.slice(0, LIMIT)}
@@ -1062,7 +1065,7 @@ var compact = (lines) => lines.filter((l, i, all) => l || all[i - 1]).join(`
 `).trim();
 var projectContext = (project) => {
   const teams = project.teams.nodes.map((t) => t.name).join(", ");
-  const milestones = project.projectMilestones.nodes.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((m) => `- ${m.name}${m.targetDate ? ` (${shortDate(m.targetDate)})` : ""}: ${percent(m.progress)}`);
+  const milestones = project.projectMilestones.nodes.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((m) => `- ${m.name}${m.targetDate ? ` (${shortDate(m.targetDate)})` : ""}: ${percent(milestoneFraction(m.progress))}`);
   const update = project.projectUpdates.nodes[0];
   const body = project.content?.trim() || project.description?.trim() || "";
   return fit(compact([

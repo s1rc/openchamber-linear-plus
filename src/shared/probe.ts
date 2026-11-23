@@ -38,7 +38,7 @@ export const runProbe = async (onResult: (result: ProbeResult) => void): Promise
   await step('Workspace labels', Q.WORKSPACE_LABELS);
   if (team) {
     await step('Team people', Q.TEAM_PEOPLE, { teamId: team.id });
-    await step('Team cycles', Q.TEAM_CYCLES, { teamId: team.id, minNumber: 0 });
+    await step('Team cycles', Q.TEAM_CYCLES, { teamId: team.id, minNumber: 1 });
     await step('Team projects', Q.PROJECTS, { after: null, filter: { accessibleTeams: { some: { id: { eq: team.id } } }, status: { type: { nin: ['completed', 'canceled'] } } } });
   }
   await step('Repository merge requests', Q.REPO_ATTACHMENTS, { url: 'gitlab.com/' });

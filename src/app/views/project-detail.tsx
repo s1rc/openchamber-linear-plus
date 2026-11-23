@@ -17,7 +17,7 @@ import { gql } from '../../shared/linear.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import { projectPush, pushSnapshot } from '../../shared/snapshot.ts';
 import { MILESTONE_ISSUES, PROJECT_DETAIL } from '../../shared/queries.ts';
-import { issueCountText, milestoneCounts } from '../../shared/milestones.ts';
+import { issueCountText, milestoneCounts, milestoneDone, milestoneFraction } from '../../shared/milestones.ts';
 import type { MilestoneIssuesResult, ProjectDetail as Detail, ProjectDetailResult, StateType } from '../../shared/types.ts';
 import { IssueBrowser } from '../components/issue-browser.tsx';
 
@@ -108,7 +108,7 @@ const Overview = ({ project, onMilestone }: { project: Detail; onMilestone?: (id
           value={project.targetDate ? shortDate(project.targetDate) : 'None'}
           breakdown={days === null ? undefined : [{ tone: days < 0 ? 'error' : days <= 7 ? 'warning' : 'muted', text: days < 0 ? `${-days} days late` : `${days} days left` }]}
         />
-        <StatCard label="Milestones" value={`${milestones.filter((m) => m.progress >= 1).length} of ${milestones.length}`} />
+        <StatCard label="Milestones" value={`${milestones.filter((m) => milestoneDone(m.progress)).length} of ${milestones.length}`} />
       </Cards>
       <KV items={[
         ['Status', <span class="sui-row"><span class="lin-swatch" style={{ background: project.status.color }} />{project.status.name}</span>],
@@ -139,7 +139,7 @@ const Overview = ({ project, onMilestone }: { project: Detail; onMilestone?: (id
                 </div>
                 {m.description?.trim() && <div class="lin-milestone-desc sui-small">{m.description.trim()}</div>}
                 {/* The kit's bar prints the percent, so the head does not repeat it. */}
-                <Progress value={m.progress * 100} />
+                <Progress value={milestoneFraction(m.progress) * 100} />
               </div>
             );
           })}

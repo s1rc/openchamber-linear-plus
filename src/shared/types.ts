@@ -180,7 +180,7 @@ export type ProjectDetail = ProjectSummary & {
   description: string;
   content: string | null;
   members: Connection<User>;
-  projectMilestones: Connection<{ id: string; name: string; description?: string | null; targetDate: string | null; progress: number; sortOrder: number }>;
+  projectMilestones: Connection<{ id: string; name: string; description?: string | null; targetDate: string | null; /** A percent, 0 to 100 (a project's own progress is 0 to 1). */ progress: number; sortOrder: number }>;
   lastUpdate: { id: string; health: ProjectHealth; createdAt: string } | null;
   projectUpdates: Connection<ProjectUpdate>;
   documents: Connection<DocumentSummary>;

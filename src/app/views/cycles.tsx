@@ -9,7 +9,7 @@ import { daysUntil, percent, shortDate } from '../../shared/format.ts';
 import { Banner, Empty, Progress, Select, Spinner } from '../../shared/kit.tsx';
 import { gql } from '../../shared/linear.ts';
 import { CYCLE_DETAIL, TEAM_CYCLES } from '../../shared/queries.ts';
-import { orderCycles } from '../../shared/cycles.ts';
+import { cycleFloor, orderCycles } from '../../shared/cycles.ts';
 import type { CycleDetailResult, CycleSummary, TeamCyclesResult } from '../../shared/types.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 import type { Workspace } from '../../shared/workspace.ts';
@@ -74,7 +74,7 @@ export const Cycles = ({ ctx, workspace, state, scoped }: Props) => {
 
   const saved = tabFor(placeKey, 'cycles:team');
   const team = teams.find((t) => t.id === saved) ?? teams[0];
-  const minNumber = Math.max(0, (team?.activeCycle?.number ?? 0) - PAST_SHOWN);
+  const minNumber = cycleFloor((team?.activeCycle?.number ?? 1) - PAST_SHOWN);
   const list = useQuery(team ? `cycles:${team.id}:${minNumber}` : null, async () => {
     const data = await gql<TeamCyclesResult>(TEAM_CYCLES, { teamId: team!.id, minNumber });
     return orderCycles(data.team.cycles.nodes);

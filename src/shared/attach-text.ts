@@ -1,6 +1,7 @@
 // The text an agent reads when a Linear project or document is attached to a message. Under the host's
 // 16,000 character limit.
 import { HEALTH_LABEL, percent, shortDate } from './format.ts';
+import { milestoneFraction } from './milestones.ts';
 import type { DocumentDetail, ProjectDetail } from './types.ts';
 
 const LIMIT = 15_000;
@@ -15,7 +16,7 @@ export const projectContext = (project: ProjectDetail): string => {
   const milestones = project.projectMilestones.nodes
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((m) => `- ${m.name}${m.targetDate ? ` (${shortDate(m.targetDate)})` : ''}: ${percent(m.progress)}`);
+    .map((m) => `- ${m.name}${m.targetDate ? ` (${shortDate(m.targetDate)})` : ''}: ${percent(milestoneFraction(m.progress))}`);
   const update = project.projectUpdates.nodes[0];
   const body = (project.content?.trim() || project.description?.trim() || '');
   return fit(compact([

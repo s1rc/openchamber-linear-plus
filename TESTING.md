@@ -9,7 +9,7 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 440 unit and route tests in `test/` (see below) |
+| `bun test` | 442 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
@@ -41,7 +41,7 @@ Also check by grep:
 | `issue-pane` | An issue from a list opens in the right-hand pane with its trail, the list stays beside it, another row swaps it, Escape closes it; a cycle's issue opens in the same pane |
 | `issue-rail` | On the rail the issue replaces the view, with its trail; Back returns to the list |
 | `sidebar` | The folder's team is open with Home, Triage (count 1), Issues, Projects, Views; the sub-team sits under it and opens; a saved view opens the team's issues with it picked; open teams are remembered |
-| `milestones` | A milestone's issue count opens its three issues |
+| `milestones` | A milestone's issue count opens its three issues; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done |
 | `copy-buttons` | Copy ID copies the key |
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
 | `plan-extras` | The Work Status frame claims a finished plan, sets the estimate on the team's scale, creates the split-out issue once, relates it, reports it done, and toasts what it did |

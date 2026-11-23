@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { orderCycles } from '../src/shared/cycles.ts';
+import { cycleFloor, orderCycles } from '../src/shared/cycles.ts';
 import { inScope } from '../src/shared/inbox.ts';
 import type { CycleSummary, Notification } from '../src/shared/types.ts';
 
@@ -84,5 +84,16 @@ describe('compactMoney and sinceLabel', () => {
     expect(sinceLabel('2026-11-01T12:00:00Z', now)).toBe('9d');
     expect(sinceLabel('2026-09-29T12:00:00Z', now)).toBe('6w');
     expect(sinceLabel(undefined, now)).toBeNull();
+  });
+});
+
+describe('cycleFloor', () => {
+  test('never asks Linear for cycle 0 or below, which it refuses', () => {
+    expect(cycleFloor(37 - 6)).toBe(31);
+    expect(cycleFloor(3 - 6)).toBe(1);
+    expect(cycleFloor(0)).toBe(1);
+    expect(cycleFloor(null)).toBe(1);
+    expect(cycleFloor(undefined)).toBe(1);
+    expect(cycleFloor(4.5)).toBe(4);
   });
 });

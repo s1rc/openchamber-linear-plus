@@ -16,5 +16,15 @@ export const milestoneCounts = (issues: readonly { projectMilestone: { id: strin
 export const issueCountText = (count: number | undefined): string | null =>
   count === undefined ? null : `${count} ${count === 1 ? 'issue' : 'issues'}`;
 
+/**
+ * A milestone's completion from 0 to 1. Linear gives a project's progress as a fraction but a milestone's as a
+ * percent (0 to 100, and 99.9 while unfinished issues with no estimate remain), so a milestone at 40% must not
+ * read as 4000%, nor as complete.
+ */
+export const milestoneFraction = (progress: number): number => (Number.isFinite(progress) ? Math.max(0, Math.min(1, progress / 100)) : 0);
+
+/** Whether Linear counts the milestone as done. */
+export const milestoneDone = (progress: number): boolean => milestoneFraction(progress) >= 1;
+
 /** One milestone's issues in every state: a milestone is small, and its done work is part of what it shows. */
 export const milestoneFilter = (milestoneId: string): Filter => ({ projectMilestone: { id: { eq: milestoneId } } });

@@ -188,6 +188,10 @@ const tests: Test[] = [
       await ctx.frame.locator('.lin-table-row:not(.lin-table-head)', { hasText: 'Checkout' }).click();
       const count = ctx.frame.locator('.lin-milestone-count', { hasText: '3 issues' });
       await count.waitFor();
+      // Linear gives a milestone's progress as a percent: 50 is half done, not complete.
+      const half = await ctx.frame.locator('.lin-milestone', { hasText: 'Idempotent payments' }).innerText();
+      expect(half.includes('50%') && !half.includes('100%'), `a half-done milestone shows 50% (got ${half.replace(/\s+/g, ' ')})`);
+      expect((await ctx.frame.locator('.sui-card', { hasText: 'Milestones' }).first().innerText()).includes('1 of 2'), 'and only the finished one counts as done');
       await count.click();
       await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
       await until(async () => (await ctx.frame.locator('[data-issue]').count()) === 3, 'the milestone shows its three issues');
