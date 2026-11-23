@@ -334,8 +334,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-editable { cursor: text; border-radius: var(--oc-radius, 6px); }
 .lin-editable:hover { background: var(--oc-hover); }
 .lin-stack--tight { gap: 6px; }
-.lin-description { display: flex; flex-direction: column; gap: 6px; }
-.lin-description-body { margin: 0 -6px; padding: 4px 6px; min-height: 1.5em; }
+.lin-description { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); overflow: hidden; }
+.lin-description-body { padding: 10px 12px; min-height: 1.5em; }
+.lin-description-foot { display: flex; padding: 4px 6px; border-top: 1px solid var(--oc-border); }
 .lin-description-preview { min-height: 120px; padding: 8px 10px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }
 .lin-composer { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .lin-label-picker { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }

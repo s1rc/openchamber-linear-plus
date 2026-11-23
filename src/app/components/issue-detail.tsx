@@ -131,7 +131,7 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
             ? <Markdown source={issue.description} onOpenIssue={onOpenIssue} onToggleTask={toggleTask} />
             : <div class="sui-muted">No description.</div>}
         </div>
-        <div><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={edit} /></div>
+        <div class="lin-description-foot"><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={edit} /></div>
       </div>
     );
   }
