@@ -130,6 +130,12 @@ const tests: Test[] = [
       await pane.waitFor();
       await until(async () => (await pane.locator('.lin-issue-trail').innerText()).includes('This folder'), 'the pane says where the issue came from');
       expect(await ctx.frame.locator('.lin-body--split > .lin-content [data-issue="ENG-13"]').count() === 1, 'the list stays beside the pane');
+      const milestone = pane.locator('.oc-sdk-trigger', { hasText: 'Set milestone' });
+      await milestone.waitFor();
+      await milestone.click();
+      const beforeMilestone = calls.length;
+      await ctx.frame.locator('[role="option"]', { hasText: 'Idempotent payments' }).click();
+      await until(async () => calls.slice(beforeMilestone).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"projectMilestoneId":"m2"') && c.hit), 'the issue pane assigns a milestone');
       await ctx.frame.locator('.lin-body--split > .lin-content [data-issue="ENG-13"]').click();
       await pane.locator('.lin-issue-trail', { hasText: 'ENG-13' }).waitFor();
       await pane.click({ position: { x: 5, y: 300 } });
@@ -140,6 +146,27 @@ const tests: Test[] = [
       await ctx.frame.locator('[data-issue]').first().click();
       await pane.waitFor();
       await until(async () => (await pane.locator('.lin-issue-trail').innerText()).includes('Cycle 42'), 'a cycle\'s issue opens in the same pane');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-relations',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      const row = ctx.frame.locator('[data-issue="ENG-11"]');
+      await row.waitFor();
+      expect(await row.locator('.lin-meta-blocked').innerText() === '1', 'the list counts only the unfinished prerequisite');
+      expect(await row.locator('.lin-meta-blocking').innerText() === '1', 'and only the unfinished dependent');
+      await row.click();
+      const pane = ctx.frame.locator('.lin-pane');
+      await pane.locator('.lin-issue-heading').waitFor();
+      const section = (name: string) => pane.locator('.lin-side-section').filter({ has: ctx.frame.locator('.lin-side-title', { hasText: new RegExp(`^${name}$`) }) });
+      expect((await section('Blocked by').innerText()).includes('Retry webhook deliveries'), 'Blocked by keeps the open prerequisite');
+      expect(!(await section('Blocked by').innerText()).includes('Done prerequisite'), 'Blocked by drops the completed prerequisite');
+      expect((await section('Blocking').innerText()).includes('Show saved cards'), 'Blocking keeps the open dependent');
+      expect(!(await section('Blocking').innerText()).includes('Done dependent'), 'Blocking drops the completed dependent');
+      expect((await section('Related').innerText()).includes('Done prerequisite') && (await section('Related').innerText()).includes('Done dependent'), 'completed dependencies read as Related');
       await ctx.page.context().close();
     },
   },
@@ -345,7 +372,7 @@ const tests: Test[] = [
       const menu = ctx.frame.locator('.lin-menu:not(.lin-menu--sub)');
       await menu.waitFor();
       const labels = await menu.locator('.lin-menu-label').allInnerTexts();
-      expect(['Status', 'Priority', 'Assignee', 'Due date', 'Labels', 'Project', 'Estimate', 'Cycle', 'Open', 'Open in Linear', 'Copy', 'Delete...'].every((l, i) => labels[i] === l), `the menu lists Linear's actions (got ${labels.join(', ')})`);
+      expect(['Status', 'Priority', 'Assignee', 'Due date', 'Labels', 'Project', 'Milestone', 'Estimate', 'Cycle', 'More properties', 'Create related', 'Mark as', 'Remove', 'Open', 'Copy', 'Convert to', 'Make a copy...', 'Open in', 'Favorite', 'Remind me', 'Delete...'].every((l, i) => labels[i] === l), `the menu lists Linear's actions (got ${labels.join(', ')})`);
       expect(await ctx.frame.locator('.lin-pane').count() === 0, 'a right click does not open the issue');
       await menu.locator('[data-menu-item="status"]').hover();
       const sub = ctx.frame.locator('.lin-menu--sub');
@@ -355,6 +382,13 @@ const tests: Test[] = [
       await sub.locator('[data-menu-item="status:t-eng-review"]').click();
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"stateId":"t-eng-review"') && c.hit), 'a status from the menu saves');
       expect(await menu.count() === 0, 'and the menu closes');
+      await ctx.frame.locator('[data-issue="ENG-11"]').click({ button: 'right' });
+      await menu.locator('[data-menu-item="milestone"]').click();
+      await sub.locator('[data-menu-item="milestone:m2"]').waitFor();
+      expect(await sub.locator('[data-menu-item="milestone:none"]').getAttribute('aria-checked') === 'true', 'No milestone is ticked before one is assigned');
+      const beforeMilestone = calls.length;
+      await sub.locator('[data-menu-item="milestone:m2"]').click();
+      await until(async () => calls.slice(beforeMilestone).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"projectMilestoneId":"m2"') && c.hit), 'a milestone from the menu saves');
       // Keys: P opens Priority, Escape closes the submenu, then the menu, and nothing else.
       await ctx.frame.locator('[data-issue="ENG-13"]').click({ button: 'right' });
       await menu.waitFor();
@@ -386,6 +420,129 @@ const tests: Test[] = [
       await ctx.page.waitForTimeout(300);
       const copied = (await ctx.log()).find((m) => m.type === 'clipboard-write');
       expect(JSON.stringify(copied?.payload ?? '').includes('ENG-11'), 'Copy ID copies the key');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-menu-actions',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      const row = ctx.frame.locator('[data-issue="ENG-11"]');
+      const menu = ctx.frame.locator('.lin-menu:not(.lin-menu--sub)');
+      const sub = ctx.frame.locator('.lin-menu--sub');
+      const modal = ctx.frame.locator('.lin-modal');
+      const more = async (id: string) => {
+        await row.click({ button: 'right' });
+        await menu.locator('[data-menu-item="more"]').hover();
+        await sub.locator(`[data-menu-item="${id}"]`).click();
+      };
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="more"]').hover();
+      await sub.locator('[data-menu-item="rename"]').waitFor();
+      expect((await sub.locator('.lin-menu-label').allInnerTexts()).join(',') === 'Team,Release,SLA...,Add link...,Add customer request...,Add document,Find suggestions,Rename...', 'More properties lists every missing action');
+      await sub.locator('[data-menu-item="add-link"]').click();
+      await modal.getByLabel('URL').fill('https://example.com/runbook');
+      await modal.getByLabel('Title').fill('Runbook');
+      let before = calls.length;
+      await modal.getByRole('button', { name: 'Add Link' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation AttachmentCreate') && c.key.includes('Runbook') && c.hit), 'Add link saves');
+
+      await more('add-customer');
+      await modal.locator('.oc-sdk-trigger').click();
+      await ctx.frame.locator('[role="option"]', { hasText: 'Acme' }).click();
+      await modal.getByLabel('Request').fill('Please speed up large carts');
+      before = calls.length;
+      await modal.getByRole('button', { name: 'Add Request' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation CustomerNeedCreate') && c.key.includes('customer-acme') && c.hit), 'Add customer request saves');
+
+      await more('add-document');
+      await modal.getByLabel('Title').fill('Checkout notes');
+      await modal.getByLabel('Content').fill('Large cart findings');
+      before = calls.length;
+      await modal.getByRole('button', { name: 'Add Document' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation DocumentCreate') && c.key.includes('Checkout notes') && c.hit), 'Add document saves');
+
+      await more('release');
+      await modal.getByRole('checkbox', { name: 'Release One 1.0.0' }).waitFor();
+      before = calls.length;
+      await modal.getByRole('checkbox', { name: 'Release One 1.0.0' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"addedReleaseIds":["r1"]') && c.hit), 'Release links the issue');
+      await modal.getByRole('button', { name: 'Done' }).click();
+
+      await more('sla');
+      await modal.locator('.oc-sdk-trigger').click();
+      before = calls.length;
+      await ctx.frame.locator('[role="option"]', { hasText: 'Business days only' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"slaType":"onlyBusinessDays"') && c.hit), 'SLA saves the day-count rule');
+
+      await more('suggestions');
+      await modal.locator('[data-issue="ENG-14"]').waitFor();
+      expect(calls.some((c) => c.key.includes('query SemanticIssues') && c.hit), 'Find suggestions uses semantic issue search');
+      await modal.locator('[data-issue="ENG-14"]').click();
+      await until(async () => (await modal.count()) === 0, 'choosing a suggestion closes the dialog');
+
+      await row.click({ button: 'right' });
+      before = calls.length;
+      await menu.locator('[data-menu-item="favorite"]').click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation FavoriteCreate') && c.hit), 'Favorite saves');
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="remind"]').hover();
+      before = calls.length;
+      await sub.locator('[data-menu-item="remind:hour"]').click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueReminder') && c.key.includes('2026-11-09T13:00:00.000Z') && c.hit), 'Remind me saves the preset');
+
+      await more('rename');
+      await modal.getByLabel('Title').fill('Checkout times out on large carts');
+      before = calls.length;
+      await modal.getByRole('button', { name: 'Save' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('Checkout times out on large carts') && c.hit), 'Rename saves');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-menu-create',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      const row = ctx.frame.locator('[data-issue="ENG-11"]');
+      const menu = ctx.frame.locator('.lin-menu:not(.lin-menu--sub)');
+      const sub = ctx.frame.locator('.lin-menu--sub');
+      const modal = ctx.frame.locator('.lin-modal');
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="mark-as"]').hover();
+      await sub.locator('[data-menu-item="mark-as:related"]').click();
+      await modal.locator('input').fill('retry');
+      await modal.locator('[data-issue="ENG-14"]').waitFor();
+      let before = calls.length;
+      await modal.locator('[data-issue="ENG-14"]').click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueRelationCreate') && c.key.includes('i-eng-14') && c.hit), 'Mark as related links the chosen issue');
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="create-related"]').hover();
+      await sub.locator('[data-menu-item="create-related:related"]').click();
+      await modal.getByLabel('Title').fill('Related cache work');
+      before = calls.length;
+      await modal.getByRole('button', { name: 'Create Issue' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueCreate') && c.key.includes('Related cache work') && c.hit), 'Create related creates the issue');
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueRelationCreate') && c.key.includes('i-eng-50') && c.hit), 'then links it');
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="make-copy"]').click();
+      await modal.getByLabel('Title').waitFor();
+      expect(await modal.getByLabel('Title').inputValue() === 'Checkout times out when the cart has more than 50 items', 'Make a copy prefills the title');
+      expect((await modal.getByLabel('Description').inputValue()).includes('Carts over **50 items**'), 'and the description');
+      await modal.getByRole('button', { name: 'Cancel' }).click();
+
+      await row.click({ button: 'right' });
+      await menu.locator('[data-menu-item="convert"]').hover();
+      await sub.locator('[data-menu-item="convert:project"]').click();
+      before = calls.length;
+      await modal.getByRole('button', { name: 'Convert to Project' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation ProjectCreate') && c.key.includes('"convertedFromIssueId":"i-eng-11"') && c.hit), 'Convert to project uses Linear\'s conversion');
       await ctx.page.context().close();
     },
   },
@@ -463,6 +620,7 @@ const tests: Test[] = [
       const ctx = await open(browser, { page: 'status/index.html', surface: 'status' }, 280, 700);
       const row = ctx.frame.locator('[data-handoff="ses_plan:ENG-13"]');
       await row.waitFor();
+      await row.getByRole('button', { name: 'Start Build' }).waitFor();
       const labels = (await row.locator('button').allInnerTexts()).map((t) => t.trim());
       expect(['Start Build', 'Write Plan', 'Dismiss'].every((l) => labels.includes(l)), `the buttons are in title case (got ${labels.join(', ')})`);
       const wide = await ctx.frame.locator('html').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));

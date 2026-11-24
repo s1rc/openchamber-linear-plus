@@ -12,7 +12,9 @@ mock.module('../src/shared/linear.ts', () => ({
   },
   gql: async (query: string, variables: unknown) => { sent.push({ query, variables }); return answer(); },
 }));
-const { markRead, patchIssue, updateIssue, writeErrorText } = await import('../src/shared/writes.ts');
+const {
+  addCustomerRequest, addIssueDocument, addIssueLink, convertIssueToProject, createIssueRelation, markRead, patchIssue, remindIssue, toggleFavorite, updateIssue, writeErrorText,
+} = await import('../src/shared/writes.ts');
 const { LinearError } = await import('../src/shared/linear.ts');
 
 const row = (id: string, priority: number): IssueRow => ({ id, identifier: id.toUpperCase(), priority, team: { id: 't', key: 'T' } } as unknown as IssueRow);
@@ -62,6 +64,54 @@ describe('markRead', () => {
     answer = async () => ({ notificationUpdate: { success: true } });
     await markRead(['n1']);
     expect(sent[1]!.query).toContain('mutation NotificationMarkRead(');
+  });
+});
+
+describe('issue action writes', () => {
+  test('links, customer requests and documents carry the issue id', async () => {
+    answer = async () => {
+      const query = sent.at(-1)!.query;
+      if (query.includes('mutation DocumentCreate')) return { documentCreate: { success: true, document: { id: 'd1' } } };
+      if (query.includes('mutation CustomerNeedCreate')) return { customerNeedCreate: { success: true } };
+      return { attachmentCreate: { success: true } };
+    };
+    await addIssueLink({ id: 'i1', identifier: 'I1' }, { url: 'https://example.com', title: 'Example' });
+    await addCustomerRequest({ id: 'i1', identifier: 'I1' }, { customerId: 'c1', body: 'Please add this' });
+    await addIssueDocument({ id: 'i1', identifier: 'I1' }, { title: 'Notes', content: 'Text' });
+    expect(sent.map((c) => c.variables)).toEqual([
+      { input: { issueId: 'i1', url: 'https://example.com', title: 'Example' } },
+      { input: { issueId: 'i1', customerId: 'c1', body: 'Please add this' } },
+      { input: { issueId: 'i1', title: 'Notes', content: 'Text' } },
+    ]);
+  });
+
+  test('a blocked-by relation reverses the issue ids', async () => {
+    answer = async () => ({ issueRelationCreate: { success: true } });
+    await createIssueRelation({ id: 'i1', identifier: 'I1' }, { id: 'i2', identifier: 'I2' }, { id: 'blocked', type: 'blocks', inverse: true });
+    expect(sent[0]!.variables).toEqual({ input: { issueId: 'i2', relatedIssueId: 'i1', type: 'blocks' } });
+  });
+
+  test('favorite creates or deletes the caller\'s favorite reference', async () => {
+    answer = async () => sent.at(-1)!.query.includes('query IssueFavorite')
+      ? { issue: { id: 'i1', favorite: null } }
+      : { favoriteCreate: { success: true } };
+    await expect(toggleFavorite({ id: 'i1' })).resolves.toBe(true);
+    expect(sent[1]!.variables).toEqual({ input: { issueId: 'i1' } });
+    answer = async () => sent.at(-1)!.query.includes('query IssueFavorite')
+      ? { issue: { id: 'i1', favorite: { id: 'f1' } } }
+      : { favoriteDelete: { success: true } };
+    await expect(toggleFavorite({ id: 'i1' })).resolves.toBe(false);
+    expect(sent[3]!.variables).toEqual({ id: 'f1' });
+  });
+
+  test('reminders use a timestamp and project conversion uses Linear\'s native hook', async () => {
+    answer = async () => sent.at(-1)!.query.includes('mutation ProjectCreate')
+      ? { projectCreate: { success: true, project: { id: 'p1', name: 'Copied', url: 'u' } } }
+      : { issueReminder: { success: true } };
+    await remindIssue({ id: 'i1' }, '2026-11-25T12:00:00Z');
+    await convertIssueToProject({ id: 'i1', identifier: 'I1', title: 'Copied', team: { id: 't1', key: 'T' } });
+    expect(sent[0]!.variables).toEqual({ id: 'i1', reminderAt: '2026-11-25T12:00:00Z' });
+    expect(sent[1]!.variables).toEqual({ input: { name: 'Copied', teamIds: ['t1'], convertedFromIssueId: 'i1' } });
   });
 });
 

@@ -1,18 +1,18 @@
-// The right-click menu on an issue row or card, laid out as Linear's: properties with their shortcut keys,
-// then open and copy, then delete. Submenus fly out beside the menu; where the frame is too narrow for that
+// The right-click menu on an issue row or card, laid out as Linear's: properties, relations, conversion,
+// personal actions and delete. Submenus fly out beside the menu; where the frame is too narrow for that
 // (the rail panel) they open in its place with a Back row. A property saves on choice, shown at once.
 import { toast } from '@openchamber-ext/shared-ui';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { Avatar, CycleGlyph, EstimateGlyph, PriorityGlyph, ProjectIcon, StatusGlyph } from '../../shared/glyphs.tsx';
+import { Avatar, CycleGlyph, EstimateGlyph, MilestoneGlyph, PriorityGlyph, ProjectIcon, StatusGlyph } from '../../shared/glyphs.tsx';
 import { host } from '../../shared/host.ts';
 import { copyText, ExternalIcon } from '../../shared/icon-buttons.tsx';
-import { filterItems, isShortcut, issueMenu, type GlyphName, type MenuIcon, type MenuItem } from '../../shared/issue-menu.ts';
+import { filterItems, isShortcut, issueMenu, type GlyphName, type MenuAction, type MenuIcon, type MenuItem } from '../../shared/issue-menu.ts';
 import { estimateScale } from '../../shared/moves.ts';
-import { useTeamProjects } from '../../shared/projects.ts';
+import { useProjectMilestones, useTeamProjects } from '../../shared/projects.ts';
 import { useOpenCycles, useTeamPeople } from '../../shared/team-data.ts';
 import type { IssueRow } from '../../shared/types.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
-import { updateIssue, writeErrorText } from '../../shared/writes.ts';
+import { remindIssue, toggleFavorite, updateIssue, writeErrorText } from '../../shared/writes.ts';
 
 const MENU_W = 236;
 const SUB_W = 240;
@@ -27,6 +27,7 @@ const GLYPHS: Record<GlyphName, () => preact.JSX.Element> = {
   due: () => <svg {...svg}><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3" /></svg>,
   labels: () => <svg {...svg}><path d="M2.5 3.5v4l6 6 5-5-6-6h-4z" /><circle cx="5.5" cy="5.5" r="0.8" fill="currentColor" /></svg>,
   project: () => <ProjectIcon icon={null} color={null} size={14} />,
+  milestone: () => <MilestoneGlyph size={14} />,
   estimate: () => <EstimateGlyph size={14} />,
   cycle: () => <CycleGlyph size={14} />,
   copy: () => <svg {...svg}><rect x="5" y="2.5" width="8.5" height="10" rx="1.5" /><path d="M3 5v8a1.5 1.5 0 0 0 1.5 1.5H10" /></svg>,
@@ -34,6 +35,14 @@ const GLYPHS: Record<GlyphName, () => preact.JSX.Element> = {
   external: () => <span class="lin-menu-ext"><ExternalIcon /></span>,
   delete: () => <svg {...svg}><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9" /></svg>,
   none: () => <svg {...svg} stroke-dasharray="2 2"><circle cx="8" cy="8" r="5.5" /></svg>,
+  more: () => <svg {...svg}><circle cx="4" cy="4" r="1" /><circle cx="4" cy="8" r="1" /><circle cx="4" cy="12" r="1" /><path d="M8 4h5M8 8h5M8 12h5" /></svg>,
+  related: () => <svg {...svg}><rect x="2" y="2" width="5" height="5" rx="1" /><rect x="9" y="9" width="5" height="5" rx="1" /><path d="M6 6l4 4M10 4h3v3" /></svg>,
+  mark: () => <svg {...svg}><path d="M4 14V2.5h8l-1.5 3L12 8.5H4" /></svg>,
+  remove: () => <svg {...svg}><path d="M3 3l10 10M13 3L3 13" /><rect x="2" y="2" width="12" height="12" rx="2" /></svg>,
+  convert: () => <svg {...svg}><path d="M3 5h8M8.5 2.5 11 5 8.5 7.5M13 11H5M7.5 8.5 5 11l2.5 2.5" /></svg>,
+  favorite: () => <svg {...svg}><path d="m8 2 1.8 3.7 4.1.6-3 2.9.7 4.1L8 11.4l-3.6 1.9.7-4.1-3-2.9 4.1-.6z" /></svg>,
+  reminder: () => <svg {...svg}><circle cx="8" cy="8.5" r="5.5" /><path d="M8 5v3.5l2.5 1.5M5 1.5 2.5 4M11 1.5 13.5 4" /></svg>,
+  rename: () => <svg {...svg}><path d="m3 10-.5 3.5L6 13l7.5-7.5-3-3zM9.5 3.5l3 3" /></svg>,
 };
 
 const Icon = ({ icon }: { icon: MenuIcon | undefined }) => {
@@ -61,13 +70,15 @@ type Props = {
   onClose: () => void;
   onOpen: (issue: IssueRow) => void;
   onDelete: (issue: IssueRow) => void;
+  onAction: (issue: IssueRow, action: MenuAction) => void;
 };
 
-export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete }: Props) => {
+export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: Props) => {
   const workspace = useWorkspace();
   const team = workspace.data?.teamsById.get(issue.team.id);
   const people = useTeamPeople(issue.team.id);
   const projects = useTeamProjects([issue.team.id]);
+  const milestones = useProjectMilestones(issue.project?.id ?? null);
   const cycles = useOpenCycles(team?.cyclesEnabled ? issue.team.id : null, team?.activeCycle?.number);
   const sections = issueMenu(issue, {
     states: workspace.data?.statesByTeam.get(issue.team.id) ?? [],
@@ -76,8 +87,10 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete }: Props) => 
     members: people.data?.members,
     labels: people.data?.labels,
     projects: projects.data,
+    milestones: issue.project ? milestones.data : [],
     cycles: team?.cyclesEnabled ? cycles.data : [],
     today: localToday(),
+    now: new Date(),
   });
   const items = sections.flat();
 
@@ -127,6 +140,17 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete }: Props) => 
     if (action.kind === 'copy') void copyText(action.text, action.what);
     if (action.kind === 'open') onOpen(issue);
     if (action.kind === 'open-linear') void host.openUrl(issue.url);
+    if (action.kind === 'favorite') {
+      void toggleFavorite(issue)
+        .then((favorite) => toast(host, 'success', favorite ? `Added ${issue.identifier} to favorites` : `Removed ${issue.identifier} from favorites`))
+        .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+    }
+    if (action.kind === 'reminder') {
+      void remindIssue(issue, action.at)
+        .then(() => toast(host, 'success', `Reminder set for ${new Date(action.at).toLocaleString()}`))
+        .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+    }
+    if (action.kind === 'prompt' || action.kind === 'relation') onAction(issue, action);
     if (action.kind === 'delete') onDelete(issue);
     onClose();
   };
@@ -168,9 +192,16 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete }: Props) => 
       if (item) run(item);
       return;
     }
-    if (inSearch || event.metaKey || event.ctrlKey || event.altKey) return;
-    const hit = items.find((i) => isShortcut(i.shortcut, event.key, event.shiftKey));
-    if (hit) { event.preventDefault(); setActive(items.indexOf(hit)); choose(hit, rowOf(hit.id), true); }
+    if (inSearch) return;
+    const key = event.code.startsWith('Key') ? event.code.slice(3) : event.key;
+    const hit = list.find((i) => isShortcut(i.shortcut, key, event.shiftKey, event.metaKey, event.altKey, event.ctrlKey));
+    if (hit) {
+      event.preventDefault();
+      if (sub) { setSubActive(subItems.indexOf(hit)); run(hit); }
+      else { setActive(items.indexOf(hit)); choose(hit, rowOf(hit.id), true); }
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
   };
   const close = useRef(onClose);
   close.current = onClose;

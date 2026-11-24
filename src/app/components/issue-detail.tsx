@@ -18,11 +18,12 @@ import { useWorkspace } from '../../shared/workspace.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import { setTask } from '../../shared/tasks.ts';
 import { openedIssuePush, pushSnapshot } from '../../shared/snapshot.ts';
+import { dependencyGroup } from '../../shared/relations.ts';
 import type { Comment, HistoryEvent, IssueDetail as Detail, RelatedIssue } from '../../shared/types.ts';
 import { teamEstimateType } from '../../shared/workspace.ts';
 import { IssueRow } from './issue-row.tsx';
 import {
-  AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
+  AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, MilestoneEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
 } from './property-editors.tsx';
 import { BuildPanel, PlanActions, useBuildSource } from '../../shared/build-panel.tsx';
 import { Modal } from './modal.tsx';
@@ -38,11 +39,11 @@ type Relation = { key: string; issue: RelatedIssue };
 const relationGroups = (issue: Detail): [string, Relation[]][] => {
   const groups: Record<string, Relation[]> = { 'Blocked by': [], Blocking: [], Related: [], 'Duplicate of': [], 'Duplicated by': [], Similar: [] };
   for (const r of issue.relations.nodes) {
-    const name = r.type === 'blocks' ? 'Blocking' : r.type === 'duplicate' ? 'Duplicate of' : r.type === 'similar' ? 'Similar' : 'Related';
+    const name = r.type === 'blocks' ? dependencyGroup(issue, r.relatedIssue, false) : r.type === 'duplicate' ? 'Duplicate of' : r.type === 'similar' ? 'Similar' : 'Related';
     groups[name]!.push({ key: r.id, issue: r.relatedIssue });
   }
   for (const r of issue.inverseRelations.nodes) {
-    const name = r.type === 'blocks' ? 'Blocked by' : r.type === 'duplicate' ? 'Duplicated by' : r.type === 'similar' ? 'Similar' : 'Related';
+    const name = r.type === 'blocks' ? dependencyGroup(issue, r.issue, true) : r.type === 'duplicate' ? 'Duplicated by' : r.type === 'similar' ? 'Similar' : 'Related';
     groups[name]!.push({ key: `i${r.id}`, issue: r.issue });
   }
   return Object.entries(groups).filter(([, list]) => list.length > 0);
@@ -403,7 +404,7 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
           </SideSection>
           <SideSection title="Project">
             <ProjectEdit {...editorProps} />
-            {issue.projectMilestone && <div class="lin-prop lin-prop--sub sui-small">Milestone: {issue.projectMilestone.name}</div>}
+            <MilestoneEdit {...editorProps} />
           </SideSection>
           {relations.map(([name, list]) => (
             <SideSection title={name} key={name}>

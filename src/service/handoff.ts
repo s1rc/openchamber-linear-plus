@@ -190,8 +190,8 @@ const titled = (identifier: string, issueTitle: string | null | undefined) =>
   `${identifier}${issueTitle ? ` (${issueTitle.replace(/\s+/g, ' ').trim().slice(0, 160)})` : ''}`;
 
 /**
- * The first message of a lead session: it hands the plan to a child session on the plan agent and model, answers
- * the child's questions, and repeats the finished plan as its own reply, which Start build reads.
+ * The first message of a lead session: it hands the plan to a child session on the plan agent and model, relays
+ * every question to the user and passes back the answer, then repeats the finished plan as its own reply.
  */
 export const leadPlanPrompt = (input: PlanPromptInput & { choice: ChildChoice }): string => {
   const where = `${input.directory}${input.branch ? `, on branch ${input.branch}` : ''}`;
@@ -203,7 +203,7 @@ export const leadPlanPrompt = (input: PlanPromptInput & { choice: ChildChoice })
     'Then end your turn with one line saying the plan session is running. Do not read the code or write a plan yourself.',
     '',
     'While it plans:',
-    '- Its questions come to you. Answer them yourself from the issue and the code where you can, with session.send to that session. Ask the user only what only the user can settle (a preference, a trade-off they would judge, a step that is hard to undo), then pass the answer on the same way.',
+    '- Its questions come to you. Always ask the user every question, as the plan session wrote it, and wait for the user\'s answer. Never answer a plan question yourself, even when the answer seems obvious from the issue or code. Send the user\'s answer back to the plan session with session.send. Keep relaying questions and answers until the plan session has no more questions.',
     '- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.',
     '',
     'When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.',

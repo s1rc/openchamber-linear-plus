@@ -1,5 +1,5 @@
-// The confirm Linear asks for when a card lands on a status only another team has: the issue moves
-// to that team. Says what changes before anything is sent.
+// Confirms a team move from More properties or from a card dropped on a status only another team has.
+// Says what changes before anything is sent.
 import { toast } from '@openchamber-ext/shared-ui';
 import { useState } from 'preact/hooks';
 import { host } from '../../shared/host.ts';
@@ -16,11 +16,13 @@ type Props = {
   extra: IssueInput;
   /** How many sub-issues the issue has, when known. */
   subIssues: number;
+  /** True for More properties, Team; false for a board drag to a missing status. */
+  manual?: boolean;
   onClose: () => void;
   onMoved: (issue: IssueRow) => void;
 };
 
-export const TeamMoveDialog = ({ issue, choices, extra, subIssues, onClose, onMoved }: Props) => {
+export const TeamMoveDialog = ({ issue, choices, extra, subIssues, manual = false, onClose, onMoved }: Props) => {
   const teams = useWorkspace().data?.teamsById;
   const [teamId, setTeamId] = useState(choices[0]!.teamId);
   const [busy, setBusy] = useState(false);
@@ -53,7 +55,9 @@ export const TeamMoveDialog = ({ issue, choices, extra, subIssues, onClose, onMo
       )}
     >
       <div class="sui-small">
-        {from?.name ?? issue.team.key} has no {choice.state.name} status. {choices.length > 1 ? 'These teams do:' : `${target?.name ?? name} does.`}
+        {manual
+          ? 'Choose a team. The issue gets a new identifier and starts in that team\'s default status.'
+          : <>{from?.name ?? issue.team.key} has no {choice.state.name} status. {choices.length > 1 ? 'These teams do:' : `${target?.name ?? name} does.`}</>}
       </div>
       {choices.length > 1 && (
         <Select value={teamId} options={choices.map((c) => ({ id: c.teamId, label: teams?.get(c.teamId)?.name ?? c.teamId, hint: teams?.get(c.teamId)?.key }))} onChange={setTeamId} />

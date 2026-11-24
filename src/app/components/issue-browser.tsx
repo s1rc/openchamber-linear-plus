@@ -17,11 +17,14 @@ import type { IssueRow as Issue, StateType } from '../../shared/types.ts';
 import { changedOptions, EXTRA_PROPERTIES, orderIssues, resolveOptions, visibleIssues, type Mode, type ViewOptions } from '../../shared/view-options.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
 import { host } from '../../shared/host.ts';
-import { planDrop, type IssueInput, type TeamChoice } from '../../shared/moves.ts';
-import { updateIssue, writeErrorText } from '../../shared/writes.ts';
+import { acceptStateOf, planDrop, type IssueInput, type TeamChoice } from '../../shared/moves.ts';
+import type { IssuePrompt, MenuAction, RelationChoice } from '../../shared/issue-menu.ts';
+import { createIssueRelation, updateIssue, writeErrorText } from '../../shared/writes.ts';
 import { CreateIssueDialog } from './create-issue.tsx';
 import { DeleteIssueDialog } from './delete-issue.tsx';
 import { IssueMenu } from './issue-menu.tsx';
+import { IssueActionDialog } from './issue-action-dialogs.tsx';
+import { IssueRelationDialog } from './issue-relation-dialog.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import {
   openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
@@ -115,10 +118,12 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [moving, setMoving] = useState<{ issue: Issue; choices: TeamChoice[]; extra: IssueInput } | null>(null);
+  const [moving, setMoving] = useState<{ issue: Issue; choices: TeamChoice[]; extra: IssueInput; manual?: boolean } | null>(null);
   // The right-click menu, by key so it shows each change as it saves; and the issue waiting for Delete's confirm.
   const [menu, setMenu] = useState<{ identifier: string; x: number; y: number } | null>(null);
   const [deleting, setDeleting] = useState<Issue | null>(null);
+  const [prompt, setPrompt] = useState<{ issue: Issue; prompt: IssuePrompt } | null>(null);
+  const [relation, setRelation] = useState<{ issue: Issue; relation: RelationChoice; create: boolean } | null>(null);
   // The open issue is drawn by the shell's pane, the same from every view (src/app/issue-pane.tsx).
   const [openId, setOpenId] = usePaneIssue(placeKey, listKey, origin);
   const [cursorId, setCursorId] = useState<string | null>(() => openIssueFor(placeKey, listKey));
@@ -211,7 +216,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
         else if (optionsOpen) setOptionsOpen(false);
         return;
       }
-      if (typing(event.target) || creating || moving || deleting) return;
+      if (typing(event.target) || creating || moving || deleting || prompt || relation) return;
       if (event.key === 'c' && !openId) {
         event.preventDefault();
         setCreating(true);
@@ -238,7 +243,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [visible, cursorId, openId, optionsOpen, creating, moving, deleting]);
+  }, [visible, cursorId, openId, optionsOpen, creating, moving, deleting, prompt, relation]);
 
   const wide = ctx.surface === 'page';
   const activeFilters = [assignee !== 'any', priority !== 'any', label !== 'any', status !== 'any', states === 'open' && !customActive && showClosed, Boolean(inMilestone)].filter(Boolean).length;
@@ -269,6 +274,19 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
     setMenu({ identifier: issue.identifier, x: event.clientX, y: event.clientY });
   };
   const menuIssue = menu ? findIssue(menu.identifier) : undefined;
+  const menuAction = (issue: Issue, action: MenuAction) => {
+    if (action.kind === 'prompt') {
+      if (action.prompt !== 'team') { setPrompt({ issue, prompt: action.prompt }); return; }
+      const choices = (workspace.data?.teams ?? []).filter((team) => team.id !== issue.team.id).flatMap((team) => {
+        const state = acceptStateOf(team, statesByTeam?.get(team.id) ?? []);
+        return state ? [{ teamId: team.id, state }] : [];
+      });
+      if (choices.length) setMoving({ issue, choices, extra: {}, manual: true });
+      else void toast(host, 'info', 'No other team has an available default status.');
+      return;
+    }
+    if (action.kind === 'relation') setRelation({ issue, relation: action.relation, create: action.create });
+  };
 
   const dialogs = (
     <>
@@ -280,6 +298,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           onClose={() => setMenu(null)}
           onOpen={open}
           onDelete={setDeleting}
+          onAction={menuAction}
         />
       )}
       {deleting && (
@@ -287,6 +306,33 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           issue={deleting}
           onClose={() => setDeleting(null)}
           onDeleted={() => { if (openId === deleting.identifier) setOpenId(null); setDeleting(null); }}
+        />
+      )}
+      {prompt && (
+        <IssueActionDialog
+          issue={prompt.issue}
+          prompt={prompt.prompt}
+          onClose={() => setPrompt(null)}
+          onOpen={(issue) => { setPrompt(null); open(issue); }}
+        />
+      )}
+      {relation && !relation.create && (
+        <IssueRelationDialog issue={relation.issue} relation={relation.relation} onClose={() => setRelation(null)} />
+      )}
+      {relation?.create && (
+        <CreateIssueDialog
+          teamIds={[relation.issue.team.id]}
+          projectId={relation.issue.project?.id ?? null}
+          onClose={() => setRelation(null)}
+          onCreated={(created) => {
+            const source = relation.issue;
+            const choice = relation.relation;
+            void createIssueRelation(source, created, choice)
+              .then(() => toast(host, 'success', `Linked ${source.identifier} and ${created.identifier}`))
+              .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+            setRelation(null);
+            open(created);
+          }}
         />
       )}
       {creating && (
@@ -302,6 +348,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           issue={moving.issue}
           choices={moving.choices}
           extra={moving.extra}
+          manual={moving.manual}
           subIssues={childCounts.data?.get(moving.issue.id)?.total ?? 0}
           onClose={() => setMoving(null)}
           onMoved={(issue) => { setMoving(null); setCursorId(issue.identifier); }}

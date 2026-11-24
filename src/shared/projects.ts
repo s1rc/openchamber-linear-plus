@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { load, useQuery } from './cache.ts';
 import { gql } from './linear.ts';
-import { PROJECTS, SEARCH_PROJECTS } from './queries.ts';
-import type { ProjectsResult, ProjectSummary, SearchProjectsResult } from './types.ts';
+import { PROJECT_MILESTONES, PROJECTS, SEARCH_PROJECTS } from './queries.ts';
+import type { ProjectMilestonesResult, ProjectMilestoneSummary, ProjectsResult, ProjectSummary, SearchProjectsResult } from './types.ts';
 
 const known = new Map<string, ProjectSummary>();
 
@@ -46,6 +46,12 @@ export const useTeamProjects = (teamIds: string[]) => {
     return lists.flat().filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
   });
 };
+
+export const useProjectMilestones = (projectId: string | null) =>
+  useQuery(projectId ? `project-milestones:${projectId}` : null, async () => {
+    const data = await gql<ProjectMilestonesResult>(PROJECT_MILESTONES, { projectId });
+    return [...data.project.projectMilestones.nodes].sort((a, b) => a.sortOrder - b.sortOrder);
+  });
 
 /** Server-side project search, debounced. Empty under two characters. */
 export const useProjectSearch = (term: string) => {

@@ -2,6 +2,18 @@
 
 What changed in each Linear+ release. The newest is first. The release workflow uses a version's section as the notes of its GitHub release.
 
+## 1.3.2 (2026-11-24)
+
+### Added
+
+- Project milestones can be assigned or cleared from the issue side panel and the right-click menu (Shift+M).
+- The issue menu now includes More properties, Create related, Mark as, Remove, Convert to, Make a copy, Open in, Favorite and Remind me. Links, customer requests, documents, releases, relations and project conversion use Linear's public API. Find suggestions uses semantic issue search.
+
+### Fixed
+
+- Lead mode always relays every plan session question to you and waits for your answer, rather than answering questions itself when it thinks they are obvious.
+- Blocking badges and groups now reflect open work: completed issues show no list badges, and completed dependencies appear under Related instead of Blocked by or Blocking.
+
 ## 1.3.1 (2026-11-24)
 
 ### Added

@@ -433,6 +433,10 @@ describe('lead mode', () => {
     expect(prompt).toContain('- title: "ENG-5 plan"');
     expect(prompt).toContain('PLAN PROMPT START\nPlan the work for Linear issue ENG-5');
     expect(prompt).toContain('question tools reach nobody here');
+    expect(prompt).toContain('Always ask the user every question');
+    expect(prompt).toContain('Never answer a plan question yourself');
+    expect(prompt).toContain('Send the user\'s answer back to the plan session with session.send');
+    expect(prompt).not.toContain('Answer them yourself from the issue and the code');
     expect((await ctx.call('GET', '/plans', undefined, 'identifier=ENG-5')).body.sessions[0]).toMatchObject({ sessionId: 'ses_lead', title: 'ENG-5 Slow login' });
   });
 

@@ -85,10 +85,10 @@ export type IssueRow = {
   cycle: { id: string; number: number; name: string | null } | null;
   parent: { id: string; identifier: string } | null;
   attachments: Connection<Attachment>;
-  /** Relations from this issue: `blocks` means it blocks another. */
-  outRelations: Connection<{ type: string }>;
+  /** Relations from this issue: `blocks` means it blocks another. State decides whether the badge still matters. */
+  outRelations: Connection<{ type: string; relatedIssue: { state: { type: StateType } } }>;
   /** Relations to this issue: `blocks` means another blocks it. */
-  inRelations: Connection<{ type: string }>;
+  inRelations: Connection<{ type: string; issue: { state: { type: StateType } } }>;
 };
 
 export type HistoryEvent = {
@@ -154,6 +154,8 @@ export type ProjectHealth = 'onTrack' | 'atRisk' | 'offTrack';
 
 export type ProjectStatusType = 'backlog' | 'planned' | 'started' | 'paused' | 'completed' | 'canceled';
 
+export type ProjectMilestoneSummary = { id: string; name: string; sortOrder: number };
+
 export type ProjectSummary = {
   id: string;
   name: string;
@@ -180,7 +182,7 @@ export type ProjectDetail = ProjectSummary & {
   description: string;
   content: string | null;
   members: Connection<User>;
-  projectMilestones: Connection<{ id: string; name: string; description?: string | null; targetDate: string | null; /** A percent, 0 to 100 (a project's own progress is 0 to 1). */ progress: number; sortOrder: number }>;
+  projectMilestones: Connection<ProjectMilestoneSummary & { description?: string | null; targetDate: string | null; /** A percent, 0 to 100 (a project's own progress is 0 to 1). */ progress: number }>;
   lastUpdate: { id: string; health: ProjectHealth; createdAt: string } | null;
   projectUpdates: Connection<ProjectUpdate>;
   documents: Connection<DocumentSummary>;
@@ -221,6 +223,7 @@ export type TeamPeopleResult = { team: { id: string; members: Connection<User & 
 export type WorkspaceLabelsResult = { issueLabels: Connection<Label & { team: { id: string } | null }> };
 export type ProjectsResult = { projects: Page<ProjectSummary> };
 export type ProjectDetailResult = { project: ProjectDetail };
+export type ProjectMilestonesResult = { project: { id: string; projectMilestones: Connection<ProjectMilestoneSummary> } };
 export type IssuesResult = { issues: Page<IssueRow> };
 export type IssueDetailResult = { issue: IssueDetail };
 export type IssuesByIdentifierResult = Record<string, IssueRow | null>;
@@ -228,10 +231,12 @@ export type IssuesByKeysResult = { issues: { nodes: IssueRow[] } };
 export type BlockStatesResult = { workflowStates: { nodes: { id: string; position: number; team: { id: string } }[] } };
 export type TeamCyclesResult = { team: { id: string; key: string; name: string; cycles: Connection<CycleSummary> } };
 export type CycleDetailResult = { cycle: CycleSummary & { description: string | null } };
+export type ReleaseSummary = { id: string; name: string; version: string | null };
+
 /** The costly properties, loaded apart from the rows and only when shown. */
 export type IssueExtras = {
   id: string;
-  releases: Connection<{ id: string; name: string; version: string | null }>;
+  releases: Connection<ReleaseSummary>;
   needs: Connection<{ id: string; customer: { id: string; name: string; revenue: number | null } | null }>;
   /** The latest state span: when the issue entered its current status. */
   stateHistory: Connection<{ startedAt: string }>;
@@ -258,6 +263,10 @@ export type RepoAttachmentsResult = {
   attachments: Connection<{ url: string; issue: { id: string; identifier: string; team: { id: string }; project: { id: string } | null } | null }>;
 };
 export type SearchIssuesResult = { searchIssues: Connection<IssueRow> };
+export type IssueReleasesResult = { issue: { id: string; releases: Connection<ReleaseSummary> }; releaseSearch: ReleaseSummary[] };
+export type CustomersResult = { customers: Connection<{ id: string; name: string }> };
+export type IssueFavoriteResult = { issue: { id: string; favorite: { id: string } | null } };
+export type SemanticIssuesResult = { semanticSearch: { results: { id: string; type: string; issue: IssueRow | null }[] } };
 
 /** One issue in the dialog's picker (`PICKER_ROW`). */
 export type PickerIssue = {
@@ -289,4 +298,6 @@ export type IssueUpdateResult = { issueUpdate: { success: boolean; issue: IssueR
 export type IssueCreateResult = { issueCreate: { success: boolean; issue: IssueRow | null } };
 export type CommentCreateResult = { commentCreate: { success: boolean; comment: Comment | null } };
 export type ProjectUpdateCreateResult = { projectUpdateCreate: { success: boolean; projectUpdate: ProjectUpdate | null } };
+export type DocumentCreateResult = { documentCreate: { success: boolean; document: DocumentSummary } };
+export type ProjectCreateResult = { projectCreate: { success: boolean; project: { id: string; name: string; url: string } | null } };
 export type SuccessResult = Record<string, { success: boolean }>;

@@ -1,15 +1,28 @@
-// What a right click on an issue offers, as Linear's issue menu does: its properties, copy, open, delete. Pure:
+// What a right click on an issue offers, as Linear's issue menu does: properties, relations, conversion, copy, reminders and delete. Pure:
 // the menu component (src/app/components/issue-menu.tsx) loads the team's data and runs what is chosen.
 import { estimateLabel } from './format.ts';
 import { compareStates, PRIORITY_NAMES } from './grouping.ts';
 import type { Change } from './moves.ts';
-import type { CycleSummary, IssueRow, Label, ProjectSummary, Team, User, WorkflowState } from './types.ts';
+import type { CycleSummary, IssueRow, Label, ProjectMilestoneSummary, ProjectSummary, Team, User, WorkflowState } from './types.ts';
+
+export type IssuePrompt = 'team' | 'release' | 'sla' | 'link' | 'customer' | 'document' | 'suggestions' | 'rename' | 'copy' | 'convert-project' | 'convert-subissue' | 'reminder-custom';
+
+export type RelationChoice = {
+  id: 'related' | 'blocking' | 'blocked' | 'duplicate' | 'similar';
+  type: 'related' | 'blocks' | 'duplicate' | 'similar';
+  /** True when the other issue blocks this one. */
+  inverse: boolean;
+};
 
 export type MenuAction =
   | { kind: 'change'; change: Change }
   | { kind: 'copy'; text: string; what: string }
   | { kind: 'open' }
   | { kind: 'open-linear' }
+  | { kind: 'prompt'; prompt: IssuePrompt }
+  | { kind: 'relation'; relation: RelationChoice; create: boolean }
+  | { kind: 'favorite' }
+  | { kind: 'reminder'; at: string }
   | { kind: 'delete' };
 
 export type MenuIcon =
@@ -20,7 +33,7 @@ export type MenuIcon =
   | { kind: 'project'; icon: string | null; color: string | null }
   | { kind: 'glyph'; name: GlyphName };
 
-export type GlyphName = 'status' | 'priority' | 'assignee' | 'due' | 'labels' | 'project' | 'estimate' | 'cycle' | 'copy' | 'open' | 'external' | 'delete' | 'none';
+export type GlyphName = 'status' | 'priority' | 'assignee' | 'due' | 'labels' | 'project' | 'milestone' | 'estimate' | 'cycle' | 'copy' | 'open' | 'external' | 'delete' | 'none' | 'more' | 'related' | 'mark' | 'remove' | 'convert' | 'favorite' | 'reminder' | 'rename';
 
 export type MenuItem = {
   id: string;
@@ -51,14 +64,20 @@ export type MenuData = {
   members?: User[];
   labels?: Label[];
   projects?: Pick<ProjectSummary, 'id' | 'name' | 'color' | 'icon'>[];
+  /** Undefined while the current project's milestones load; empty when there is no project. */
+  milestones?: ProjectMilestoneSummary[];
   cycles?: CycleSummary[];
   /** Today, as YYYY-MM-DD in the user's time zone. */
   today: string;
+  /** The clock used for reminder presets. */
+  now: Date;
 };
 
 const SEARCH_AT = 8;
 
 const change = (input: Change['input'], patch: Change['patch']): MenuAction => ({ kind: 'change', change: { input, patch } });
+const prompt = (value: IssuePrompt): MenuAction => ({ kind: 'prompt', prompt: value });
+const relation = (value: RelationChoice, create: boolean): MenuAction => ({ kind: 'relation', relation: value, create });
 
 /** YYYY-MM-DD plus `days`, on the calendar (no time zone shift). */
 export const addDays = (date: string, days: number): string => {
@@ -74,6 +93,31 @@ const toFriday = (date: string): number => {
 };
 
 const cycleName = (c: { number: number; name: string | null }) => `Cycle ${c.number}${c.name ? `: ${c.name}` : ''}`;
+
+const RELATIONS: Record<RelationChoice['id'], RelationChoice> = {
+  related: { id: 'related', type: 'related', inverse: false },
+  blocking: { id: 'blocking', type: 'blocks', inverse: false },
+  blocked: { id: 'blocked', type: 'blocks', inverse: true },
+  duplicate: { id: 'duplicate', type: 'duplicate', inverse: false },
+  similar: { id: 'similar', type: 'similar', inverse: false },
+};
+
+/** Local reminder times, serialized as the UTC timestamps Linear expects. */
+export const reminderTimes = (now: Date): { id: string; label: string; at: string }[] => {
+  const hour = new Date(now.getTime() + 60 * 60 * 1000);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const month = new Date(now);
+  month.setMonth(month.getMonth() + 1);
+  return [
+    { id: 'hour', label: 'In one hour', at: hour.toISOString() },
+    { id: 'tomorrow', label: 'Tomorrow at 9 AM', at: tomorrow.toISOString() },
+    { id: 'week', label: 'In one week', at: week.toISOString() },
+    { id: 'month', label: 'In one month', at: month.toISOString() },
+  ];
+};
 
 export const issueMenu = (issue: IssueRow, data: MenuData): MenuSection[] => {
   const states = [...data.states].sort(compareStates);
@@ -141,6 +185,18 @@ export const issueMenu = (issue: IssueRow, data: MenuData): MenuSection[] => {
       })),
     ],
   };
+  const milestoneList = data.milestones ?? [];
+  const milestones = issue.projectMilestone && !milestoneList.some((m) => m.id === issue.projectMilestone!.id) ? [issue.projectMilestone, ...milestoneList] : milestoneList;
+  const milestone: MenuItem = {
+    id: 'milestone', label: 'Milestone', shortcut: '⇧M', icon: { kind: 'glyph', name: 'milestone' }, loading: Boolean(issue.project && !data.milestones), searchable: milestones.length >= SEARCH_AT,
+    children: [
+      { id: 'milestone:none', label: 'No milestone', icon: { kind: 'glyph', name: 'none' }, checked: !issue.projectMilestone, action: change({ projectMilestoneId: null }, { projectMilestone: null }) },
+      ...milestones.map((m) => ({
+        id: `milestone:${m.id}`, label: m.name, icon: { kind: 'glyph' as const, name: 'milestone' as const }, checked: issue.projectMilestone?.id === m.id,
+        action: change({ projectMilestoneId: m.id }, { projectMilestone: { id: m.id, name: m.name } }),
+      })),
+    ],
+  };
   const type = data.team?.issueEstimationType;
   const scale = issue.estimate !== null && data.estimates.length && !data.estimates.includes(issue.estimate) ? [...data.estimates, issue.estimate].sort((a, b) => a - b) : data.estimates;
   const estimate: MenuItem | null = scale.length ? {
@@ -166,6 +222,60 @@ export const issueMenu = (issue: IssueRow, data: MenuData): MenuSection[] => {
     ],
   } : null;
 
+  const more: MenuItem = {
+    id: 'more', label: 'More properties', icon: { kind: 'glyph', name: 'more' },
+    children: [
+      { id: 'team', label: 'Team', shortcut: '⌘⇧M', icon: { kind: 'glyph', name: 'assignee' }, action: prompt('team') },
+      { id: 'release', label: 'Release', shortcut: '⌥R', icon: { kind: 'glyph', name: 'project' }, action: prompt('release') },
+      { id: 'sla', label: 'SLA...', icon: { kind: 'glyph', name: 'due' }, action: prompt('sla') },
+      { id: 'add-link', label: 'Add link...', shortcut: '⌃L', icon: { kind: 'glyph', name: 'external' }, action: prompt('link') },
+      { id: 'add-customer', label: 'Add customer request...', shortcut: '⌃R', icon: { kind: 'glyph', name: 'assignee' }, action: prompt('customer') },
+      { id: 'add-document', label: 'Add document', icon: { kind: 'glyph', name: 'open' }, action: prompt('document') },
+      { id: 'suggestions', label: 'Find suggestions', icon: { kind: 'glyph', name: 'status' }, action: prompt('suggestions') },
+      { id: 'rename', label: 'Rename...', shortcut: '⇧R', icon: { kind: 'glyph', name: 'rename' }, action: prompt('rename') },
+    ],
+  };
+  const createRelated: MenuItem = {
+    id: 'create-related', label: 'Create related', icon: { kind: 'glyph', name: 'related' },
+    children: [
+      { id: 'create-related:related', label: 'Related issue...', action: relation(RELATIONS.related, true) },
+      { id: 'create-related:blocking', label: 'Blocking issue...', action: relation(RELATIONS.blocking, true) },
+      { id: 'create-related:blocked', label: 'Blocked by issue...', action: relation(RELATIONS.blocked, true) },
+    ],
+  };
+  const markAs: MenuItem = {
+    id: 'mark-as', label: 'Mark as', icon: { kind: 'glyph', name: 'mark' },
+    children: [
+      { id: 'mark-as:related', label: 'Related to...', action: relation(RELATIONS.related, false) },
+      { id: 'mark-as:blocking', label: 'Blocking...', action: relation(RELATIONS.blocking, false) },
+      { id: 'mark-as:blocked', label: 'Blocked by...', action: relation(RELATIONS.blocked, false) },
+      { id: 'mark-as:duplicate', label: 'Duplicate of...', action: relation(RELATIONS.duplicate, false) },
+      { id: 'mark-as:similar', label: 'Similar to...', action: relation(RELATIONS.similar, false) },
+    ],
+  };
+  const remove: MenuItem = {
+    id: 'remove', label: 'Remove', icon: { kind: 'glyph', name: 'remove' },
+    children: [
+      ...(issue.project ? [{ id: 'remove:project', label: 'From project', action: change({ projectId: null }, { project: null, projectMilestone: null }) }] : []),
+      ...(issue.projectMilestone ? [{ id: 'remove:milestone', label: 'From milestone', action: change({ projectMilestoneId: null }, { projectMilestone: null }) }] : []),
+      ...(issue.cycle ? [{ id: 'remove:cycle', label: 'From cycle', action: change({ cycleId: null }, { cycle: null }) }] : []),
+      ...(issue.parent ? [{ id: 'remove:parent', label: 'Parent', action: change({ parentId: null }, { parent: null }) }] : []),
+      ...(issue.assignee ? [{ id: 'remove:assignee', label: 'Assignee', action: change({ assigneeId: null }, { assignee: null }) }] : []),
+      ...(issue.estimate !== null ? [{ id: 'remove:estimate', label: 'Estimate', action: change({ estimate: null }, { estimate: null }) }] : []),
+      ...(issue.dueDate ? [{ id: 'remove:due', label: 'Due date', action: change({ dueDate: null }, { dueDate: null }) }] : []),
+      ...(issue.labels.nodes.length ? [{ id: 'remove:labels', label: 'Labels', action: change({ labelIds: [] }, { labels: { nodes: [] } }) }] : []),
+      ...(issue.slaType ? [{ id: 'remove:sla', label: 'SLA override', action: change({ slaType: null }, { slaType: null }) }] : []),
+    ],
+  };
+  const convert: MenuItem = {
+    id: 'convert', label: 'Convert to', icon: { kind: 'glyph', name: 'convert' },
+    children: [
+      { id: 'convert:subissue', label: 'Sub-issue of...', action: prompt('convert-subissue') },
+      ...(issue.parent ? [{ id: 'convert:top-level', label: 'Top-level issue', action: change({ parentId: null }, { parent: null }) }] : []),
+      { id: 'convert:project', label: 'Project...', action: prompt('convert-project') },
+    ],
+  };
+
   const copy: MenuItem = {
     id: 'copy', label: 'Copy', icon: { kind: 'glyph', name: 'copy' },
     children: [
@@ -178,11 +288,27 @@ export const issueMenu = (issue: IssueRow, data: MenuData): MenuSection[] => {
   };
 
   return [
-    [status, priority, assignee, due, labels, project, ...(estimate ? [estimate] : []), ...(cycle ? [cycle] : [])],
+    [status, priority, assignee, due, labels, project, milestone, ...(estimate ? [estimate] : []), ...(cycle ? [cycle] : []), more],
+    [createRelated, markAs, remove],
     [
       { id: 'open', label: 'Open', icon: { kind: 'glyph', name: 'open' }, action: { kind: 'open' } },
-      { id: 'open-linear', label: 'Open in Linear', icon: { kind: 'glyph', name: 'external' }, action: { kind: 'open-linear' } },
       copy,
+      convert,
+      { id: 'make-copy', label: 'Make a copy...', icon: { kind: 'glyph', name: 'copy' }, action: prompt('copy') },
+      {
+        id: 'open-in', label: 'Open in', icon: { kind: 'glyph', name: 'external' },
+        children: [{ id: 'open-in:linear', label: 'Linear', icon: { kind: 'glyph', name: 'external' }, action: { kind: 'open-linear' } }],
+      },
+    ],
+    [
+      { id: 'favorite', label: 'Favorite', shortcut: '⌥F', icon: { kind: 'glyph', name: 'favorite' }, action: { kind: 'favorite' } },
+      {
+        id: 'remind', label: 'Remind me', shortcut: '⇧H', icon: { kind: 'glyph', name: 'reminder' },
+        children: [
+          ...reminderTimes(data.now).map((r) => ({ id: `remind:${r.id}`, label: r.label, action: { kind: 'reminder' as const, at: r.at } })),
+          { id: 'remind:custom', label: 'Custom...', action: prompt('reminder-custom') },
+        ],
+      },
     ],
     [{ id: 'delete', label: 'Delete...', icon: { kind: 'glyph', name: 'delete' }, danger: true, action: { kind: 'delete' } }],
   ];
@@ -194,9 +320,12 @@ export const filterItems = (items: MenuItem[], query: string): MenuItem[] => {
   return words.length ? items.filter((item) => words.every((w) => item.label.toLowerCase().includes(w))) : items;
 };
 
-/** Whether a key press is `shortcut`. */
-export const isShortcut = (shortcut: string | undefined, key: string, shift: boolean): boolean => {
+/** Whether a key press is `shortcut`, including Linear's Shift, Command, Option and Control prefixes. */
+export const isShortcut = (shortcut: string | undefined, key: string, shift: boolean, meta = false, alt = false, ctrl = false): boolean => {
   if (!shortcut) return false;
-  const withShift = shortcut.startsWith('\u21e7');
-  return shift === withShift && key.toUpperCase() === shortcut.slice(-1);
+  return shift === shortcut.includes('\u21e7')
+    && meta === shortcut.includes('\u2318')
+    && alt === shortcut.includes('\u2325')
+    && ctrl === shortcut.includes('\u2303')
+    && key.toUpperCase() === shortcut.slice(-1);
 };

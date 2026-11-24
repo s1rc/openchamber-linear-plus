@@ -23,8 +23,8 @@ export const ISSUE_ROW = `
   cycle { id number name }
   parent { id identifier }
   attachments(first: 4) { nodes { id url title sourceType metadata } }
-  outRelations: relations(first: 5) { nodes { type } }
-  inRelations: inverseRelations(first: 5) { nodes { type } }
+  outRelations: relations(first: 5) { nodes { type relatedIssue { state { type } } } }
+  inRelations: inverseRelations(first: 5) { nodes { type issue { state { type } } } }
 `;
 
 const PROJECT_SUMMARY = `
@@ -102,6 +102,47 @@ export const PROJECT_DETAIL = `
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
+    }
+  }
+`;
+
+/** The milestones an issue in this project can be assigned to, in Linear's planned order. */
+export const PROJECT_MILESTONES = `
+  query ProjectMilestones($projectId: String!) {
+    project(id: $projectId) {
+      id
+      projectMilestones(first: 250) { nodes { id name sortOrder } }
+    }
+  }
+`;
+
+/** Releases available to the issue and the ones already linked, for the Release dialog. */
+export const ISSUE_RELEASES = `
+  query IssueReleases($id: String!) {
+    issue(id: $id) { id releases(first: 250) { nodes { id name version } } }
+    releaseSearch(first: 50) { id name version }
+  }
+`;
+
+/** Customers that a new request on an issue can belong to. */
+export const CUSTOMERS = `
+  query Customers {
+    customers(first: 250) { nodes { id name } }
+  }
+`;
+
+/** The caller's favorite reference for an issue; its id, not the issue id, removes it. */
+export const ISSUE_FAVORITE = `
+  query IssueFavorite($id: String!) {
+    issue(id: $id) { id favorite { id } }
+  }
+`;
+
+/** Similar issues for Find suggestions. This is semantic search, not Linear's internal triage suggestions. */
+export const SEMANTIC_ISSUES = `
+  query SemanticIssues($query: String!) {
+    semanticSearch(query: $query, types: [issue], maxResults: 10) {
+      results { id type issue {${ISSUE_ROW}} }
     }
   }
 `;
@@ -435,6 +476,48 @@ export const ISSUE_RELATION_CREATE = `
   }
 `;
 
+export const ATTACHMENT_CREATE = `
+  mutation AttachmentCreate($input: AttachmentCreateInput!) {
+    attachmentCreate(input: $input) { success attachment { id url title } }
+  }
+`;
+
+export const CUSTOMER_NEED_CREATE = `
+  mutation CustomerNeedCreate($input: CustomerNeedCreateInput!) {
+    customerNeedCreate(input: $input) { success need { id } }
+  }
+`;
+
+export const DOCUMENT_CREATE = `
+  mutation DocumentCreate($input: DocumentCreateInput!) {
+    documentCreate(input: $input) { success document { id title url updatedAt } }
+  }
+`;
+
+export const FAVORITE_CREATE = `
+  mutation FavoriteCreate($input: FavoriteCreateInput!) {
+    favoriteCreate(input: $input) { success favorite { id } }
+  }
+`;
+
+export const FAVORITE_DELETE = `
+  mutation FavoriteDelete($id: String!) {
+    favoriteDelete(id: $id) { success }
+  }
+`;
+
+export const ISSUE_REMINDER = `
+  mutation IssueReminder($id: String!, $reminderAt: DateTime!) {
+    issueReminder(id: $id, reminderAt: $reminderAt) { success }
+  }
+`;
+
+export const PROJECT_CREATE = `
+  mutation ProjectCreate($input: ProjectCreateInput!) {
+    projectCreate(input: $input) { success project { id name url } }
+  }
+`;
+
 export const ISSUE_CREATE = `
   mutation IssueCreate($input: IssueCreateInput!) {
     issueCreate(input: $input) { success issue { ${ISSUE_ROW} } }
@@ -474,11 +557,11 @@ export const markReadMany = (ids: readonly string[]): string => `
 
 /** Every static document, for validation. */
 export const ALL_DOCUMENTS: Record<string, string> = {
-  VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
+  VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, PROJECT_MILESTONES, ISSUE_RELEASES, CUSTOMERS, ISSUE_FAVORITE, SEMANTIC_ISSUES, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, MENTION_ISSUE, MENTION_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, TRIAGE_COUNTS,
-  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, ATTACHMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_REMINDER, PROJECT_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

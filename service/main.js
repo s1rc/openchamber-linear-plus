@@ -572,7 +572,7 @@ var leadPlanPrompt = (input) => {
     "Then end your turn with one line saying the plan session is running. Do not read the code or write a plan yourself.",
     "",
     "While it plans:",
-    "- Its questions come to you. Answer them yourself from the issue and the code where you can, with session.send to that session. Ask the user only what only the user can settle (a preference, a trade-off they would judge, a step that is hard to undo), then pass the answer on the same way.",
+    "- Its questions come to you. Always ask the user every question, as the plan session wrote it, and wait for the user's answer. Never answer a plan question yourself, even when the answer seems obvious from the issue or code. Send the user's answer back to the plan session with session.send. Keep relaying questions and answers until the plan session has no more questions.",
     "- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.",
     "",
     "When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.",
@@ -690,8 +690,8 @@ var ISSUE_ROW = `
   cycle { id number name }
   parent { id identifier }
   attachments(first: 4) { nodes { id url title sourceType metadata } }
-  outRelations: relations(first: 5) { nodes { type } }
-  inRelations: inverseRelations(first: 5) { nodes { type } }
+  outRelations: relations(first: 5) { nodes { type relatedIssue { state { type } } } }
+  inRelations: inverseRelations(first: 5) { nodes { type issue { state { type } } } }
 `;
 var PROJECT_SUMMARY = `
   id name slugId url icon color health progress startDate targetDate updatedAt
@@ -757,6 +757,37 @@ var PROJECT_DETAIL = `
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
+    }
+  }
+`;
+var PROJECT_MILESTONES = `
+  query ProjectMilestones($projectId: String!) {
+    project(id: $projectId) {
+      id
+      projectMilestones(first: 250) { nodes { id name sortOrder } }
+    }
+  }
+`;
+var ISSUE_RELEASES = `
+  query IssueReleases($id: String!) {
+    issue(id: $id) { id releases(first: 250) { nodes { id name version } } }
+    releaseSearch(first: 50) { id name version }
+  }
+`;
+var CUSTOMERS = `
+  query Customers {
+    customers(first: 250) { nodes { id name } }
+  }
+`;
+var ISSUE_FAVORITE = `
+  query IssueFavorite($id: String!) {
+    issue(id: $id) { id favorite { id } }
+  }
+`;
+var SEMANTIC_ISSUES = `
+  query SemanticIssues($query: String!) {
+    semanticSearch(query: $query, types: [issue], maxResults: 10) {
+      results { id type issue {${ISSUE_ROW}} }
     }
   }
 `;
@@ -1021,6 +1052,41 @@ var ISSUE_RELATION_CREATE = `
     issueRelationCreate(input: $input) { success }
   }
 `;
+var ATTACHMENT_CREATE = `
+  mutation AttachmentCreate($input: AttachmentCreateInput!) {
+    attachmentCreate(input: $input) { success attachment { id url title } }
+  }
+`;
+var CUSTOMER_NEED_CREATE = `
+  mutation CustomerNeedCreate($input: CustomerNeedCreateInput!) {
+    customerNeedCreate(input: $input) { success need { id } }
+  }
+`;
+var DOCUMENT_CREATE = `
+  mutation DocumentCreate($input: DocumentCreateInput!) {
+    documentCreate(input: $input) { success document { id title url updatedAt } }
+  }
+`;
+var FAVORITE_CREATE = `
+  mutation FavoriteCreate($input: FavoriteCreateInput!) {
+    favoriteCreate(input: $input) { success favorite { id } }
+  }
+`;
+var FAVORITE_DELETE = `
+  mutation FavoriteDelete($id: String!) {
+    favoriteDelete(id: $id) { success }
+  }
+`;
+var ISSUE_REMINDER = `
+  mutation IssueReminder($id: String!, $reminderAt: DateTime!) {
+    issueReminder(id: $id, reminderAt: $reminderAt) { success }
+  }
+`;
+var PROJECT_CREATE = `
+  mutation ProjectCreate($input: ProjectCreateInput!) {
+    projectCreate(input: $input) { success project { id name url } }
+  }
+`;
 var ISSUE_CREATE = `
   mutation IssueCreate($input: IssueCreateInput!) {
     issueCreate(input: $input) { success issue { ${ISSUE_ROW} } }
@@ -1060,6 +1126,11 @@ var ALL_DOCUMENTS = {
   WORKSPACE_LABELS,
   PROJECTS,
   PROJECT_DETAIL,
+  PROJECT_MILESTONES,
+  ISSUE_RELEASES,
+  CUSTOMERS,
+  ISSUE_FAVORITE,
+  SEMANTIC_ISSUES,
   ISSUES,
   CHILD_STATES,
   CHILD_ISSUES,
@@ -1094,6 +1165,13 @@ var ALL_DOCUMENTS = {
   ISSUE_DELETE,
   ISSUE_CREATE,
   ISSUE_RELATION_CREATE,
+  ATTACHMENT_CREATE,
+  CUSTOMER_NEED_CREATE,
+  DOCUMENT_CREATE,
+  FAVORITE_CREATE,
+  FAVORITE_DELETE,
+  ISSUE_REMINDER,
+  PROJECT_CREATE,
   COMMENT_CREATE,
   PROJECT_UPDATE_CREATE,
   NOTIFICATION_MARK_READ,

@@ -87,10 +87,18 @@ const issue = (title: string, stateName: string, extra: Record<string, unknown> 
   };
 };
 const engIssues = [
-  issue('Checkout times out when the cart has more than 50 items', 'In Progress', { priority: 1, estimate: 3, startedAt: '2026-11-03T14:00:00Z', labels: { nodes: [labelBug, labelPerf] }, dueDate: '2026-11-08', attachments: { nodes: [mrAttachment(42, 'opened')] } }),
+  issue('Checkout times out when the cart has more than 50 items', 'In Progress', {
+    priority: 1, estimate: 3, startedAt: '2026-11-03T14:00:00Z', labels: { nodes: [labelBug, labelPerf] }, dueDate: '2026-11-08', attachments: { nodes: [mrAttachment(42, 'opened')] },
+    inRelations: { nodes: [{ type: 'blocks', issue: { state: engStates.Todo } }, { type: 'blocks', issue: { state: engStates.Done } }] },
+    outRelations: { nodes: [{ type: 'blocks', relatedIssue: { state: engStates.Todo } }, { type: 'blocks', relatedIssue: { state: engStates.Done } }] },
+  }),
   issue('Add idempotency keys to the payment API', 'In Review', { priority: 2, estimate: 5, startedAt: '2026-11-04T10:00:00Z', parent: { id: 'i-eng-11', identifier: 'ENG-11' }, labels: { nodes: [labelApi] }, attachments: { nodes: [mrAttachment(40, 'merged'), mrAttachment(41, 'opened')] } }),
-  issue('Show saved cards first in the payment step', 'Todo', { priority: 3, estimate: 1, assignee: ada, inRelations: { nodes: [{ type: 'blocks' }] }, outRelations: { nodes: [{ type: 'blocks' }, { type: 'blocks' }] } }),
-  issue('Retry webhook deliveries with backoff', 'Todo', { priority: 2, estimate: 2, labels: { nodes: [labelApi] }, project: { id: 'p-repo', name: 'Repo', color: '#5e6ad2', icon: '🚀' }, inRelations: { nodes: [{ type: 'blocks' }] } }),
+  issue('Show saved cards first in the payment step', 'Todo', {
+    priority: 3, estimate: 1, assignee: ada,
+    inRelations: { nodes: [{ type: 'blocks', issue: { state: engStates.Todo } }] },
+    outRelations: { nodes: [{ type: 'blocks', relatedIssue: { state: engStates.Todo } }, { type: 'blocks', relatedIssue: { state: engStates.Todo } }] },
+  }),
+  issue('Retry webhook deliveries with backoff', 'Todo', { priority: 2, estimate: 2, labels: { nodes: [labelApi] }, project: { id: 'p-repo', name: 'Repo', color: '#5e6ad2', icon: '🚀' }, inRelations: { nodes: [{ type: 'blocks', issue: { state: engStates.Todo } }] } }),
   issue('Tax line shows the wrong currency symbol', 'Triage', { priority: 0, assignee: null, labels: { nodes: [labelBug] } }),
   issue('Document the refund flow', 'Backlog', { priority: 4, assignee: null, project: null, cycle: null }),
   issue('Pin the gateway sandbox version', 'Needs Grooming', { priority: 3, estimate: 3, addedToCycleAt: '2026-11-06T09:00:00Z', assignee: null, labels: { nodes: [labelApi] }, slaBreachesAt: '2026-11-30T12:00:00Z', slaType: 'all' }),
@@ -107,6 +115,10 @@ const mobIssue = {
 engIssues.push(mobIssue);
 const mine = engIssues.filter((i) => i.assignee === matt);
 
+const relationIssue = (identifier: string, title: string, stateName: string) => ({
+  id: `related-${identifier}`, identifier, title, url: `https://linear.app/acme/issue/${identifier}`, state: engStates[stateName],
+});
+
 const detail = {
   ...engIssues[0],
   description: 'Carts over **50 items** take longer than 30 s to price, and the gateway gives up. See https://linear.app/acme/issue/ENG-14/retry-webhooks and [MR !42](https://gitlab.com/acme/checkout/-/merge_requests/42).\n\n## Findings\n- Happens on web and mobile\n- Started after `TaxService.lookup()` moved to one call per line\n    - `priceCart(cart)` calls it `cart.lines.length` times\n\n```ts\nawait priceCart(cart) // 31.2 s\n```\n\n## Steps\n- [ ] Batch the tax lookups into one call per cart\n- [x] Add a timing test for a 60 item cart',
@@ -121,8 +133,15 @@ const detail = {
     { id: 'a1', title: 'ENG-11: batch tax lookups', subtitle: null, url: 'https://gitlab.com/acme/checkout/-/merge_requests/42', sourceType: 'gitlab', metadata: { status: 'opened' }, createdAt: '2026-11-07T12:00:00Z' },
     { id: 'a2', title: 'Datadog: checkout p99 latency', subtitle: null, url: 'https://app.datadoghq.com/dashboard/abc', sourceType: 'datadog', metadata: {}, createdAt: '2026-11-06T12:00:00Z' },
   ] },
-  relations: { nodes: [{ id: 'r1', type: 'blocks', relatedIssue: { id: 'i-eng-13', identifier: 'ENG-13', title: 'Show saved cards first in the payment step', url: 'https://linear.app/acme/issue/ENG-13', state: engStates['Todo'] } }] },
-  inverseRelations: { nodes: [{ id: 'r2', type: 'related', issue: { id: 'i-eng-14', identifier: 'ENG-14', title: 'Retry webhook deliveries with backoff', url: 'https://linear.app/acme/issue/ENG-14', state: engStates['Todo'] } }] },
+  relations: { nodes: [
+    { id: 'r1', type: 'blocks', relatedIssue: relationIssue('ENG-13', 'Show saved cards first in the payment step', 'Todo') },
+    { id: 'r-done-out', type: 'blocks', relatedIssue: relationIssue('ENG-90', 'Done dependent', 'Done') },
+  ] },
+  inverseRelations: { nodes: [
+    { id: 'r2', type: 'related', issue: relationIssue('ENG-14', 'Retry webhook deliveries with backoff', 'Todo') },
+    { id: 'r-active-in', type: 'blocks', issue: relationIssue('ENG-14', 'Retry webhook deliveries with backoff', 'Todo') },
+    { id: 'r-done-in', type: 'blocks', issue: relationIssue('ENG-91', 'Done prerequisite', 'Done') },
+  ] },
   subscribers: { nodes: [matt, ada] },
   history: { nodes: [
     { id: 'h1', createdAt: '2026-10-11T10:05:00Z', updatedDescription: null, fromPriority: 0, toPriority: 1, fromEstimate: null, toEstimate: null, fromTitle: null, toTitle: null, actor: ada, fromState: null, toState: null, fromAssignee: null, toAssignee: null, addedLabels: [labelBug], removedLabels: null, fromCycle: null, toCycle: null, fromProject: null, toProject: null, toParent: null, relationChanges: null },
@@ -181,6 +200,12 @@ for (const list of [engIssues, mine, engIssues.filter((i) => i.project?.id === '
   workspace[key(Q.CHILD_STATES, { ids, after: null })] = childStates(ids);
 }
 workspace[key(Q.PROJECT_DETAIL, { id: 'p-checkout' })] = ok({ project: checkoutDetail });
+for (const projectId of ['p-checkout', 'p-repo']) {
+  workspace[key(Q.PROJECT_MILESTONES, { projectId })] = ok({ project: {
+    id: projectId,
+    projectMilestones: { nodes: checkoutDetail.projectMilestones.nodes.map(({ id, name, sortOrder }) => ({ id, name, sortOrder })) },
+  } });
+}
 
 workspace[key(Q.CUSTOM_VIEWS, { filter: customViewsFilter('t-eng') })] = ok({ customViews: { nodes: [
   { id: 'v-bugs', name: 'All Bugs', icon: 'Bug', color: '#eb5757', shared: true, team: { id: 't-eng' } },
@@ -264,6 +289,28 @@ const refused = { status: 200, body: JSON.stringify({ errors: [{ message: 'Inval
 const update = (id: string, input: Record<string, unknown>) => key(Q.ISSUE_UPDATE, { id, input });
 const [eng11, , eng13, , eng15] = engIssues;
 workspace[update('i-eng-11', { stateId: 't-eng-review' })] = updated({ ...eng11, state: engStates['In Review'] });
+workspace[update('i-eng-11', { projectMilestoneId: 'm2' })] = updated({ ...eng11, projectMilestone: { id: 'm2', name: 'Idempotent payments' } });
+workspace[update('i-eng-11', { title: 'Checkout times out on large carts' })] = updated({ ...eng11, title: 'Checkout times out on large carts' });
+workspace[update('i-eng-11', { addedReleaseIds: ['r1'] })] = updated(eng11);
+workspace[update('i-eng-11', { slaType: 'onlyBusinessDays' })] = updated({ ...eng11, slaType: 'onlyBusinessDays' });
+workspace[update('i-eng-11', { parentId: 'i-eng-14' })] = updated({ ...eng11, parent: { id: 'i-eng-14', identifier: 'ENG-14' } });
+workspace[update('i-eng-11', { projectId: null })] = updated({ ...eng11, project: null, projectMilestone: null });
+workspace[update('i-eng-13', { teamId: 't-mob', stateId: 't-mob-todo' })] = updated({ ...eng13, identifier: 'MOB-6', team: { id: 't-mob', key: 'MOB' }, state: mobStates.Todo, cycle: null });
+workspace[key(Q.ISSUE_RELEASES, { id: 'i-eng-11' })] = ok({
+  issue: { id: 'i-eng-11', releases: { nodes: [] } },
+  releaseSearch: [{ id: 'r1', name: 'Release One', version: '1.0.0' }, { id: 'r2', name: 'Release Two', version: '2.0.0' }],
+});
+workspace[key(Q.CUSTOMERS)] = ok({ customers: { nodes: [{ id: 'customer-acme', name: 'Acme' }] } });
+workspace[key(Q.ISSUE_FAVORITE, { id: 'i-eng-11' })] = ok({ issue: { id: 'i-eng-11', favorite: null } });
+workspace[key(Q.FAVORITE_CREATE, { input: { issueId: 'i-eng-11' } })] = ok({ favoriteCreate: { success: true, favorite: { id: 'fav-eng-11' } } });
+workspace[key(Q.ISSUE_REMINDER, { id: 'i-eng-11', reminderAt: '2026-11-09T13:00:00.000Z' })] = ok({ issueReminder: { success: true } });
+workspace[key(Q.ATTACHMENT_CREATE, { input: { issueId: 'i-eng-11', url: 'https://example.com/runbook', title: 'Runbook' } })] = ok({ attachmentCreate: { success: true, attachment: { id: 'attachment-runbook', url: 'https://example.com/runbook', title: 'Runbook' } } });
+workspace[key(Q.CUSTOMER_NEED_CREATE, { input: { issueId: 'i-eng-11', customerId: 'customer-acme', body: 'Please speed up large carts' } })] = ok({ customerNeedCreate: { success: true, need: { id: 'need-1' } } });
+workspace[key(Q.DOCUMENT_CREATE, { input: { issueId: 'i-eng-11', title: 'Checkout notes', content: 'Large cart findings' } })] = ok({ documentCreate: { success: true, document: { id: 'doc-checkout', title: 'Checkout notes', url: 'https://linear.app/acme/document/checkout-notes', updatedAt: '2026-11-09T12:00:00Z' } } });
+workspace[key(Q.SEARCH_ISSUES, { term: 'retry' })] = ok({ searchIssues: { nodes: [engIssues[3]] } });
+workspace[key(Q.SEMANTIC_ISSUES, { query: eng11.title })] = ok({ semanticSearch: { results: [{ id: engIssues[3]!.id, type: 'issue', issue: engIssues[3] }] } });
+workspace[key(Q.ISSUE_RELATION_CREATE, { input: { issueId: 'i-eng-11', relatedIssueId: 'i-eng-14', type: 'related' } })] = ok({ issueRelationCreate: { success: true } });
+workspace[key(Q.PROJECT_CREATE, { input: { name: eng11.title, teamIds: ['t-eng'], convertedFromIssueId: 'i-eng-11' } })] = ok({ projectCreate: { success: true, project: { id: 'p-converted', name: eng11.title, url: 'https://linear.app/acme/project/converted' } } });
 // A connection that can only read: the change shows, then rolls back with a toast.
 workspace[update('i-eng-11', { priority: 2 })] = refused;
 workspace[update('i-eng-13', { stateId: 't-eng-progress' })] = updated({ ...eng13, state: engStates['In Progress'] });
@@ -285,6 +332,9 @@ workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-15' })] = ok({ issue: {
 workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Cache exchange rates', stateId: 't-eng-backlog', priority: 2 } })] = ok({ issueCreate: { success: true, issue: {
   ...issue('Cache exchange rates', 'Backlog', { priority: 2, assignee: null, project: null, cycle: null }), id: 'i-eng-30', identifier: 'ENG-30',
 } } });
+const relatedIssue = { ...issue('Related cache work', 'Backlog', { priority: 0, assignee: null }), id: 'i-eng-50', identifier: 'ENG-50' };
+workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Related cache work', stateId: 't-eng-backlog', priority: 0, projectId: 'p-checkout' } })] = ok({ issueCreate: { success: true, issue: relatedIssue } });
+workspace[key(Q.ISSUE_RELATION_CREATE, { input: { issueId: 'i-eng-11', relatedIssueId: 'i-eng-50', type: 'related' } })] = ok({ issueRelationCreate: { success: true } });
 workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: 'Batching shipped in !42.' } })] = ok({ commentCreate: { success: true, comment: { id: 'cm3', body: 'Batching shipped in !42.', createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
 const READ_AT = '2026-11-09T12:00:00.000Z';
 workspace[key(Q.markReadMany(['n1', 'n2']), { readAt: READ_AT })] = ok({ n0: { success: true }, n1: { success: true } });

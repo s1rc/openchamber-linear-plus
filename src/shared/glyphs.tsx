@@ -131,6 +131,12 @@ export const EstimateGlyph = ({ size = 13 }: { size?: number }) => (
   </svg>
 );
 
+export const MilestoneGlyph = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" aria-hidden="true" style={{ flex: 'none' }}>
+    <path d="M7 1.8 12.2 7 7 12.2 1.8 7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+  </svg>
+);
+
 /** Sub-issue progress ring, as Linear draws it beside "2/3". */
 export const ProgressRing = ({ done, total, size = 13 }: { done: number; total: number; size?: number }) => {
   const r = 5;

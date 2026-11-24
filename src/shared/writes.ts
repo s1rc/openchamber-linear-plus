@@ -5,10 +5,13 @@ import type { IssueList } from './issues.ts';
 import { gql, LinearError } from './linear.ts';
 import type { Change, IssueInput, IssuePatch } from './moves.ts';
 import {
-  COMMENT_CREATE, ISSUE_CREATE, ISSUE_DELETE, ISSUE_UPDATE, markReadMany, NOTIFICATION_MARK_READ, PROJECT_UPDATE_CREATE,
+  ATTACHMENT_CREATE, COMMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_CREATE, ISSUE_DELETE,
+  ISSUE_FAVORITE, ISSUE_RELATION_CREATE, ISSUE_REMINDER, ISSUE_UPDATE, markReadMany, NOTIFICATION_MARK_READ, PROJECT_CREATE, PROJECT_UPDATE_CREATE,
 } from './queries.ts';
+import type { RelationChoice } from './issue-menu.ts';
 import type {
-  CommentCreateResult, IssueCreateResult, IssueRow, IssueUpdateResult, Notification, Page, ProjectUpdateCreateResult, SuccessResult,
+  CommentCreateResult, DocumentCreateResult, IssueCreateResult, IssueFavoriteResult, IssueRow, IssueUpdateResult, Notification, Page,
+  ProjectCreateResult, ProjectUpdateCreateResult, SuccessResult,
 } from './types.ts';
 
 /** What to tell the user when a write fails. A connection that can only read says so. */
@@ -53,6 +56,21 @@ export const updateIssue = async (issue: Pick<IssueRow, 'id' | 'identifier'>, ch
     refreshKey(`issue:${issue.identifier}`);
     // A status change moves a parent's "2/3" sub-issue count.
     if ('stateId' in change.input) invalidate('children:');
+    // Milestone filters and the project overview's counts depend on this assignment.
+    if ('projectMilestoneId' in change.input || 'projectId' in change.input) {
+      invalidate('issues:');
+      invalidate('view-issues:');
+      invalidate('milestone-counts:');
+    }
+    if ('parentId' in change.input) {
+      invalidate('issues:');
+      invalidate('view-issues:');
+      invalidate('children:');
+    }
+    if (['releaseIds', 'addedReleaseIds', 'removedReleaseIds'].some((key) => key in change.input)) {
+      invalidate('extras:');
+      invalidate('issue-releases:');
+    }
     return row;
   } catch (error) {
     rollback();
@@ -91,6 +109,65 @@ export const createIssue = async (input: IssueInput): Promise<IssueRow> => {
   invalidate('issues:');
   invalidate('view-issues:');
   return data.issueCreate.issue;
+};
+
+const requireSuccess = (data: SuccessResult, message: string): void => {
+  if (!Object.values(data).every((r) => r.success)) throw new LinearError('graphql', message);
+};
+
+export const addIssueLink = async (issue: Pick<IssueRow, 'id' | 'identifier'>, input: { url: string; title: string }): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(ATTACHMENT_CREATE, { input: { issueId: issue.id, ...input } }), 'Linear did not add the link.');
+  refreshKey(`issue:${issue.identifier}`);
+};
+
+export const addCustomerRequest = async (issue: Pick<IssueRow, 'id' | 'identifier'>, input: { customerId: string; body: string }): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(CUSTOMER_NEED_CREATE, { input: { issueId: issue.id, ...input } }), 'Linear did not add the customer request.');
+  refreshKey(`issue:${issue.identifier}`);
+  invalidate('extras:');
+};
+
+export const addIssueDocument = async (issue: Pick<IssueRow, 'id' | 'identifier'>, input: { title: string; content: string }): Promise<void> => {
+  const data = await gql<DocumentCreateResult>(DOCUMENT_CREATE, { input: { issueId: issue.id, ...input } });
+  if (!data.documentCreate.success) throw new LinearError('graphql', 'Linear did not create the document.');
+  refreshKey(`issue:${issue.identifier}`);
+};
+
+export const createIssueRelation = async (issue: Pick<IssueRow, 'id' | 'identifier'>, other: Pick<IssueRow, 'id' | 'identifier'>, relation: RelationChoice): Promise<void> => {
+  const input = relation.inverse
+    ? { issueId: other.id, relatedIssueId: issue.id, type: relation.type }
+    : { issueId: issue.id, relatedIssueId: other.id, type: relation.type };
+  requireSuccess(await gql<SuccessResult>(ISSUE_RELATION_CREATE, { input }), 'Linear did not create the relation.');
+  refreshKey(`issue:${issue.identifier}`);
+  refreshKey(`issue:${other.identifier}`);
+  invalidate('issues:');
+  invalidate('view-issues:');
+};
+
+/** Returns true when the issue is now favorited, false when an existing favorite was removed. */
+export const toggleFavorite = async (issue: Pick<IssueRow, 'id'>): Promise<boolean> => {
+  const current = await gql<IssueFavoriteResult>(ISSUE_FAVORITE, { id: issue.id });
+  if (current.issue.favorite) {
+    requireSuccess(await gql<SuccessResult>(FAVORITE_DELETE, { id: current.issue.favorite.id }), 'Linear did not remove the favorite.');
+    return false;
+  }
+  requireSuccess(await gql<SuccessResult>(FAVORITE_CREATE, { input: { issueId: issue.id } }), 'Linear did not favorite the issue.');
+  return true;
+};
+
+export const remindIssue = async (issue: Pick<IssueRow, 'id'>, reminderAt: string): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(ISSUE_REMINDER, { id: issue.id, reminderAt }), 'Linear did not set the reminder.');
+};
+
+/** Linear performs the same conversion as its own Convert to project command. */
+export const convertIssueToProject = async (issue: Pick<IssueRow, 'id' | 'identifier' | 'title' | 'team'>): Promise<{ id: string; name: string; url: string }> => {
+  const data = await gql<ProjectCreateResult>(PROJECT_CREATE, { input: { name: issue.title, teamIds: [issue.team.id], convertedFromIssueId: issue.id } });
+  if (!data.projectCreate.success || !data.projectCreate.project) throw new LinearError('graphql', 'Linear did not convert the issue to a project.');
+  invalidate('issues:');
+  invalidate('view-issues:');
+  invalidate('projects:');
+  invalidate('team-projects:');
+  refreshKey(`issue:${issue.identifier}`);
+  return data.projectCreate.project;
 };
 
 export const addComment = async (issue: Pick<IssueRow, 'id' | 'identifier'>, body: string): Promise<void> => {

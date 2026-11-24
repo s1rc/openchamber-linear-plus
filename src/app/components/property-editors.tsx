@@ -3,12 +3,12 @@
 import { toast } from '@openchamber-ext/shared-ui';
 import { useMemo, useState } from 'preact/hooks';
 import { estimateLabel } from '../../shared/format.ts';
-import { Avatar, CycleGlyph, EstimateGlyph, PriorityGlyph, ProjectIcon, StatusGlyph } from '../../shared/glyphs.tsx';
+import { Avatar, CycleGlyph, EstimateGlyph, MilestoneGlyph, PriorityGlyph, ProjectIcon, StatusGlyph } from '../../shared/glyphs.tsx';
 import { compareStates, PRIORITY_NAMES } from '../../shared/grouping.ts';
 import { host } from '../../shared/host.ts';
 import { Button, Checkbox, SearchField, SelectBlock } from '../../shared/kit.tsx';
 import { estimateScale, type Change } from '../../shared/moves.ts';
-import { useTeamProjects } from '../../shared/projects.ts';
+import { useProjectMilestones, useTeamProjects } from '../../shared/projects.ts';
 import { useOpenCycles, useTeamPeople } from '../../shared/team-data.ts';
 import type { IssueDetail, Label, Team } from '../../shared/types.ts';
 import { updateIssue, writeErrorText } from '../../shared/writes.ts';
@@ -153,6 +153,36 @@ export const ProjectEdit = ({ issue }: Props) => {
           void save(issue, {
             input: { projectId: id === NONE ? null : id },
             patch: { project: project ? { id: project.id, name: project.name, color: project.color, icon: project.icon } : null, projectMilestone: null },
+          });
+        }}
+      />
+    </Row>
+  );
+};
+
+export const MilestoneEdit = ({ issue }: Props) => {
+  const query = useProjectMilestones(issue.project?.id ?? null);
+  const list = query.data ?? [];
+  if (!issue.project) return null;
+  const options = [
+    { id: NONE, label: 'No milestone' },
+    ...(issue.projectMilestone && !list.some((m) => m.id === issue.projectMilestone!.id) ? [{ id: issue.projectMilestone.id, label: issue.projectMilestone.name }] : []),
+    ...list.map((m) => ({ id: m.id, label: m.name })),
+  ];
+  return (
+    <Row icon={<MilestoneGlyph />}>
+      <SelectBlock
+        value={issue.projectMilestone?.id ?? null}
+        placeholder="Set milestone"
+        searchable={options.length >= 8}
+        searchPlaceholder="Add to milestone..."
+        options={options}
+        onChange={(id) => {
+          if (id === (issue.projectMilestone?.id ?? NONE)) return;
+          const milestone = list.find((m) => m.id === id);
+          void save(issue, {
+            input: { projectMilestoneId: id === NONE ? null : id },
+            patch: { projectMilestone: milestone ? { id: milestone.id, name: milestone.name } : null },
           });
         }}
       />

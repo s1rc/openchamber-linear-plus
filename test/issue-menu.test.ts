@@ -24,8 +24,10 @@ const data = (over: Partial<MenuData> = {}): MenuData => ({
   members: [{ id: 'u1', name: 'Matt Witkowicz', displayName: 'matt', avatarUrl: null, avatarBackgroundColor: '' }],
   labels: [bug, infra],
   projects: [{ id: 'p1', name: 'GitLab migration', color: '#00f', icon: null }, { id: 'p2', name: 'Q4 Tech Debt', color: '#0ff', icon: null }],
+  milestones: [{ id: 'm1', name: 'M3', sortOrder: 1 }, { id: 'm2', name: 'M4', sortOrder: 2 }],
   cycles: [{ id: 'c1', number: 16, name: null, startsAt: '', endsAt: '', progress: 0, isActive: true, isFuture: false, isPast: false } as never],
   today: '2026-11-23',
+  now: new Date('2026-11-23T12:00:00Z'),
   ...over,
 });
 
@@ -42,11 +44,13 @@ describe('issueMenu', () => {
   test('properties first with Linear\'s keys, then open and copy, then delete', () => {
     const sections = issueMenu(issue(), data());
     expect(sections.map((s) => s.map((i) => i.id))).toEqual([
-      ['status', 'priority', 'assignee', 'due', 'labels', 'project', 'estimate', 'cycle'],
-      ['open', 'open-linear', 'copy'],
+      ['status', 'priority', 'assignee', 'due', 'labels', 'project', 'milestone', 'estimate', 'cycle', 'more'],
+      ['create-related', 'mark-as', 'remove'],
+      ['open', 'copy', 'convert', 'make-copy', 'open-in'],
+      ['favorite', 'remind'],
       ['delete'],
     ]);
-    expect(sections[0]!.map((i) => i.shortcut)).toEqual(['S', 'P', 'A', '\u21e7D', 'L', '\u21e7P', '\u21e7E', '\u21e7C']);
+    expect(sections[0]!.map((i) => i.shortcut)).toEqual(['S', 'P', 'A', '\u21e7D', 'L', '\u21e7P', '\u21e7M', '\u21e7E', '\u21e7C', undefined]);
     expect(find(sections, 'delete')).toMatchObject({ danger: true, action: { kind: 'delete' } });
   });
 
@@ -81,6 +85,25 @@ describe('issueMenu', () => {
     expect(find(issueMenu(issue(), data()), 'project:p1').checked).toBe(true);
   });
 
+  test('a milestone can be set or cleared, with the current one ticked', () => {
+    const sections = issueMenu(issue(), data());
+    expect(find(sections, 'milestone').shortcut).toBe('\u21e7M');
+    expect(find(sections, 'milestone:m1').checked).toBe(true);
+    expect(find(sections, 'milestone:m2').action).toEqual({
+      kind: 'change', change: { input: { projectMilestoneId: 'm2' }, patch: { projectMilestone: { id: 'm2', name: 'M4' } } },
+    });
+    expect(find(sections, 'milestone:none').action).toEqual({ kind: 'change', change: { input: { projectMilestoneId: null }, patch: { projectMilestone: null } } });
+  });
+
+  test('a milestone list loads only for an issue with a project and keeps an unknown current value', () => {
+    const loading = issueMenu(issue(), data({ milestones: undefined }));
+    expect(find(loading, 'milestone').loading).toBe(true);
+    expect(find(loading, 'milestone:m1').checked).toBe(true);
+    const noProject = issueMenu(issue({ project: null, projectMilestone: null }), data({ milestones: undefined }));
+    expect(find(noProject, 'milestone').loading).toBe(false);
+    expect(find(noProject, 'milestone').children!.map((c) => c.id)).toEqual(['milestone:none']);
+  });
+
   test('due date presets count from today, and Remove shows only when a date is set', () => {
     const due = find(issueMenu(issue(), data()), 'due');
     expect(due.children!.map((c) => [c.label, (c.action as { change: { input: { dueDate: string } } }).change.input.dueDate])).toEqual([
@@ -93,7 +116,7 @@ describe('issueMenu', () => {
 
   test('estimate and cycle are left out where the team does not use them', () => {
     const ids = issueMenu(issue(), data({ estimates: [], team: { cyclesEnabled: false, issueEstimationType: 'notUsed', issueEstimationAllowZero: false, issueEstimationExtended: false } }))[0]!.map((i) => i.id);
-    expect(ids).toEqual(['status', 'priority', 'assignee', 'due', 'labels', 'project']);
+    expect(ids).toEqual(['status', 'priority', 'assignee', 'due', 'labels', 'project', 'milestone', 'more']);
   });
 
   test('lists still loading say so, and keep the issue\'s own value to tick', () => {
@@ -103,6 +126,52 @@ describe('issueMenu', () => {
     expect(find(sections, 'labels').loading).toBe(true);
     expect(find(sections, 'label:l-infra').checked).toBe(true);
     expect(find(sections, 'project:p1').checked).toBe(true);
+  });
+
+  test('more properties opens each focused action', () => {
+    const more = find(issueMenu(issue(), data()), 'more');
+    expect(more.children!.map((c) => [c.id, c.action])).toEqual([
+      ['team', { kind: 'prompt', prompt: 'team' }],
+      ['release', { kind: 'prompt', prompt: 'release' }],
+      ['sla', { kind: 'prompt', prompt: 'sla' }],
+      ['add-link', { kind: 'prompt', prompt: 'link' }],
+      ['add-customer', { kind: 'prompt', prompt: 'customer' }],
+      ['add-document', { kind: 'prompt', prompt: 'document' }],
+      ['suggestions', { kind: 'prompt', prompt: 'suggestions' }],
+      ['rename', { kind: 'prompt', prompt: 'rename' }],
+    ]);
+  });
+
+  test('create and mark relations carry direction, type and whether a new issue is needed', () => {
+    const sections = issueMenu(issue(), data());
+    expect(find(sections, 'create-related:blocked').action).toEqual({
+      kind: 'relation', create: true, relation: { id: 'blocked', type: 'blocks', inverse: true },
+    });
+    expect(find(sections, 'mark-as:blocking').action).toEqual({
+      kind: 'relation', create: false, relation: { id: 'blocking', type: 'blocks', inverse: false },
+    });
+    expect(find(sections, 'mark-as:duplicate').action).toMatchObject({ relation: { type: 'duplicate' } });
+  });
+
+  test('remove lists only properties the issue has and clears the chosen one', () => {
+    const sections = issueMenu(issue(), data());
+    expect(find(sections, 'remove').children!.map((c) => c.id)).toEqual(['remove:project', 'remove:milestone', 'remove:estimate', 'remove:labels']);
+    expect(find(sections, 'remove:project').action).toMatchObject({ change: { input: { projectId: null }, patch: { project: null, projectMilestone: null } } });
+    const empty = issueMenu(issue({ project: null, projectMilestone: null, cycle: null, parent: null, assignee: null, estimate: null, dueDate: null, labels: { nodes: [] }, slaType: null }), data());
+    expect(find(empty, 'remove').children).toEqual([]);
+  });
+
+  test('convert, copy, open, favorite and reminders have real actions', () => {
+    const sections = issueMenu(issue({ parent: { id: 'p', identifier: 'NIL-1' } }), data());
+    expect(find(sections, 'convert:subissue').action).toEqual({ kind: 'prompt', prompt: 'convert-subissue' });
+    expect(find(sections, 'convert:top-level').action).toMatchObject({ change: { input: { parentId: null } } });
+    expect(find(sections, 'convert:project').action).toEqual({ kind: 'prompt', prompt: 'convert-project' });
+    expect(find(sections, 'make-copy').action).toEqual({ kind: 'prompt', prompt: 'copy' });
+    expect(find(sections, 'open-in:linear').action).toEqual({ kind: 'open-linear' });
+    expect(find(sections, 'favorite').action).toEqual({ kind: 'favorite' });
+    const reminders = find(sections, 'remind').children!;
+    expect(reminders.map((r) => r.id)).toEqual(['remind:hour', 'remind:tomorrow', 'remind:week', 'remind:month', 'remind:custom']);
+    expect(reminders.slice(0, 4).every((r) => r.action?.kind === 'reminder' && Date.parse(r.action.at) > data().now.getTime())).toBe(true);
   });
 
   test('copy offers the ID, link, title, branch and a Markdown link', () => {
@@ -136,6 +205,10 @@ describe('menu helpers', () => {
     expect(isShortcut('\u21e7P', 'P', true)).toBe(true);
     expect(isShortcut('\u21e7P', 'p', false)).toBe(false);
     expect(isShortcut(undefined, 's', false)).toBe(false);
+    expect(isShortcut('\u2318\u21e7M', 'm', true, true)).toBe(true);
+    expect(isShortcut('\u2318\u21e7M', 'm', true, false)).toBe(false);
+    expect(isShortcut('\u2325F', 'f', false, false, true)).toBe(true);
+    expect(isShortcut('\u2303L', 'l', false, false, false, true)).toBe(true);
   });
   test('addDays crosses months and years on the calendar', () => {
     expect(addDays('2026-11-30', 1)).toBe('2026-12-01');

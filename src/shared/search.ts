@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { load, useQuery } from './cache.ts';
 import { gql } from './linear.ts';
-import { DOCUMENT, DOCUMENTS, PROJECT_DETAIL, SEARCH_DOCUMENTS, SEARCH_ISSUES } from './queries.ts';
-import type { DocumentDetail, DocumentResult, DocumentsResult, DocumentSummary, IssueRow, ProjectDetail, ProjectDetailResult, SearchDocumentsResult, SearchIssuesResult } from './types.ts';
+import { DOCUMENT, DOCUMENTS, PROJECT_DETAIL, SEARCH_DOCUMENTS, SEARCH_ISSUES, SEMANTIC_ISSUES } from './queries.ts';
+import type { DocumentDetail, DocumentResult, DocumentsResult, DocumentSummary, IssueRow, ProjectDetail, ProjectDetailResult, SearchDocumentsResult, SearchIssuesResult, SemanticIssuesResult } from './types.ts';
 
 /** The text once typing has paused for 250 ms. */
 export const useDebounced = (term: string): string => {
@@ -22,6 +22,14 @@ export const useIssueSearch = (term: string) => {
   return useQuery<IssueRow[]>(
     enough(debounced) ? `issue-search:${debounced.toLowerCase()}` : null,
     async () => (await gql<SearchIssuesResult>(SEARCH_ISSUES, { term: debounced })).searchIssues.nodes,
+  );
+};
+
+export const useSemanticIssueSearch = (term: string) => {
+  const debounced = useDebounced(term);
+  return useQuery<IssueRow[]>(
+    enough(debounced) ? `semantic-issues:${debounced.toLowerCase()}` : null,
+    async () => (await gql<SemanticIssuesResult>(SEMANTIC_ISSUES, { query: debounced })).semanticSearch.results.map((r) => r.issue).filter((i) => i !== null),
   );
 };
 

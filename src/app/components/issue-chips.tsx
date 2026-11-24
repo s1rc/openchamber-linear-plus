@@ -6,6 +6,7 @@ import { Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, CycleGlyph, ProgressR
 import type { ChildCount } from '../../shared/issues.ts';
 import type { IssueExtras, IssueRow, Label } from '../../shared/types.ts';
 import type { PropertyId } from '../../shared/view-options.ts';
+import { blockingCounts } from '../../shared/relations.ts';
 import { teamEstimateType } from '../../shared/workspace.ts';
 
 export const LabelChip = ({ label }: { label: Label }) => (
@@ -62,8 +63,7 @@ export const IssueChips = ({ issue, properties: p, subIssues, hideProject, extra
   const attachments = issue.attachments?.nodes ?? [];
   const changes = attachments.map(changeOf).filter((c) => c !== null);
   const otherLinks = attachments.filter((a) => !changeOf(a));
-  const blockedBy = (issue.inRelations?.nodes ?? []).filter((r) => r.type === 'blocks').length;
-  const blocking = (issue.outRelations?.nodes ?? []).filter((r) => r.type === 'blocks').length;
+  const { blockedBy, blocking } = blockingCounts(issue);
   const estimate = estimateLabel(issue.estimate, teamEstimateType(issue.team.id));
   const due = issue.dueDate ? daysUntil(issue.dueDate) : null;
   const sla = p.has('sla') ? slaLabel(issue.slaBreachesAt) : null;

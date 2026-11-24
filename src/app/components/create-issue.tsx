@@ -3,7 +3,7 @@
 // dialog for the Create Linear issue actions, where a Small Model draft can fill the title and
 // description (src/dialog).
 import { toast } from '@openchamber-ext/shared-ui';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Draft } from '../../shared/draft.ts';
 import { estimateLabel } from '../../shared/format.ts';
 import { compareStates, PRIORITY_NAMES } from '../../shared/grouping.ts';
@@ -21,12 +21,22 @@ import { LabelPicker } from './property-editors.tsx';
 
 const NONE = '__none__';
 
+export type IssueFormInitial = Partial<Draft> & {
+  stateId?: string;
+  priority?: number;
+  assigneeId?: string | null;
+  estimate?: number | null;
+  cycleId?: string | null;
+  projectId?: string | null;
+  labels?: Label[];
+};
+
 type FormProps = {
   /** Teams to offer first, such as the folder's. The team picker lists every team. */
   teamIds: readonly string[];
   projectId?: string | null;
   /** What the title and description start as. */
-  initial?: Partial<Draft>;
+  initial?: IssueFormInitial;
   /** A draft that arrives later fills the title and description the user has not typed in yet. */
   draft?: Draft | null;
   onCreated: (issue: IssueRow) => void;
@@ -50,13 +60,13 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [typed, setTyped] = useState({ title: false, description: false });
-  const [stateId, setStateId] = useState<string>(NONE);
-  const [priority, setPriority] = useState('0');
-  const [assigneeId, setAssigneeId] = useState<string>(NONE);
-  const [estimate, setEstimate] = useState<string>(NONE);
-  const [cycleId, setCycleId] = useState<string>(NONE);
-  const [project, setProject] = useState<string>(projectId ?? NONE);
-  const [labels, setLabels] = useState<Label[]>([]);
+  const [stateId, setStateId] = useState<string>(initial?.stateId ?? NONE);
+  const [priority, setPriority] = useState(String(initial?.priority ?? 0));
+  const [assigneeId, setAssigneeId] = useState<string>(initial?.assigneeId ?? NONE);
+  const [estimate, setEstimate] = useState<string>(initial?.estimate === null || initial?.estimate === undefined ? NONE : String(initial.estimate));
+  const [cycleId, setCycleId] = useState<string>(initial?.cycleId ?? NONE);
+  const [project, setProject] = useState<string>(initial?.projectId ?? projectId ?? NONE);
+  const [labels, setLabels] = useState<Label[]>(initial?.labels ?? []);
   const [busy, setBusy] = useState(false);
   // The Settings default for "Assign to me", read once; null until read.
   const [assignDefault, setAssignDefault] = useState<boolean | null>(null);
@@ -69,13 +79,17 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
     if (!typed.description) setDescription(draft.description);
   }, [draft]);
 
-  // A new team brings its own states, people, labels and cycles. The assignee starts as the Settings default.
+  const initialTeam = useRef(teamId);
+  const initialPending = useRef(Boolean(initial));
+  // A new team brings its own states, people, labels and cycles. A copy keeps its source values on the first team.
   useEffect(() => {
-    setStateId(acceptStateOf(team, states)?.id ?? states[0]?.id ?? NONE);
-    setAssigneeId(assignDefault && viewer ? viewer.id : NONE);
-    setEstimate(NONE);
-    setCycleId(NONE);
-    setLabels([]);
+    const preset = initialPending.current && teamId === initialTeam.current ? initial : undefined;
+    setStateId(preset?.stateId ?? acceptStateOf(team, states)?.id ?? states[0]?.id ?? NONE);
+    setAssigneeId(preset && preset.assigneeId !== undefined ? preset.assigneeId ?? NONE : assignDefault && viewer ? viewer.id : NONE);
+    setEstimate(preset?.estimate === null || preset?.estimate === undefined ? NONE : String(preset.estimate));
+    setCycleId(preset?.cycleId ?? NONE);
+    setLabels(preset?.labels ?? []);
+    if (preset && states.length > 0 && assignDefault !== null) initialPending.current = false;
   }, [teamId, states.length, assignDefault, viewer?.id]);
 
   const people = useTeamPeople(teamId || null);
@@ -175,12 +189,13 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
 type Props = {
   teamIds: readonly string[];
   projectId?: string | null;
+  initial?: IssueFormInitial;
   onClose: () => void;
   onCreated: (issue: IssueRow) => void;
 };
 
-export const CreateIssueDialog = ({ teamIds, projectId = null, onClose, onCreated }: Props) => {
-  const form = useIssueForm({ teamIds, projectId, onCreated, onEscape: onClose });
+export const CreateIssueDialog = ({ teamIds, projectId = null, initial, onClose, onCreated }: Props) => {
+  const form = useIssueForm({ teamIds, projectId, initial, onCreated, onEscape: onClose });
   return (
     <Modal
       wide
