@@ -26,7 +26,7 @@ Also check by grep:
 
 `bun test` covers the pure rules and the service, with fakes for the host, the disk and Linear:
 
-- **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
+- **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, lead mode (plan and build steps sent to the lead, its progress lines are no plan rows), agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
 - **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), the rich editor's Markdown round trip and editing commands (`rich.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
@@ -109,6 +109,8 @@ Things to watch:
 
 - [ ] Settings, Start plan and Start build: **All folders** agent and model apply in a folder that is not pinned; **This folder** overrides them in a pinned folder.
 - [ ] Start plan and Start build: the **Plan model** or **Build model** dropdown starts on "From Settings: <model>"; a pick is used for that start only and Settings stay as they were.
+- [ ] Lead on (Settings, Plan and build): Start plan makes one session in the worktree, and it starts "<KEY> plan" nested under it on the plan agent and model. When the plan is done, the lead repeats it with the card, and the Work Status row offers Start build. Start build opens the lead, which starts "<KEY> build" under it on the build agent and model. No empty session is left.
+- [ ] Lead off: Start plan makes the worktree, an empty first session and "<KEY> plan"; Start build makes "<KEY> build".
 - [ ] Finish comments (Settings, Draft): a draft appears in Work Status after a turn; Post comments, Discard drops it.
 
 ### Dashboard

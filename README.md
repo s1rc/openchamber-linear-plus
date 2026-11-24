@@ -45,6 +45,8 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 2. Review the plan. When enabled, Linear+ sets the estimate and creates split-out issues after the plan finishes.
 3. Click **Start build** to hand the finished plan to a build session.
 
+With **Run the plan and the build under one lead session** on (Settings, Plan and build), Start plan makes the worktree with one session, the lead. The lead starts the plan, and on Start build the build, as sessions nested under it, and answers their questions itself where it can. With it off, the plan and the build are sessions of their own, and the host leaves an empty first session in the worktree.
+
 Agent and model defaults live in **Settings** (in the rail panel, the Settings button beside Refresh). A one-off model choice on Start plan or Start build does not change those defaults.
 
 The plan estimate and split-out issues are the only writes Linear+ makes without a click. Comments, status changes, and project updates require an action from you.
