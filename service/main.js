@@ -282,6 +282,11 @@ var QUOTA_PROVIDER_IDLE_MS = 10 * 60000;
 // node_modules/@openchamber/sdk/dist/service-surface.js
 var SURFACE_CONTROLLERS = ["none", "agent", "user"];
 var CONTROLLERS = new Set(SURFACE_CONTROLLERS);
+// src/shared/folder-settings.ts
+var folderFinish = (folder) => folder?.finishComments === "draft" || folder?.finishSet && folder.finishComments === "off" ? folder.finishComments : undefined;
+var finishChoice = (folder, defaults) => folderFinish(folder) ?? defaults?.finishComments ?? "off";
+var postPlanChoice = (folder, defaults) => folder?.postPlan ?? defaults?.postPlan ?? false;
+
 // src/shared/plan-extras.ts
 var EXTRAS_FENCE = "linear-plan";
 var EXTRA_ISSUES_MAX = 10;
@@ -498,6 +503,10 @@ var sessionChoice = (role, folder, defaults, override = {}) => {
   const model = [override.model, folder?.[modelKey], defaults?.[modelKey]].map((v) => cleanModel(text(v))).find(Boolean);
   return model ? { agent, model } : { agent };
 };
+var reviewChoice = (folder, defaults) => ({
+  mode: folder?.reviewMode ?? defaults?.reviewMode ?? "off",
+  reviewers: folder?.aiReviewers?.trim() || defaults?.aiReviewers?.trim() || ""
+});
 var extrasLines = (identifier, scale) => {
   const text = scale?.replace(/\s+/g, " ").trim().slice(0, 400);
   if (!text)
@@ -1292,12 +1301,13 @@ var mapping = (raw) => {
     linearProjectIds: strings(raw.linearProjectIds, 50, 80),
     activeProjectId: text(raw.activeProjectId, 80) ?? "all",
     finishComments: finish,
+    ...raw.finishSet === true ? { finishSet: true } : {},
     ...optional("buildAgent", text(raw.buildAgent, 64)),
     ...optional("buildModel", text(raw.buildModel, 200)),
     ...optional("planAgent", text(raw.planAgent, 64)),
     ...optional("planModel", text(raw.planModel, 200)),
-    ...raw.postPlan === true ? { postPlan: true } : {},
-    ...raw.reviewMode === "mr" || raw.reviewMode === "auto" ? { reviewMode: raw.reviewMode } : {},
+    ...typeof raw.postPlan === "boolean" ? { postPlan: raw.postPlan } : {},
+    ...raw.reviewMode === "off" || raw.reviewMode === "mr" || raw.reviewMode === "auto" ? { reviewMode: raw.reviewMode } : {},
     ...optional("aiReviewers", text(raw.aiReviewers, 200)),
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0
   };
@@ -1309,7 +1319,11 @@ var readDefaults = (raw) => {
     ...optional("planAgent", text(raw.planAgent, 64)),
     ...optional("planModel", text(raw.planModel, 200)),
     ...optional("buildAgent", text(raw.buildAgent, 64)),
-    ...optional("buildModel", text(raw.buildModel, 200))
+    ...optional("buildModel", text(raw.buildModel, 200)),
+    ...raw.reviewMode === "mr" || raw.reviewMode === "auto" ? { reviewMode: raw.reviewMode } : {},
+    ...optional("aiReviewers", text(raw.aiReviewers, 200)),
+    ...raw.finishComments === "draft" ? { finishComments: "draft" } : {},
+    ...raw.postPlan === true ? { postPlan: true } : {}
   };
   return Object.keys(defaults).length ? defaults : undefined;
 };
@@ -1847,7 +1861,7 @@ var createApp = (deps) => {
       saveDrafts();
     return { body: { ok: true, removed: drafts.length !== before } };
   };
-  const withSetting = (list) => list.map((h) => ({ ...h, postPlan: config.directories[h.directory]?.postPlan === true }));
+  const withSetting = (list) => list.map((h) => ({ ...h, postPlan: postPlanChoice(config.directories[h.directory], config.defaults) }));
   const handoffsFor = (directory) => {
     if (!directory)
       return withSetting(handoffs.pending);
@@ -1956,7 +1970,7 @@ var createApp = (deps) => {
     if (body.mode === "preview") {
       try {
         const got = await readPlan(sessionId);
-        return { body: "error" in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === "lead" } };
+        return { body: "error" in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: postPlanChoice(mapping, config.defaults), earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === "lead" } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
         return fail(message(error));
@@ -1978,7 +1992,7 @@ var createApp = (deps) => {
         directory: sessionDirectory,
         planSessionTitle: typeof body.sessionTitle === "string" ? body.sessionTitle : pending?.sessionTitle ?? null,
         plan: got.plan,
-        review: { mode: mapping?.reviewMode ?? "off", reviewers: mapping?.aiReviewers ?? "" },
+        review: reviewChoice(mapping, config.defaults),
         splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? []
       };
       const choice = sessionChoice("build", mapping, config.defaults, { model: body.model });
@@ -2166,7 +2180,7 @@ var createApp = (deps) => {
       return;
     const reply = content?.type === "turn-finished" ? withoutBlocks(content.reply) : "";
     const title = content?.sessionTitle ?? null;
-    if (mapping.finishComments === "draft") {
+    if (finishChoice(mapping, config.defaults) === "draft") {
       for (const identifier of issues) {
         const draft = buildDraft({ directory: folder, sessionId: event.session.id, identifier, title, reply, now: now() });
         if (draft)

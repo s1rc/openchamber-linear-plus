@@ -32,7 +32,7 @@ export const hostEnv: DetectEnv = {
 };
 
 /** What Settings can change on a saved mapping. */
-export type MappingPatch = Partial<Pick<Mapping, 'finishComments' | 'buildAgent' | 'buildModel' | 'planAgent' | 'planModel' | 'postPlan' | 'reviewMode' | 'aiReviewers'>>;
+export type MappingPatch = Partial<Pick<Mapping, 'finishComments' | 'finishSet' | 'buildAgent' | 'buildModel' | 'planAgent' | 'planModel' | 'postPlan' | 'reviewMode' | 'aiReviewers'>>;
 
 export type DetectionState = {
   place: Place | null;
@@ -99,6 +99,7 @@ export const useDetection = (directory: string | null, workspace: Workspace | un
       teamIds,
       activeProjectId: ids.length === 1 ? ids[0]! : previous && ids.includes(previous) ? previous : (ids[0] ?? 'all'),
       finishComments: detection.mapping?.finishComments ?? 'off',
+      ...(detection.mapping?.finishSet ? { finishSet: true } : {}),
       updatedAt: Date.now(),
     };
     // Apply it now either way; a failed save only means it will not survive a reload.

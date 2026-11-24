@@ -2,10 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import type { GuestSessionLinkedItem } from '@openchamber/sdk';
 import { issueOfBranch, mainOfGitFile, parseHead, readBranch, resolveMapped, type ReadText } from '../src/service/directories.ts';
 import { buildDraft, draftBody, linearIssuesOf, looksLikePlan, upsertDraft, withoutBlocks, REPLY_LIMIT } from '../src/service/events.ts';
-import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewerNames, reviewSteps, sessionChoice } from '../src/service/handoff.ts';
+import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewChoice, reviewerNames, reviewSteps, sessionChoice } from '../src/service/handoff.ts';
 import { buildInstructions, INSTRUCTIONS_TARGET } from '../src/service/instructions.ts';
 import { docMarkdown, locate, mentionRows, projectMarkdown, ROWS_MAX } from '../src/service/mentions.ts';
 import { mergePush, readConfig, readPush, knownTeamKeys } from '../src/service/snapshot.ts';
+import { finishChoice, folderFinish, postPlanChoice } from '../src/shared/folder-settings.ts';
 import type { DirSnapshot, Draft, SnapProject } from '../src/service/types.ts';
 
 const files = (map: Record<string, string>): ReadText => (path) => map[path] ?? null;
@@ -413,6 +414,12 @@ describe('pushes and config', () => {
     expect('postPlan' in readConfig({ directories: { a: { directory: '/a', postPlan: 'yes' } } })!.directories['/a']!).toBe(false);
     expect(readConfig({ directories: { a: { directory: '/a', reviewMode: 'auto', aiReviewers: ' CodeRabbit ' } } })!.directories['/a']).toMatchObject({ reviewMode: 'auto', aiReviewers: 'CodeRabbit' });
     expect('reviewMode' in readConfig({ directories: { a: { directory: '/a', reviewMode: 'everything' } } })!.directories['/a']!).toBe(false);
+    expect(readConfig({ directories: { a: { directory: '/a', reviewMode: 'off' } } })!.directories['/a']!.reviewMode).toBe('off');
+    expect(readConfig({ directories: {}, defaults: { reviewMode: 'mr', aiReviewers: ' Greptile ' } })!.defaults).toEqual({ reviewMode: 'mr', aiReviewers: 'Greptile' });
+    expect(readConfig({ directories: {}, defaults: { reviewMode: 'off' } })!.defaults).toBeUndefined();
+    expect(readConfig({ directories: {}, defaults: { finishComments: 'draft', postPlan: true } })!.defaults).toEqual({ finishComments: 'draft', postPlan: true });
+    expect(readConfig({ directories: {}, defaults: { finishComments: 'off', postPlan: false } })!.defaults).toBeUndefined();
+    expect(readConfig({ directories: { a: { directory: '/a', postPlan: false, finishSet: true } } })!.directories['/a']).toMatchObject({ postPlan: false, finishSet: true });
     expect(readConfig('x')).toBeNull();
     expect(readConfig({})).toBeNull();
   });
@@ -426,5 +433,33 @@ describe('pushes and config', () => {
     expect(knownTeamKeys(snapshot({ teams: [{ id: 't', key: 'eng', name: 'E' }], projects: [project('p', 'P', { teams: ['MOB'] })] })).sort()).toEqual(['ENG', 'MOB']);
     expect(knownTeamKeys(snapshot({ teamKeys: ['inf', 'NIL'] })).sort()).toEqual(['INF', 'NIL']);
     expect(knownTeamKeys(undefined)).toEqual([]);
+  });
+});
+
+describe('reviewChoice', () => {
+  test('the folder\'s mode, else every folder\'s, else off; reviewers the same way', () => {
+    expect(reviewChoice(undefined, undefined)).toEqual({ mode: 'off', reviewers: '' });
+    expect(reviewChoice({}, { reviewMode: 'auto', aiReviewers: 'Greptile' })).toEqual({ mode: 'auto', reviewers: 'Greptile' });
+    expect(reviewChoice({ reviewMode: 'off' }, { reviewMode: 'auto' })).toEqual({ mode: 'off', reviewers: '' });
+    expect(reviewChoice({ reviewMode: 'mr', aiReviewers: ' ' }, { reviewMode: 'auto', aiReviewers: 'Greptile' })).toEqual({ mode: 'mr', reviewers: 'Greptile' });
+    expect(reviewChoice({ aiReviewers: 'CodeRabbit' }, { reviewMode: 'mr', aiReviewers: 'Greptile' })).toEqual({ mode: 'mr', reviewers: 'CodeRabbit' });
+  });
+});
+
+describe('folder or every folder', () => {
+  test('finish comments: a picked draft, or an off marked as picked, wins; the off every mapping starts with follows every folder', () => {
+    expect(folderFinish({ finishComments: 'off' })).toBeUndefined();
+    expect(folderFinish({ finishComments: 'off', finishSet: true })).toBe('off');
+    expect(folderFinish({ finishComments: 'draft' })).toBe('draft');
+    expect(finishChoice({ finishComments: 'off' }, { finishComments: 'draft' })).toBe('draft');
+    expect(finishChoice({ finishComments: 'off', finishSet: true }, { finishComments: 'draft' })).toBe('off');
+    expect(finishChoice(undefined, undefined)).toBe('off');
+  });
+
+  test('add the plan: the folder\'s true or false, else every folder\'s, else no', () => {
+    expect(postPlanChoice({}, { postPlan: true })).toBe(true);
+    expect(postPlanChoice({ postPlan: false }, { postPlan: true })).toBe(false);
+    expect(postPlanChoice({ postPlan: true }, undefined)).toBe(true);
+    expect(postPlanChoice(undefined, undefined)).toBe(false);
   });
 });

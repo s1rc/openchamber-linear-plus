@@ -12,7 +12,8 @@ import { fetchDrafts } from '../../shared/drafts.ts';
 import { rowKey } from '../../shared/handoff-rules.ts';
 import { host } from '../../shared/host.ts';
 import { Banner, Button, Select, Spinner, Switch, TextField } from '../../shared/kit.tsx';
-import { getAgentDefaults, getLeadMode, setAgentDefaults, setLeadMode, type FinishComments } from '../../shared/storage.ts';
+import { finishChoice, folderFinish } from '../../shared/folder-settings.ts';
+import { getAgentDefaults, getLeadMode, setAgentDefaults, setLeadMode, type AgentDefaults, type FinishComments, type ReviewMode } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 
 type ServiceState = { reachable: boolean; hasKey: boolean };
@@ -22,7 +23,7 @@ const readService = async (): Promise<ServiceState> => {
   return reply.ok === false ? { reachable: false, hasKey: false } : { reachable: true, hasKey: reply.hasKey === true };
 };
 
-const FINISH_OPTIONS = [
+const FINISH_OPTIONS: Choice[] = [
   { id: 'off', label: 'Off' },
   { id: 'draft', label: 'Draft a summary comment' },
 ];
@@ -167,47 +168,163 @@ const LeadModeSwitch = () => {
   );
 };
 
-const REVIEW_OPTIONS = [
+const REVIEW_OPTIONS: Choice[] = [
   { id: 'off', label: 'Stop when the code is done' },
   { id: 'mr', label: 'My usual commit, push and merge request options, then AI review' },
   { id: 'auto', label: 'Commit, push, open the merge request and handle AI review by itself' },
 ];
 
-/** What the build session does after the code: the merge request, the pipeline and the AI reviewers' comments. */
-const ReviewFields = ({ state }: { state: DetectionState }) => {
-  const mapping = state.detection.mapping;
-  const mode = mapping?.reviewMode ?? 'off';
-  const [reviewers, setReviewers] = useState(mapping?.aiReviewers ?? '');
-  useEffect(() => { setReviewers(mapping?.aiReviewers ?? ''); }, [mapping?.aiReviewers]);
+/** Saves one change to the settings for every folder. */
+const saveDefaults = async (all: AgentDefaults, patch: Partial<AgentDefaults>): Promise<boolean> => {
+  const next = { ...all, ...patch };
+  put('settings:agent-defaults', next);
+  return setAgentDefaults(next);
+};
+
+const reviewLabel = (mode: ReviewMode) => REVIEW_OPTIONS.find((o) => o.id === mode)?.label ?? mode;
+
+const reviewText = (mode: ReviewMode) => (mode === 'off'
+  ? 'The build ends when the code is written and tested.'
+  : `${mode === 'auto' ? 'The build commits, pushes and opens the merge request without asking, assigned to you. ' : 'The build shows its usual commit, push and merge request options and waits for your choice. '}Then it watches the pipeline and fixes AI review comments, and replies to or resolves only the threads the AI reviewers started. It never touches other people's threads and never merges. If a comment needs your decision it asks, and after your answer it checks for new AI comments again before finishing. Choosing this is your permission for those pushes and replies.`);
+
+/** One "After the build" choice and its AI reviewers: the one for every folder, or this folder's. */
+type ReviewPair = {
+  /** A mode, or `DEFAULT_ID` for a folder that follows every folder's. */
+  value: string;
+  options: Choice[];
+  reviewers: string;
+  reviewersPlaceholder: string;
+  /** The mode that applies here, which decides whether the reviewers field shows. */
+  effective: ReviewMode;
+  disabled: boolean;
+  save: (mode: string, reviewers: string) => Promise<boolean>;
+};
+
+const ReviewPairFields = ({ pair }: { pair: ReviewPair }) => {
+  const [reviewers, setReviewers] = useState(pair.reviewers);
+  useEffect(() => { setReviewers(pair.reviewers); }, [pair.reviewers]);
   return (
     <>
-      <Select
-        label="After the build"
-        value={mode}
-        options={REVIEW_OPTIONS}
-        disabled={!mapping}
-        onChange={(id) => { void state.update({ reviewMode: id === 'off' ? undefined : (id as 'mr' | 'auto') }); }}
-      />
-      <div class="sui-muted sui-small">
-        {mode === 'off'
-          ? 'The build ends when the code is written and tested.'
-          : `${mode === 'auto' ? 'The build commits, pushes and opens the merge request without asking, assigned to you. ' : 'The build shows its usual commit, push and merge request options and waits for your choice. '}Then it watches the pipeline and fixes AI review comments, and replies to or resolves only the threads the AI reviewers started. It never touches other people's threads and never merges. If a comment needs your decision it asks, and after your answer it checks for new AI comments again before finishing. Choosing this is your permission for those pushes and replies.`}
-      </div>
-      {mode !== 'off' && (
+      <Select label="When the code is done" value={pair.value} options={pair.options} disabled={pair.disabled} onChange={(id) => { void pair.save(id, pair.reviewers); }} />
+      {pair.effective !== 'off' && (
         <>
           <TextField
             label="AI reviewers"
             value={reviewers}
             onChange={setReviewers}
-            placeholder="CodeRabbit"
-            helper="Names, separated by commas. Empty means CodeRabbit."
-            disabled={!mapping}
+            placeholder={pair.reviewersPlaceholder}
+            helper={`Names, separated by commas. Empty means ${pair.reviewersPlaceholder}.`}
+            disabled={pair.disabled}
           />
           <div class="sui-row">
-            <Button label="Save reviewers" size="sm" disabled={!mapping || reviewers.trim() === (mapping?.aiReviewers ?? '')} onClick={() => { void state.update({ aiReviewers: reviewers.trim() }); }} />
+            <Button label="Save reviewers" size="sm" disabled={pair.disabled || reviewers.trim() === pair.reviewers} onClick={() => { void pair.save(pair.value, reviewers.trim()); }} />
           </div>
         </>
       )}
+    </>
+  );
+};
+
+/** What the build session does after the code (the merge request, the pipeline and the AI reviewers' comments): for every folder, then this folder's own. */
+const ReviewFields = ({ state }: { state: DetectionState }) => {
+  const defaults = useQuery('settings:agent-defaults', getAgentDefaults);
+  if (!defaults.data) return <Spinner size="sm" label="Reading the build settings" />;
+  const all = defaults.data;
+  const mapping = state.detection.mapping;
+  const allMode: ReviewMode = all.reviewMode ?? 'off';
+  const allReviewers = all.aiReviewers ?? '';
+  const effective: ReviewMode = mapping?.reviewMode ?? allMode;
+  const everywhere: ReviewPair = {
+    value: allMode,
+    options: REVIEW_OPTIONS,
+    reviewers: allReviewers,
+    reviewersPlaceholder: 'CodeRabbit',
+    effective: allMode,
+    disabled: false,
+    save: (mode, reviewers) => saveDefaults(all, { reviewMode: mode === 'mr' || mode === 'auto' ? mode : undefined, aiReviewers: reviewers || undefined }),
+  };
+  const folder: ReviewPair = {
+    value: mapping?.reviewMode ?? DEFAULT_ID,
+    options: [{ id: DEFAULT_ID, label: `All folders: ${reviewLabel(allMode)}` }, ...REVIEW_OPTIONS],
+    reviewers: mapping?.aiReviewers?.trim() ?? '',
+    reviewersPlaceholder: allReviewers || 'CodeRabbit',
+    effective,
+    disabled: !mapping,
+    save: (mode, reviewers) => state.update({ reviewMode: mode === DEFAULT_ID ? undefined : (mode as ReviewMode), aiReviewers: reviewers }),
+  };
+  return (
+    <>
+      <div class="lin-subheading">All folders</div>
+      <ReviewPairFields pair={everywhere} />
+      <div class="lin-subheading">This folder</div>
+      <ReviewPairFields pair={folder} />
+      <div class="sui-muted sui-small">
+        {`In this folder: ${reviewText(effective).replace(/^The build/, 'the build')}`}
+        {!mapping && ' Pin this folder to a team or project to give it its own choice.'}
+      </div>
+    </>
+  );
+};
+
+/** Finish comments for every folder, then this folder's own, which wins when set. */
+const FinishFields = ({ state }: { state: DetectionState }) => {
+  const defaults = useQuery('settings:agent-defaults', getAgentDefaults);
+  if (!defaults.data) return <Spinner size="sm" label="Reading the settings" />;
+  const all = defaults.data;
+  const mapping = state.detection.mapping;
+  const allMode = all.finishComments ?? 'off';
+  const own = folderFinish(mapping ?? undefined);
+  const effective = finishChoice(mapping ?? undefined, all);
+  return (
+    <>
+      <div class="lin-subheading">All folders</div>
+      <Select value={allMode} options={FINISH_OPTIONS} onChange={(id) => { void saveDefaults(all, { finishComments: id === 'draft' ? 'draft' : undefined }); }} />
+      <div class="lin-subheading">This folder</div>
+      <Select
+        value={own ?? DEFAULT_ID}
+        options={[{ id: DEFAULT_ID, label: `All folders: ${FINISH_OPTIONS.find((o) => o.id === allMode)!.label}` }, ...FINISH_OPTIONS]}
+        disabled={!mapping}
+        onChange={(id) => { void state.update(id === DEFAULT_ID ? { finishComments: 'off', finishSet: undefined } : { finishComments: id as FinishComments, finishSet: true }); }}
+      />
+      <div class="sui-muted sui-small">
+        {effective === 'draft'
+          ? 'In this folder: when an agent finishes a turn in a session linked to a Linear issue, a summary is kept as a draft in the Work Status section. Nothing is posted until you click Post.'
+          : 'In this folder: no drafts are kept.'}
+        {!mapping && ' Pin this folder to a team or project first: drafts are kept only in pinned folders.'}
+      </div>
+    </>
+  );
+};
+
+const POST_OPTIONS: Choice[] = [
+  { id: 'on', label: 'Add the plan' },
+  { id: 'off', label: 'Do not add the plan' },
+];
+
+/** Whether Start build adds the plan to the issue description: for every folder, then this folder's own. */
+const PostPlanFields = ({ state }: { state: DetectionState }) => {
+  const defaults = useQuery('settings:agent-defaults', getAgentDefaults);
+  if (!defaults.data) return <Spinner size="sm" label="Reading the settings" />;
+  const all = defaults.data;
+  const mapping = state.detection.mapping;
+  const allOn = all.postPlan === true;
+  return (
+    <>
+      <div class="lin-subheading">All folders</div>
+      <Switch
+        label="Add the plan to the issue description when I click Start build"
+        description="Adds the plan to the end of the issue's description, then starts the build. A plan added before is replaced, and the rest of the description is kept. Written only on that click, and you can still turn it off for one build."
+        checked={allOn}
+        onChange={(on) => { void saveDefaults(all, { postPlan: on ? true : undefined }); }}
+      />
+      <div class="lin-subheading">This folder</div>
+      <Select
+        value={mapping?.postPlan === undefined ? DEFAULT_ID : mapping.postPlan ? 'on' : 'off'}
+        options={[{ id: DEFAULT_ID, label: `All folders: ${allOn ? 'Add the plan' : 'Do not add the plan'}` }, ...POST_OPTIONS]}
+        disabled={!mapping}
+        onChange={(id) => { void state.update({ postPlan: id === DEFAULT_ID ? undefined : id === 'on' }); }}
+      />
+      {!mapping && <div class="sui-muted sui-small">Pin this folder to a team or project to give it its own choice.</div>}
     </>
   );
 };
@@ -217,7 +334,6 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
   const directory = state.place?.directory ?? null;
   const drafts = useQuery(directory ? `settings:drafts:${directory}` : null, () => fetchDrafts(directory!));
   const [handled, setHandled] = useState<ReadonlySet<string>>(new Set());
-  const mapping = state.detection.mapping;
   const waiting = (drafts.data ?? []).filter((d) => !handled.has(rowKey(d)));
 
   return (
@@ -234,17 +350,7 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
         )}
       </Section>
       <Section title="Finish comments">
-        <Select
-          value={mapping?.finishComments ?? 'off'}
-          options={FINISH_OPTIONS}
-          disabled={!mapping}
-          onChange={(id) => { void state.update({ finishComments: id as FinishComments }); }}
-        />
-        <div class="sui-muted sui-small">
-          {mapping
-            ? 'When an agent finishes a turn in a session linked to a Linear issue in this folder, a summary is kept as a draft in the Work Status section. Nothing is posted until you click Post.'
-            : 'Pin this folder to a team or project first.'}
-        </div>
+        <FinishFields state={state} />
         {waiting.length === 0 ? (
           <div class="sui-muted sui-small">No drafts waiting.</div>
         ) : (
@@ -267,15 +373,13 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
           Start build begins a new session in the same worktree with the plan from the planning session (with the lead on, a session the lead starts under it). Pick the agent and model it uses for every folder, and this folder's own when it should differ.
         </div>
         <RoleFields state={state} role="build" />
+      </Section>
+      <Section title="Add the plan to the issue">
+        <PostPlanFields state={state} />
+      </Section>
+      <Section title="After the build">
+        <div class="sui-muted sui-small">What the build session does once the code is written: the merge request, the pipeline and the AI reviewers' comments. Pick it for every folder, and this folder's own when it should differ.</div>
         <ReviewFields state={state} />
-        <Switch
-          label="Add the plan to the issue description when I click Start build"
-          description="Adds the plan to the end of the issue's description, then starts the build. A plan added before is replaced, and the rest of the description is kept. Written only on that click, and you can still turn it off for one build."
-          checked={mapping?.postPlan === true}
-          disabled={!mapping}
-          onChange={(on) => { void state.update({ postPlan: on }); }}
-        />
-        {!mapping && <div class="sui-muted sui-small">Pin this folder to a team or project first.</div>}
       </Section>
     </>
   );

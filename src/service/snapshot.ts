@@ -146,12 +146,13 @@ const mapping = (raw: unknown): MappingConfig | null => {
     linearProjectIds: strings(raw.linearProjectIds, 50, 80),
     activeProjectId: text(raw.activeProjectId, 80) ?? 'all',
     finishComments: finish,
+    ...(raw.finishSet === true ? { finishSet: true } : {}),
     ...optional('buildAgent', text(raw.buildAgent, 64)),
     ...optional('buildModel', text(raw.buildModel, 200)),
     ...optional('planAgent', text(raw.planAgent, 64)),
     ...optional('planModel', text(raw.planModel, 200)),
-    ...(raw.postPlan === true ? { postPlan: true } : {}),
-    ...(raw.reviewMode === 'mr' || raw.reviewMode === 'auto' ? { reviewMode: raw.reviewMode } : {}),
+    ...(typeof raw.postPlan === 'boolean' ? { postPlan: raw.postPlan } : {}),
+    ...(raw.reviewMode === 'off' || raw.reviewMode === 'mr' || raw.reviewMode === 'auto' ? { reviewMode: raw.reviewMode } : {}),
     ...optional('aiReviewers', text(raw.aiReviewers, 200)),
     updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : 0,
   };
@@ -165,6 +166,10 @@ export const readDefaults = (raw: unknown): AgentDefaults | undefined => {
     ...optional('planModel', text(raw.planModel, 200)),
     ...optional('buildAgent', text(raw.buildAgent, 64)),
     ...optional('buildModel', text(raw.buildModel, 200)),
+    ...(raw.reviewMode === 'mr' || raw.reviewMode === 'auto' ? { reviewMode: raw.reviewMode } : {}),
+    ...optional('aiReviewers', text(raw.aiReviewers, 200)),
+    ...(raw.finishComments === 'draft' ? { finishComments: 'draft' as const } : {}),
+    ...(raw.postPlan === true ? { postPlan: true as const } : {}),
   };
   return Object.keys(defaults).length ? defaults : undefined;
 };

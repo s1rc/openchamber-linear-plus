@@ -96,6 +96,27 @@ describe('session events', () => {
     expect(reply?.status).toBe(400);
   });
 
+  test('finish comments for every folder reach a folder that picked none, and a folder\'s own off wins', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, finishComments: 'off' } }, defaults: { finishComments: 'draft' } });
+    await deliver(ctx, finished());
+    expect((await ctx.call('GET', '/drafts')).body.drafts.length).toBe(1);
+    const own = setup();
+    await own.call('PUT', '/config', { directories: { [REPO]: { ...mapping, finishComments: 'off', finishSet: true } }, defaults: { finishComments: 'draft' } });
+    await deliver(own, finished());
+    expect((await own.call('GET', '/drafts')).body.drafts).toEqual([]);
+  });
+
+  test('add the plan for every folder shows on the handoff and the preview unless the folder says no', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: mapping }, defaults: { postPlan: true } });
+    await deliver(ctx, finished({}, '## Plan\n1. Do it'));
+    expect((await ctx.call('GET', '/handoffs')).body.handoffs[0].postPlan).toBe(true);
+    expect((await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5' })).body.postPlan).toBe(true);
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, postPlan: false } }, defaults: { postPlan: true } });
+    expect((await ctx.call('GET', '/handoffs')).body.handoffs[0].postPlan).toBe(false);
+  });
+
   test('finish-comments off (the default) stores no draft but still lists the plan', async () => {
     const ctx = setup();
     await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, finishComments: 'off' } } });
@@ -201,6 +222,19 @@ describe('plan to build', () => {
     const prompt = String(ctx.calls.started[0]!.prompt);
     expect(prompt).toContain('I authorize these three steps');
     expect(prompt).toContain('CodeRabbit and Greptile');
+  });
+
+  test('the review mode for every folder applies where the folder sets none, and a folder\'s off wins', async () => {
+    const ctx = setup();
+    ctx.calls.reply = '## Plan\n1. Raise the window';
+    await ctx.call('PUT', '/config', { directories: { [REPO]: mapping }, defaults: { reviewMode: 'auto', aiReviewers: 'Greptile' } });
+    await deliver(ctx, finished({}, ctx.calls.reply));
+    await ctx.call('POST', '/handoff', { force: true, sessionId: 'ses_1', identifier: 'ENG-5' });
+    expect(String(ctx.calls.started[0]!.prompt)).toContain('I authorize these three steps');
+    expect(String(ctx.calls.started[0]!.prompt)).toContain('Greptile');
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, reviewMode: 'off' } }, defaults: { reviewMode: 'auto' } });
+    await ctx.call('POST', '/handoff', { force: true, sessionId: 'ses_1', identifier: 'ENG-5', sessionDirectory: WT });
+    expect(String(ctx.calls.started[1]!.prompt)).not.toContain('merge request');
   });
 
   test('a folder with no review mode gets no merge request instructions', async () => {

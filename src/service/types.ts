@@ -10,6 +10,8 @@ export type MappingConfig = {
   linearProjectIds: string[];
   activeProjectId: string;
   finishComments: FinishComments;
+  /** `finishComments` is the folder's own choice, not the 'off' every mapping starts with. See `folderFinish`. */
+  finishSet?: boolean;
   /** The agent a plan to build handoff starts, empty for `build`. */
   buildAgent?: string;
   /** `provider/model` for the build session, empty for the host's default. */
@@ -18,11 +20,11 @@ export type MappingConfig = {
   planAgent?: string;
   /** `provider/model` for the plan session, empty for the host's default. */
   planModel?: string;
-  /** Start build adds the plan to the issue's description first. */
+  /** Start build adds the plan to the issue's description first. Empty follows the setting for every folder. */
   postPlan?: boolean;
-  /** What the build does after the code is written: the merge request and AI review. Empty means `off`. */
+  /** What the build does after the code is written: the merge request and AI review. Empty follows the setting for every folder. */
   reviewMode?: ReviewMode;
-  /** Names of the AI reviewers whose comments the build handles, comma separated. Empty means CodeRabbit. */
+  /** Names of the AI reviewers whose comments the build handles, comma separated. Empty follows every folder's, then CodeRabbit. */
   aiReviewers?: string;
   updatedAt: number;
 };
@@ -34,8 +36,11 @@ export type MappingConfig = {
  */
 export type ReviewMode = 'off' | 'mr' | 'auto';
 
-/** The plan and build agent and model for every folder; a folder's own value wins over these. */
-export type AgentDefaults = { planAgent?: string; planModel?: string; buildAgent?: string; buildModel?: string };
+/** Settings for every folder: the plan and build agent and model, the build's last steps, finish comments; a folder's own value wins over these. */
+export type AgentDefaults = {
+  planAgent?: string; planModel?: string; buildAgent?: string; buildModel?: string;
+  reviewMode?: 'mr' | 'auto'; aiReviewers?: string; finishComments?: 'draft'; postPlan?: true;
+};
 
 export type Config = { directories: Record<string, MappingConfig>; defaults?: AgentDefaults };
 

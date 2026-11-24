@@ -95,6 +95,18 @@ export const sessionChoice = (
   return model ? { agent, model } : { agent };
 };
 
+/**
+ * What the build does after the code: the folder's own mode, else the one for every folder, else off; and the AI
+ * reviewers the same way (empty means CodeRabbit).
+ */
+export const reviewChoice = (
+  folder: { reviewMode?: ReviewMode; aiReviewers?: string } | undefined,
+  defaults: AgentDefaults | undefined,
+): { mode: ReviewMode; reviewers: string } => ({
+  mode: folder?.reviewMode ?? defaults?.reviewMode ?? 'off',
+  reviewers: folder?.aiReviewers?.trim() || defaults?.aiReviewers?.trim() || '',
+});
+
 export type PlanPromptInput = {
   identifier: string;
   issueTitle?: string | null;

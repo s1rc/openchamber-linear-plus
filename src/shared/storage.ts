@@ -4,6 +4,9 @@ import { host } from './host.ts';
 
 export type FinishComments = 'off' | 'draft';
 
+/** What the build does after the code is written. */
+export type ReviewMode = 'off' | 'mr' | 'auto';
+
 export type Mapping = {
   /** The folder this mapping was made for (the OpenChamber project's directory). */
   directory: string;
@@ -12,6 +15,8 @@ export type Mapping = {
   /** The team or project id shown first, or 'all' for every mapped one. */
   activeProjectId: string;
   finishComments: FinishComments;
+  /** `finishComments` is the folder's own choice, not the 'off' every mapping starts with. See `folderFinish`. */
+  finishSet?: boolean;
   /** The agent the plan to build handoff starts; empty means `build`. */
   buildAgent?: string;
   /** `provider/model` for the build session; empty means the host's default. */
@@ -20,11 +25,14 @@ export type Mapping = {
   planAgent?: string;
   /** `provider/model` for the plan session; empty means the host's default. */
   planModel?: string;
-  /** Start build adds the plan to the issue's description first. */
+  /** Start build adds the plan to the issue's description first. Empty follows the setting for every folder. */
   postPlan?: boolean;
-  /** What the build does after the code is written: `mr` (usual options, then AI review), `auto` (all of it), or off. */
-  reviewMode?: 'mr' | 'auto';
-  /** The AI reviewers whose comments the build handles, comma separated; empty means CodeRabbit. */
+  /**
+   * What the build does after the code is written: `mr` (usual options, then AI review), `auto` (all of it), or `off`.
+   * Empty follows the setting for every folder.
+   */
+  reviewMode?: ReviewMode;
+  /** The AI reviewers whose comments the build handles, comma separated; empty follows every folder's, then CodeRabbit. */
   aiReviewers?: string;
   updatedAt: number;
 };
@@ -112,10 +120,13 @@ export const setStartState = (teamId: string, name: string) => set(`pref:start-s
 
 export const getLastView = (placeKey: string) => get<string>(`view:${placeKey}`);
 
-/** The plan and build agent and model for every folder. A pinned folder's own choice wins over these. */
-export type AgentDefaults = { planAgent?: string; planModel?: string; buildAgent?: string; buildModel?: string };
+/** Settings for every folder: the plan and build agent and model, the build's last steps, finish comments. A pinned folder's own choice wins over these. */
+export type AgentDefaults = {
+  planAgent?: string; planModel?: string; buildAgent?: string; buildModel?: string;
+  reviewMode?: 'mr' | 'auto'; aiReviewers?: string; finishComments?: 'draft'; postPlan?: true;
+};
 
-const AGENT_KEYS = ['planAgent', 'planModel', 'buildAgent', 'buildModel'] as const;
+const AGENT_KEYS = ['planAgent', 'planModel', 'buildAgent', 'buildModel', 'aiReviewers'] as const;
 
 export const getAgentDefaults = async (): Promise<AgentDefaults> => {
   const value = await get<Record<string, unknown>>('pref:agents');
@@ -124,6 +135,9 @@ export const getAgentDefaults = async (): Promise<AgentDefaults> => {
     const text = value?.[key];
     if (typeof text === 'string' && text.trim()) out[key] = text.trim();
   }
+  if (value?.reviewMode === 'mr' || value?.reviewMode === 'auto') out.reviewMode = value.reviewMode;
+  if (value?.finishComments === 'draft') out.finishComments = 'draft';
+  if (value?.postPlan === true) out.postPlan = true;
   return out;
 };
 

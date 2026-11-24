@@ -6,10 +6,11 @@ import {
   type GuestSessionEventRequest, type MentionsResolveRequest, type MentionsSearchRequest, type ServiceHost,
 } from '@openchamber/sdk';
 import type { Choices } from './choices.ts';
+import { finishChoice, postPlanChoice } from '../shared/folder-settings.ts';
 import { CLAIM_STALE_MS, parsePlanExtras, type ExtrasState } from '../shared/plan-extras.ts';
 import { issueOfBranch, readBranch, resolveMapped, trimDir, type ReadText } from './directories.ts';
 import { buildDraft, handoffId, HANDOFFS_MAX, linearIssuesOf, looksLikePlan, PLANS_KEPT, upsertDraft, upsertHandoff, withoutBlocks } from './events.ts';
-import { handoffPrompt, leadBuildPrompt, leadPlanPrompt, PLAN_LIMIT, planPrompt, sessionChoice } from './handoff.ts';
+import { handoffPrompt, leadBuildPrompt, leadPlanPrompt, PLAN_LIMIT, planPrompt, reviewChoice, sessionChoice } from './handoff.ts';
 import { buildInstructions } from './instructions.ts';
 import { fetchBranchIssue, fetchDocText, fetchIssueText, fetchProjectText, refreshFromLinear, searchMentionIssues, type Gql } from './linear-node.ts';
 import { docMarkdown, issueMarkdown, keyOf, locate, locateIssue, mentionRows, projectMarkdown } from './mentions.ts';
@@ -278,7 +279,7 @@ export const createApp = (deps: Deps) => {
 
   // ---- handoffs
 
-  const withSetting = (list: Handoff[]): Handoff[] => list.map((h) => ({ ...h, postPlan: config.directories[h.directory]?.postPlan === true }));
+  const withSetting = (list: Handoff[]): Handoff[] => list.map((h) => ({ ...h, postPlan: postPlanChoice(config.directories[h.directory], config.defaults) }));
 
   const handoffsFor = (directory: string | null): Handoff[] => {
     if (!directory) return withSetting(handoffs.pending);
@@ -395,7 +396,7 @@ export const createApp = (deps: Deps) => {
     if (body.mode === 'preview') {
       try {
         const got = await readPlan(sessionId);
-        return { body: 'error' in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === 'lead' } };
+        return { body: 'error' in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: postPlanChoice(mapping, config.defaults), earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === 'lead' } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
         return fail(message(error));
@@ -415,7 +416,7 @@ export const createApp = (deps: Deps) => {
         directory: sessionDirectory,
         planSessionTitle: typeof body.sessionTitle === 'string' ? body.sessionTitle : pending?.sessionTitle ?? null,
         plan: got.plan,
-        review: { mode: mapping?.reviewMode ?? 'off', reviewers: mapping?.aiReviewers ?? '' },
+        review: reviewChoice(mapping, config.defaults),
         splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? [],
       };
       const choice = sessionChoice('build', mapping, config.defaults, { model: body.model });
@@ -617,7 +618,7 @@ export const createApp = (deps: Deps) => {
     const reply = content?.type === 'turn-finished' ? withoutBlocks(content.reply) : '';
     const title = content?.sessionTitle ?? null;
 
-    if (mapping.finishComments === 'draft') {
+    if (finishChoice(mapping, config.defaults) === 'draft') {
       for (const identifier of issues) {
         const draft = buildDraft({ directory: folder, sessionId: event.session.id, identifier, title, reply, now: now() });
         if (draft) drafts = upsertDraft(drafts, draft, now());
