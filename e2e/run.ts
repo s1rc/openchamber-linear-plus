@@ -457,6 +457,53 @@ const tests: Test[] = [
       await ctx.page.context().close();
     },
   },
+  {
+    name: 'status-plan-row',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'status/index.html', surface: 'status' }, 280, 700);
+      const row = ctx.frame.locator('[data-handoff="ses_plan:ENG-13"]');
+      await row.waitFor();
+      const labels = (await row.locator('button').allInnerTexts()).map((t) => t.trim());
+      expect(['Start Build', 'Add Plan Only', 'Dismiss'].every((l) => labels.includes(l)), `the buttons are in title case (got ${labels.join(', ')})`);
+      const wide = await ctx.frame.locator('html').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+      expect(wide.scroll <= wide.client, `nothing scrolls sideways at 280 px (${wide.scroll} > ${wide.client})`);
+      const dismiss = await row.locator('button', { hasText: 'Dismiss' }).evaluate((el) => el.getBoundingClientRect().right);
+      expect(dismiss <= wide.client, 'Dismiss stays inside the section');
+      const line = row.locator('.lin-status-line');
+      await line.hover();
+      expect(await line.evaluate((el) => getComputedStyle(el).backgroundColor) === 'rgba(0, 0, 0, 0)', 'the row draws no hover behind its buttons');
+      const before = calls.length;
+      await row.locator('button', { hasText: 'Add Plan Only' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'Add Plan Only writes the plan into the description');
+      await until(async () => (await row.innerText()).includes('Plan Added'), 'and says so');
+      expect(!calls.slice(before).some((c) => c.key.startsWith('POST /handoff {"sessionId"')), 'and starts no build');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'add-plan-only',
+    run: async (browser) => {
+      const sessions = JSON.stringify([{
+        id: 'ses_plan', title: 'Plan: saved cards first', projectId: 'ocp1', directory: '/work/engineering-api-wt', agent: 'plan', parentId: null, createdAt: 1, updatedAt: 5, archivedAt: null,
+        worktree: { directory: '/work/engineering-api-wt', name: 'eng-13', branch: 'matt/eng-13-saved-cards', status: 'ready' }, activity: 'idle', outcome: null,
+        items: [{ id: 'linear-dashboard:ENG-13', data: { identifier: 'ENG-13', issueId: 'i' } }], links: [],
+      }]);
+      const block = await open(browser, { page: 'blocks/index.html', block: 'LinearIssue', args: JSON.stringify({ id: 'ENG-13' }), projects: PROJECTS, sessions }, 720, 700);
+      const add = block.frame.locator('button', { hasText: 'Add plan only' });
+      await add.waitFor();
+      const before = calls.length;
+      await add.click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'the issue card adds the plan to the description');
+      await until(async () => (await toasts(block)).includes('Added the plan to ENG-13'), 'and says so');
+      await block.page.context().close();
+      const panel = await open(browser, { page: 'panel/index.html', surface: 'page', projects: PROJECTS, sessions });
+      await navItem(panel, 'Issues').click();
+      await panel.frame.locator('[data-issue="ENG-13"]').click();
+      // The pane is narrow, so its bar says Add plan.
+      await panel.frame.locator('.lin-issue-bar button', { hasText: /^Add plan$/ }).waitFor();
+      await panel.page.context().close();
+    },
+  },
 ];
 
 const chrome = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';

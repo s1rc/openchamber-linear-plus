@@ -14,7 +14,7 @@ Run all of these before a release. Each must pass.
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff and lead mode |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 17 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 19 screen tests, fake data only |
 
 Also check by grep:
 
@@ -52,6 +52,8 @@ Also check by grep:
 | `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
 | `board-delete` | Board columns are one darker panel from the header down; Delete from a card's menu asks first, moves the issue to the trash and says how to get it back |
 | `inbox` | Notifications read only published fields: each says who did what (comment, assignment, new status, project update with its health); opening one opens the issue and marks it read |
+| `status-plan-row` | At 280 px the Work Status plan row's buttons are in title case, nothing scrolls sideways, Dismiss stays inside, the row draws no hover; Add Plan Only writes the plan and starts no build |
+| `add-plan-only` | The LinearIssue card's Add plan only writes the plan into the description and says so; the issue view's bar offers it too |
 | `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 
 Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).

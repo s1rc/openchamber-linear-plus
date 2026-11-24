@@ -1,9 +1,10 @@
-// LinearIssue(id): one issue as a card, read live. Open and Start session are the only actions, and
-// both wait for a click.
+// LinearIssue(id): one issue as a card, read live. Its actions (open, start a plan, session or build, add the plan
+// only) all wait for a click.
 import { Card, Chip, KV } from '@openchamber-ext/shared-ui/preact';
 import { useState } from 'preact/hooks';
 import { LabelChip } from '../app/components/issue-chips.tsx';
 import { splitIds } from '../shared/block-args.ts';
+import { AddPlanButton } from '../shared/add-plan-button.tsx';
 import { BuildPanel, useBuildSource } from '../shared/build-panel.tsx';
 import { relativeTime, shortDate } from '../shared/format.ts';
 import { Avatar, PriorityGlyph, ProjectIcon, StatusGlyph } from '../shared/glyphs.tsx';
@@ -43,6 +44,7 @@ const IssueCard = ({ issue }: { issue: IssueRow }) => {
         <Button label="Start plan" variant="outline" size="sm" disabled={panel === 'plan'} onClick={() => setPanel('plan')} />
         <Button label="Start session" variant="outline" size="sm" disabled={panel === 'session'} onClick={() => setPanel('session')} />
         {source && <Button label="Start build" variant="outline" size="sm" disabled={panel === 'build'} onClick={() => setPanel('build')} />}
+        {source && <AddPlanButton identifier={issue.identifier} source={source} />}
       </div>
       {(panel === 'session' || panel === 'plan') && <StartPanel issue={issue} plan={panel === 'plan'} onClose={() => setPanel(null)} />}
       {panel === 'build' && source && (

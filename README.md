@@ -43,7 +43,7 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 
 1. Open an issue and click **Start plan**. Linear+ starts a planning session with the issue context and the team's estimate scale.
 2. Review the plan. When enabled, Linear+ sets the estimate and creates split-out issues after the plan finishes.
-3. Click **Start build** to hand the finished plan to a build session.
+3. Click **Start build** to hand the finished plan to a build session. Or click **Add plan only** to put the plan in the issue's description and stop, when someone else picks the work up.
 
 With **Run the plan and the build under one lead session** on (Settings, Plan and build), Start plan makes the worktree with one session, the lead. The lead starts the plan, and on Start build the build, as sessions nested under it, and answers their questions itself where it can. With it off, the plan and the build are sessions of their own, and the host leaves an empty first session in the worktree.
 

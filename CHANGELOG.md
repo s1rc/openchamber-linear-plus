@@ -7,16 +7,19 @@ What changed in each Linear+ release. The newest is first. The release workflow 
 ### Added
 
 - **Lead mode** (Settings, Plan and build). Start plan makes the issue's worktree with one session, the lead. The lead starts the plan as a session nested under it, on the plan agent and model. When you click Start build, it starts the build the same way, on the build agent and model. It answers their questions itself and asks you only what it cannot settle. Off by default. Needs OpenChamber 2.7.3 or later.
+- **Add plan only** on the issue card in chat and in the issue view, next to Start build. It writes the plan into the issue's description and starts nothing, for when someone else picks the work up in a session of their own. Work Status already had it.
 - **All folders settings** for After the build (with its AI reviewers), Finish comments and Add the plan to the issue. This folder overrides each one in a pinned folder, as the plan and build agents and models already did.
 
 ### Changed
 
 - Sub-issues sit on a card, like the description and the comments.
+- The Work Status plan row's buttons are in title case: Start Build (or Add Plan and Build), Add Plan Only, Dismiss.
 - Add the plan to the issue has its own section in Settings, and so does After the build.
 - A folder whose finish comments were left at Off now follows All folders. A folder set to Draft keeps it.
 
 ### Fixed
 
+- The Work Status section no longer scrolls sideways, which also made it scroll up and down: the plan row's buttons wrap inside its width and Dismiss stays inside it. The row no longer draws a hover behind its buttons.
 - Changing a folder's team or projects kept only its finish comments. It now keeps the folder's agents, models, After the build, reviewers and Add the plan choice too.
 
 ## 1.2.0 (2026-11-23)

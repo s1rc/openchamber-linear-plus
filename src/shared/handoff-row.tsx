@@ -1,4 +1,4 @@
-// "Plan ready for ENG-123" with Start build and Dismiss, in the Work Status section. Starting the build is a
+// "Plan ready for ENG-123" with Start Build, Add Plan Only and Dismiss, in the Work Status section. Starting the build is a
 // click here; the service only listed the plan.
 import { toast } from '@openchamber-ext/shared-ui';
 import { useState } from 'preact/hooks';
@@ -7,13 +7,13 @@ import { dismissHandoff } from './handoff.ts';
 import type { Handoff } from './handoff-rules.ts';
 import { host } from './host.ts';
 import { Button } from './kit.tsx';
-import { startBuildFromHandoff, writePlanFromHandoff } from './start-build.ts';
+import { AddPlanButton } from './add-plan-button.tsx';
+import { sourceOfHandoff, startBuildFromHandoff } from './start-build.ts';
 import { openStartedSession } from './start-session.ts';
 import { writeErrorText } from './writes.ts';
 
 export const HandoffRow = ({ handoff, onDone }: { handoff: Handoff; onDone: () => void }) => {
   const [busy, setBusy] = useState<'build' | 'plan' | 'dismiss' | null>(null);
-  const [written, setWritten] = useState(false);
 
   const build = async () => {
     setBusy('build');
@@ -29,18 +29,6 @@ export const HandoffRow = ({ handoff, onDone }: { handoff: Handoff; onDone: () =
       setBusy(null);
     }
   };
-  const writeOnly = async () => {
-    setBusy('plan');
-    try {
-      await writePlanFromHandoff(handoff);
-      setWritten(true);
-      invalidate('issue');
-      await toast(host, 'success', `Added the plan to ${handoff.identifier}`);
-    } catch (error) {
-      await toast(host, 'error', `Could not add the plan to ${handoff.identifier}: ${writeErrorText(error)}`);
-    }
-    setBusy(null);
-  };
   const dismiss = async () => {
     setBusy('dismiss');
     if (await dismissHandoff(handoff.id)) onDone();
@@ -52,11 +40,11 @@ export const HandoffRow = ({ handoff, onDone }: { handoff: Handoff; onDone: () =
 
   return (
     <div class="lin-status-draft" data-handoff={handoff.id}>
-      <div class="lin-status-line lin-status-line--wrap">
+      <div class="lin-status-line lin-status-line--wrap lin-status-line--static">
         <span class="lin-status-label" title={handoff.sessionTitle}>Plan ready for <span class="sui-mono lin-status-ref">{handoff.identifier}</span></span>
         <span class="lin-status-actions">
-          <Button label={handoff.postPlan ? 'Add plan and build' : 'Start build'} size="xs" loading={busy === 'build'} disabled={busy !== null} onClick={() => { void build(); }} />
-          <Button label={written ? 'Plan added' : 'Add plan only'} variant="outline" size="xs" loading={busy === 'plan'} disabled={busy !== null} onClick={() => { void writeOnly(); }} />
+          <Button label={handoff.postPlan ? 'Add Plan and Build' : 'Start Build'} size="xs" loading={busy === 'build'} disabled={busy !== null} onClick={() => { void build(); }} />
+          <AddPlanButton identifier={handoff.identifier} source={sourceOfHandoff(handoff)} label="Add Plan Only" doneLabel="Plan Added" size="xs" disabled={busy !== null && busy !== 'plan'} onBusy={(on) => setBusy(on ? 'plan' : null)} />
           <Button label="Dismiss" variant="ghost" size="xs" loading={busy === 'dismiss'} disabled={busy !== null} onClick={() => { void dismiss(); }} />
         </span>
       </div>

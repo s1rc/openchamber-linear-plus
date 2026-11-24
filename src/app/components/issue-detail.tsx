@@ -24,6 +24,7 @@ import { IssueRow } from './issue-row.tsx';
 import {
   AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
 } from './property-editors.tsx';
+import { AddPlanButton } from '../../shared/add-plan-button.tsx';
 import { BuildPanel, useBuildSource } from '../../shared/build-panel.tsx';
 import { Modal } from './modal.tsx';
 import { RichEditor } from './rich-editor.tsx';
@@ -356,6 +357,7 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
         <Button label={stacked ? 'Plan' : 'Start plan'} size="xs" onClick={() => setStarting('plan')} />
         <Button label={stacked ? 'Start' : 'Start session'} variant="outline" size="xs" onClick={() => setStarting('session')} />
         {buildSource && <Button label={stacked ? 'Build' : 'Start build'} variant="outline" size="xs" onClick={() => setBuilding(true)} />}
+        {buildSource && <AddPlanButton identifier={issue.identifier} source={buildSource} label={stacked ? 'Add plan' : 'Add plan only'} size="xs" />}
         <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
         <Menu
           label="More"

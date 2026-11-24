@@ -43,9 +43,10 @@ export const writePlan = async (issue: Pick<IssueDetail, 'identifier'>, source: 
   await updateIssue(current, { input: { description }, patch: { description } });
 };
 
-/** The row's plan only click: the plan goes into the description and nothing starts. */
-export const writePlanFromHandoff = (handoff: Handoff): Promise<void> =>
-  writePlan({ identifier: handoff.identifier }, { sessionId: handoff.sessionId, directory: handoff.sessionDirectory, title: handoff.sessionTitle, agent: null, inWorktree: true, updatedAt: handoff.createdAt });
+/** The planning session a Work Status row stands for, as a build source. */
+export const sourceOfHandoff = (handoff: Handoff): BuildSource => ({
+  sessionId: handoff.sessionId, directory: handoff.sessionDirectory, title: handoff.sessionTitle, agent: null, inWorktree: true, updatedAt: handoff.createdAt,
+});
 
 /** Writes the plan to the issue if asked, then starts the build, then moves the issue. A failed write stops everything: nothing has started. */
 export const startBuildFor = async (issue: IssueDetail, source: BuildSource, options: BuildOptions): Promise<BuildOutcome> => {
@@ -77,8 +78,7 @@ export const startBuildFor = async (issue: IssueDetail, source: BuildSource, opt
 export const startBuildFromHandoff = async (handoff: Handoff): Promise<BuildOutcome & { issue: IssueDetail }> => {
   const issue = (await gql<IssueDetailResult>(ISSUE_DETAIL, { id: handoff.identifier })).issue;
   const [move, lastState] = await Promise.all([getStartMoves().catch(() => true), getStartState(issue.team.id).catch(() => null)]);
-  const source: BuildSource = { sessionId: handoff.sessionId, directory: handoff.sessionDirectory, title: handoff.sessionTitle, agent: null, inWorktree: true, updatedAt: handoff.createdAt };
-  const outcome = await startBuildFor(issue, source, { move, post: handoff.postPlan === true, lastState });
+  const outcome = await startBuildFor(issue, sourceOfHandoff(handoff), { move, post: handoff.postPlan === true, lastState });
   if (outcome.moved && outcome.target) void setStartState(issue.team.id, outcome.target.name).catch(() => undefined);
   return { ...outcome, issue };
 };
