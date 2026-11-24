@@ -53,7 +53,7 @@ const UpdateComposer = ({ project }: { project: Detail }) => {
   const [body, setBody] = useState('');
   const [health, setHealth] = useState<Health>(project.health ?? 'onTrack');
   const [busy, setBusy] = useState(false);
-  if (!open) return <div><Button label="Post update" variant="outline" size="xs" onClick={() => setOpen(true)} /></div>;
+  if (!open) return <div><Button label="Post Update" variant="outline" size="xs" onClick={() => setOpen(true)} /></div>;
   const post = async () => {
     if (!body.trim() || busy) return;
     setBusy(true);
@@ -75,7 +75,7 @@ const UpdateComposer = ({ project }: { project: Detail }) => {
       <div class="sui-row">
         <span class="sui-grow" />
         <Button label="Cancel" variant="ghost" size="xs" disabled={busy} onClick={() => setOpen(false)} />
-        <Button label={busy ? 'Posting...' : 'Post update'} size="xs" disabled={busy || !body.trim()} onClick={() => { void post(); }} />
+        <Button label={busy ? 'Posting...' : 'Post Update'} size="xs" disabled={busy || !body.trim()} onClick={() => { void post(); }} />
       </div>
     </div>
   );

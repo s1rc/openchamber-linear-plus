@@ -1,4 +1,4 @@
-// "Plan ready for ENG-123" with Start Build, Add Plan Only and Dismiss, in the Work Status section. Starting the build is a
+// "Plan ready for ENG-123" with Start Build, Write Plan and Dismiss, in the Work Status section. Starting the build is a
 // click here; the service only listed the plan.
 import { toast } from '@openchamber-ext/shared-ui';
 import { useState } from 'preact/hooks';
@@ -43,8 +43,8 @@ export const HandoffRow = ({ handoff, onDone }: { handoff: Handoff; onDone: () =
       <div class="lin-status-line lin-status-line--wrap lin-status-line--static">
         <span class="lin-status-label" title={handoff.sessionTitle}>Plan ready for <span class="sui-mono lin-status-ref">{handoff.identifier}</span></span>
         <span class="lin-status-actions">
-          <Button label={handoff.postPlan ? 'Add Plan and Build' : 'Start Build'} size="xs" loading={busy === 'build'} disabled={busy !== null} onClick={() => { void build(); }} />
-          <AddPlanButton identifier={handoff.identifier} source={sourceOfHandoff(handoff)} label="Add Plan Only" doneLabel="Plan Added" size="xs" disabled={busy !== null && busy !== 'plan'} onBusy={(on) => setBusy(on ? 'plan' : null)} />
+          <Button label={handoff.postPlan ? 'Write Plan and Build' : 'Start Build'} size="xs" loading={busy === 'build'} disabled={busy !== null} onClick={() => { void build(); }} />
+          <AddPlanButton identifier={handoff.identifier} source={sourceOfHandoff(handoff)} size="xs" disabled={busy !== null && busy !== 'plan'} onBusy={(on) => setBusy(on ? 'plan' : null)} />
           <Button label="Dismiss" variant="ghost" size="xs" loading={busy === 'dismiss'} disabled={busy !== null} onClick={() => { void dismiss(); }} />
         </span>
       </div>

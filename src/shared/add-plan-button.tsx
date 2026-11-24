@@ -1,4 +1,4 @@
-// Add plan only: writes the planning session's plan into the issue's description and starts nothing, for when someone
+// Write Plan: writes the planning session's plan into the issue's description and starts nothing, for when someone
 // else picks the work up in a session of their own. A Linear write, on the click. A reply that is not a plan is refused
 // with the reason; Start build's panel can still use it anyway.
 import { toast } from '@openchamber-ext/shared-ui';
@@ -23,7 +23,7 @@ type Props = {
   onBusy?: (busy: boolean) => void;
 };
 
-export const AddPlanButton = ({ identifier, source, label = 'Add plan only', doneLabel = 'Plan added', size = 'sm', variant = 'outline', disabled, onBusy }: Props) => {
+export const AddPlanButton = ({ identifier, source, label = 'Write Plan', doneLabel = 'Plan Written', size = 'sm', variant = 'outline', disabled, onBusy }: Props) => {
   const [busy, setBusy] = useState(false);
   const [added, setAdded] = useState(false);
   const add = async () => {

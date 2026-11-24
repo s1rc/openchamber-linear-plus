@@ -217,7 +217,7 @@ const ReviewPairFields = ({ pair }: { pair: ReviewPair }) => {
             disabled={pair.disabled}
           />
           <div class="sui-row">
-            <Button label="Save reviewers" size="sm" disabled={pair.disabled || reviewers.trim() === pair.reviewers} onClick={() => { void pair.save(pair.value, reviewers.trim()); }} />
+            <Button label="Save Reviewers" size="sm" disabled={pair.disabled || reviewers.trim() === pair.reviewers} onClick={() => { void pair.save(pair.value, reviewers.trim()); }} />
           </div>
         </>
       )}

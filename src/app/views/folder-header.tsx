@@ -76,11 +76,11 @@ export const ScopeChip = ({ workspace, state, scoped, onScoped }: {
   return scoped ? (
     <div class="sui-row">
       <Chip>This folder: {mappedNames(workspace, state)}</Chip>
-      <Button label="Show all" variant="ghost" size="xs" onClick={() => onScoped(false)} />
+      <Button label="Show All" variant="ghost" size="xs" onClick={() => onScoped(false)} />
     </div>
   ) : (
     <div class="sui-row">
-      <Button label="Only this folder" variant="outline" size="xs" onClick={() => onScoped(true)} />
+      <Button label="Only This Folder" variant="outline" size="xs" onClick={() => onScoped(true)} />
     </div>
   );
 };

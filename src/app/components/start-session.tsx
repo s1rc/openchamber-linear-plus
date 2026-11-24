@@ -73,7 +73,7 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
       footer={(
         <>
           <Button label="Cancel" variant="ghost" size="sm" onClick={onClose} />
-          <Button label={busy ? 'Starting...' : made ? 'Retry in that worktree' : plan ? 'Start plan' : 'Start session'} size="sm" disabled={busy || !prefLoaded} onClick={() => { void start(); }} />
+          <Button label={busy ? 'Starting...' : made ? 'Retry in That Worktree' : plan ? 'Start Plan' : 'Start Session'} size="sm" disabled={busy || !prefLoaded} onClick={() => { void start(); }} />
         </>
       )}
     >

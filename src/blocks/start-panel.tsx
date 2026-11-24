@@ -127,7 +127,7 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
       <MoveRow choice={choice} disabled={busy} />
       {plan && <ModelPick role="plan" directory={directory} value={model} onChange={setModel} disabled={busy} />}
       <div class="sui-row">
-        <Button label={busy ? 'Starting...' : made ? 'Retry in that worktree' : found ? 'Start in that worktree' : plan ? 'Start plan' : 'Start session'} size="sm" disabled={busy} onClick={() => { void start(); }} />
+        <Button label={busy ? 'Starting...' : made ? 'Retry in That Worktree' : found ? 'Start in That Worktree' : plan ? 'Start Plan' : 'Start Session'} size="sm" disabled={busy} onClick={() => { void start(); }} />
         <Button label="Cancel" variant="ghost" size="sm" disabled={busy} onClick={onClose} />
       </div>
     </div>

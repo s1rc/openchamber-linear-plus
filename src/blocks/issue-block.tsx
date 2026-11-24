@@ -41,10 +41,10 @@ const IssueCard = ({ issue }: { issue: IssueRow }) => {
       />
       <div class="sui-row">
         <Button label="Open in Linear" variant="outline" size="sm" onClick={() => { void host.openUrl(issue.url); }} />
-        <Button label="Start plan" variant="outline" size="sm" disabled={panel === 'plan'} onClick={() => setPanel('plan')} />
-        <Button label="Start session" variant="outline" size="sm" disabled={panel === 'session'} onClick={() => setPanel('session')} />
-        {source && <Button label="Start build" variant="outline" size="sm" disabled={panel === 'build'} onClick={() => setPanel('build')} />}
+        <Button label="Start Session" variant="outline" size="sm" disabled={panel === 'session'} onClick={() => setPanel('session')} />
+        <Button label="Plan" variant="outline" size="sm" disabled={panel === 'plan'} onClick={() => setPanel('plan')} />
         {source && <AddPlanButton identifier={issue.identifier} source={source} />}
+        {source && <Button label="Build" variant="outline" size="sm" disabled={panel === 'build'} onClick={() => setPanel('build')} />}
       </div>
       {(panel === 'session' || panel === 'plan') && <StartPanel issue={issue} plan={panel === 'plan'} onClose={() => setPanel(null)} />}
       {panel === 'build' && source && (

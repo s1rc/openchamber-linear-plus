@@ -189,7 +189,7 @@ export const CreateIssueDialog = ({ teamIds, projectId = null, onClose, onCreate
       footer={(
         <>
           <Button label="Cancel" variant="ghost" size="sm" onClick={onClose} />
-          <Button label={form.busy ? 'Creating...' : 'Create issue'} size="sm" disabled={!form.canSubmit} onClick={form.submit} />
+          <Button label={form.busy ? 'Creating...' : 'Create Issue'} size="sm" disabled={!form.canSubmit} onClick={form.submit} />
         </>
       )}
     >

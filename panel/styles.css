@@ -212,6 +212,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-issue-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; padding-bottom: 8px; border-bottom: 1px solid var(--oc-border); }
 /* In the issue bar the copy buttons are plain icons on the panel's own background, left of Plan. */
 .lin-issue-bar .lin-icon-row { gap: 2px; }
+.lin-issue-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+/* Narrow (the rail, the page's pane): the actions take a row of their own under Close, the icons and More. */
+@container (max-width: 640px) { .lin-issue-bar .lin-issue-actions { order: 10; flex-basis: 100%; } }
 .lin-issue-bar .lin-icon-btn { width: 26px; height: 26px; }
 .lin-icon-row--plain .lin-icon-btn { background: transparent; border-radius: var(--oc-radius, 6px); }
 .lin-icon-row--plain .lin-icon-btn:hover { background: var(--oc-hover); }

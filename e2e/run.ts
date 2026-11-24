@@ -217,7 +217,7 @@ const tests: Test[] = [
     run: async (browser) => {
       const ctx = await open(browser, { page: 'panel/index.html', surface: 'page', storage: JSON.stringify({ 'pref:assign-me': true }) });
       await navItem(ctx, 'Issues').click();
-      await ctx.frame.locator('.lin-toolbar button', { hasText: 'New issue' }).click();
+      await ctx.frame.locator('.lin-toolbar button', { hasText: 'New Issue' }).click();
       const modal = ctx.frame.locator('.lin-modal');
       await until(async () => (await modal.innerText()).includes('Default in Settings: on'), 'the form says the Settings default');
       expect((await modal.locator('[role="switch"]', { hasText: 'Assign to me' }).getAttribute('aria-checked')) === 'true', 'Assign to me starts on');
@@ -268,7 +268,7 @@ const tests: Test[] = [
       await until(async () => (await boxes.first().getAttribute('aria-checked')) === 'true', 'a click ticks the box');
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('- [x] Batch the tax lookups') && c.hit), 'and saves the description with the box ticked');
       expect(!(await toasts(ctx)).some((t) => /could not|refused|did not/i.test(t)), 'Linear took the change');
-      await pane.locator('.lin-description button', { hasText: 'Edit description' }).click();
+      await pane.locator('.lin-description button', { hasText: 'Edit Description' }).click();
       await pane.locator('.lin-rich-doc').waitFor();
       expect(await pane.locator('.lin-description-edit .lin-rich-doc[contenteditable="true"]').count() === 1, 'Edit description still opens the editor');
       await ctx.page.context().close();
@@ -281,7 +281,7 @@ const tests: Test[] = [
       await navItem(ctx, 'Issues').click();
       await ctx.frame.locator('[data-issue="ENG-11"]').click();
       const pane = ctx.frame.locator('.lin-pane');
-      const edit = pane.locator('.lin-description button', { hasText: 'Edit description' });
+      const edit = pane.locator('.lin-description button', { hasText: 'Edit Description' });
       await edit.click();
       const doc = pane.locator('.lin-rich-doc[contenteditable="true"]');
       await doc.waitFor();
@@ -464,7 +464,7 @@ const tests: Test[] = [
       const row = ctx.frame.locator('[data-handoff="ses_plan:ENG-13"]');
       await row.waitFor();
       const labels = (await row.locator('button').allInnerTexts()).map((t) => t.trim());
-      expect(['Start Build', 'Add Plan Only', 'Dismiss'].every((l) => labels.includes(l)), `the buttons are in title case (got ${labels.join(', ')})`);
+      expect(['Start Build', 'Write Plan', 'Dismiss'].every((l) => labels.includes(l)), `the buttons are in title case (got ${labels.join(', ')})`);
       const wide = await ctx.frame.locator('html').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
       expect(wide.scroll <= wide.client, `nothing scrolls sideways at 280 px (${wide.scroll} > ${wide.client})`);
       const dismiss = await row.locator('button', { hasText: 'Dismiss' }).evaluate((el) => el.getBoundingClientRect().right);
@@ -473,9 +473,9 @@ const tests: Test[] = [
       await line.hover();
       expect(await line.evaluate((el) => getComputedStyle(el).backgroundColor) === 'rgba(0, 0, 0, 0)', 'the row draws no hover behind its buttons');
       const before = calls.length;
-      await row.locator('button', { hasText: 'Add Plan Only' }).click();
-      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'Add Plan Only writes the plan into the description');
-      await until(async () => (await row.innerText()).includes('Plan Added'), 'and says so');
+      await row.locator('button', { hasText: 'Write Plan' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'Write Plan writes the plan into the description');
+      await until(async () => (await row.innerText()).includes('Plan Written'), 'and says so');
       expect(!calls.slice(before).some((c) => c.key.startsWith('POST /handoff {"sessionId"')), 'and starts no build');
       await ctx.page.context().close();
     },
@@ -489,8 +489,11 @@ const tests: Test[] = [
         items: [{ id: 'linear-dashboard:ENG-13', data: { identifier: 'ENG-13', issueId: 'i' } }], links: [],
       }]);
       const block = await open(browser, { page: 'blocks/index.html', block: 'LinearIssue', args: JSON.stringify({ id: 'ENG-13' }), projects: PROJECTS, sessions }, 720, 700);
-      const add = block.frame.locator('button', { hasText: 'Add plan only' });
+      expect(!(await block.frame.locator('.lin-block-card .oc-sdk-btn[data-variant="default"]').count()), 'no orange button on the card');
+      const add = block.frame.locator('button', { hasText: 'Write Plan' });
       await add.waitFor();
+      const card = (await block.frame.locator('.lin-block-card .oc-sdk-btn').allInnerTexts()).map((t) => t.trim());
+      expect(card.join(',') === 'Open in Linear,Start Session,Plan,Write Plan,Build', `the card has the issue view's buttons in order (got ${card.join(', ')})`);
       const before = calls.length;
       await add.click();
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'the issue card adds the plan to the description');
@@ -499,8 +502,12 @@ const tests: Test[] = [
       const panel = await open(browser, { page: 'panel/index.html', surface: 'page', projects: PROJECTS, sessions });
       await navItem(panel, 'Issues').click();
       await panel.frame.locator('[data-issue="ENG-13"]').click();
-      // The pane is narrow, so its bar says Add plan.
-      await panel.frame.locator('.lin-issue-bar button', { hasText: /^Add plan$/ }).waitFor();
+      await panel.frame.locator('.lin-issue-bar button', { hasText: 'Write Plan' }).waitFor();
+      const bar = panel.frame.locator('.lin-issue-bar .oc-sdk-btn');
+      const names = (await bar.allInnerTexts()).map((t) => t.trim()).filter((t) => ['Attach', 'Start Session', 'Plan', 'Write Plan', 'Build'].includes(t));
+      expect(names.join(',') === 'Attach,Start Session,Plan,Write Plan,Build', `the bar has Attach first, then Start Session, Plan, Write Plan, Build (got ${names.join(', ')})`);
+      const primary = await bar.evaluateAll((els) => els.filter((el) => (el as HTMLElement).dataset.variant === 'default').map((el) => el.textContent?.trim()));
+      expect(primary.length === 0, `no orange button in the bar (got ${primary.join(', ')})`);
       await panel.page.context().close();
     },
   },

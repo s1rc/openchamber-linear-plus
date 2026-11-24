@@ -17,7 +17,7 @@ export const ProbeSection = () => {
     <Section title="Linear queries">
       <div class="sui-muted sui-small">Runs each read query once through your Linear connection. Changes nothing in Linear.</div>
       <div class="sui-row">
-        <Button label={running ? 'Checking' : 'Check queries'} size="sm" loading={running} onClick={start} />
+        <Button label={running ? 'Checking' : 'Check Queries'} size="sm" loading={running} onClick={start} />
         {results.length > 0 && !running && (
           <span class="sui-small">{failed ? `${failed} of ${results.length} failed` : `All ${results.length} answered`}</span>
         )}

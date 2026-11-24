@@ -59,9 +59,9 @@ export const Settings = ({ workspace, state, onChange }: { workspace: Workspace;
               ['Source', SOURCE_WORDS[detection.source] + (detection.inferred ? ` (${detection.evidence})` : '')],
             ]} />
             <div class="sui-row">
-              <Button label={state.mapped ? 'Change' : 'Pick team or projects'} size="sm" onClick={onChange} />
+              <Button label={state.mapped ? 'Change' : 'Pick Team or Projects'} size="sm" onClick={onChange} />
               {detection.inferred && <Button label="Pin" variant="outline" size="sm" onClick={() => { void state.pin(); }} />}
-              {detection.mapping && <Button label="Forget this folder's choice" variant="ghost" size="sm" onClick={() => { void state.clear(); }} />}
+              {detection.mapping && <Button label="Forget This Folder's Choice" variant="ghost" size="sm" onClick={() => { void state.clear(); }} />}
             </div>
           </>
         ) : (

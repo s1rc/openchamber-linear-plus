@@ -52,8 +52,8 @@ Also check by grep:
 | `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
 | `board-delete` | Board columns are one darker panel from the header down; Delete from a card's menu asks first, moves the issue to the trash and says how to get it back |
 | `inbox` | Notifications read only published fields: each says who did what (comment, assignment, new status, project update with its health); opening one opens the issue and marks it read |
-| `status-plan-row` | At 280 px the Work Status plan row's buttons are in title case, nothing scrolls sideways, Dismiss stays inside, the row draws no hover; Add Plan Only writes the plan and starts no build |
-| `add-plan-only` | The LinearIssue card's Add plan only writes the plan into the description and says so; the issue view's bar offers it too |
+| `status-plan-row` | At 280 px the Work Status plan row's buttons are in title case, nothing scrolls sideways, Dismiss stays inside, the row draws no hover; Write Plan writes the plan and starts no build |
+| `add-plan-only` | The LinearIssue card and the issue view's bar share their buttons, in title case and with no orange one: Start Session, Plan, Write Plan, Build (the bar starts with Attach); the card's Write Plan writes the plan into the description and says so |
 | `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 
 Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).

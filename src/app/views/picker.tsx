@@ -100,7 +100,7 @@ export const Picker = ({ workspace, state, onDone }: Props) => {
         <Button label="Cancel" variant="outline" onClick={onDone} />
         <span class="sui-grow" />
         {state.detection.mapping && (
-          <Button label="Forget this folder's choice" variant="ghost" onClick={() => { void state.clear().then(onDone); }} />
+          <Button label="Forget This Folder's Choice" variant="ghost" onClick={() => { void state.clear().then(onDone); }} />
         )}
       </div>
     </div>

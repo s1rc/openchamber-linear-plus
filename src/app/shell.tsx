@@ -98,7 +98,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
       tone="info"
       title="No Linear team for this folder"
       body="Pick the team that owns it, or the projects it works on, to scope every view to it."
-      action={{ label: 'Pick team or projects', onClick: toPicker }}
+      action={{ label: 'Pick Team or Projects', onClick: toPicker }}
     />
   );
 
@@ -114,7 +114,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
           <Empty
             title="No Linear team for this folder"
             body="Pick the team that owns this folder, or the projects it works on. Worktrees of this folder use the same choice."
-            action={{ label: 'Pick team or projects', onClick: toPicker }}
+            action={{ label: 'Pick Team or Projects', onClick: toPicker }}
           />
         </div>
       ) : (
@@ -129,7 +129,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
         <FolderHeader workspace={workspace} state={state} activeId={activeId} onActive={onActive} onChange={toPicker} />
         {route.view === 'project' && route.projectId ? (
           <>
-            <div><Button label="Back to overview" variant="ghost" size="xs" onClick={() => onRoute({ view: 'project' })} /></div>
+            <div><Button label="Back to Overview" variant="ghost" size="xs" onClick={() => onRoute({ view: 'project' })} /></div>
             <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues />
           </>
         ) : route.view === 'project' ? (
@@ -161,7 +161,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
   if (route.view === 'project-detail' && route.projectId) {
     return (
       <div class="lin-stack">
-        <div><Button label="Back to projects" variant="ghost" size="xs" onClick={() => onRoute({ view: 'projects' })} /></div>
+        <div><Button label="Back to Projects" variant="ghost" size="xs" onClick={() => onRoute({ view: 'projects' })} /></div>
         <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues />
       </div>
     );

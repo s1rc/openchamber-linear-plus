@@ -339,14 +339,14 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
           <div class="lin-toolbar-search"><SearchField value={search} placeholder="Filter by title or key" onChange={setSearch} /></div>
           {!wide && (
             <Button
-              label={filtersOpen ? 'Hide filters' : activeFilters ? `Filters (${activeFilters})` : 'Filters'}
+              label={filtersOpen ? 'Hide Filters' : activeFilters ? `Filters (${activeFilters})` : 'Filters'}
               variant="outline"
               size="sm"
               onClick={() => setFiltersOpen((o) => !o)}
             />
           )}
           <Button label="Options" variant={optionsOpen ? 'secondary' : 'outline'} size="sm" onClick={() => setOptionsOpen((o) => !o)} />
-          <Button label={wide ? 'New issue' : 'New'} size="sm" onClick={() => setCreating(true)} />
+          <Button label={wide ? 'New Issue' : 'New'} size="sm" onClick={() => setCreating(true)} />
         </div>
         {optionsOpen && (
           <OptionsPanel
@@ -394,7 +394,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
         {inMilestone && onMilestone && (
           <div class="lin-milestone-scope sui-small">
             <span>Milestone <strong>{milestones.find((m) => m.id === inMilestone)?.name}</strong>, every status</span>
-            <Button label="Show all issues" variant="ghost" size="xs" onClick={() => onMilestone(null)} />
+            <Button label="Show All Issues" variant="ghost" size="xs" onClick={() => onMilestone(null)} />
           </div>
         )}
         {list.data && (

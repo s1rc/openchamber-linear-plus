@@ -18,7 +18,7 @@ const DraftNote = ({ state, retry }: { state: ReturnType<typeof useDraft>['state
   if (state.kind === 'no-model') {
     return <Banner tone="info" title="No Small Model is set up" body="Choose one in OpenChamber's settings to have issues drafted for you. The form is empty for now." />;
   }
-  return <Banner tone="warning" title="Could not draft the issue" body={`${state.message} The form is empty.`} action={{ label: 'Try again', onClick: retry }} />;
+  return <Banner tone="warning" title="Could not draft the issue" body={`${state.message} The form is empty.`} action={{ label: 'Try Again', onClick: retry }} />;
 };
 
 /** The create form. With a job it drafts from the item; with none (the + menu) it starts empty and under tabs. */
@@ -49,7 +49,7 @@ export const CreateView = ({ job, scope, hidden = false }: { job: Job | null; sc
       {form.body}
       <div class="lin-form-foot">
         <Button label="Cancel" variant="ghost" size="sm" onClick={() => { void host.close(); }} />
-        <Button label={form.busy ? 'Creating...' : 'Create issue'} size="sm" disabled={!form.canSubmit} onClick={form.submit} />
+        <Button label={form.busy ? 'Creating...' : 'Create Issue'} size="sm" disabled={!form.canSubmit} onClick={form.submit} />
       </div>
     </div>
   );

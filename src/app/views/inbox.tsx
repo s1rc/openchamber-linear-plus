@@ -46,7 +46,7 @@ export const Inbox = ({ state, scoped }: Props) => {
         <Switch label="Unread only" checked={unreadOnly} onChange={setUnreadOnly} />
         <span class="sui-grow" />
         <span class="sui-muted sui-small">{unread} unread of {all.length}{list.data?.pageInfo.hasNextPage ? ' (latest 50)' : ''}</span>
-        {shownUnread.length > 0 && <Button label={scopedOn ? 'Mark these read' : 'Mark all read'} variant="outline" size="xs" onClick={() => read(shownUnread)} />}
+        {shownUnread.length > 0 && <Button label={scopedOn ? 'Mark These Read' : 'Mark All Read'} variant="outline" size="xs" onClick={() => read(shownUnread)} />}
       </div>
       {list.error && !list.data && <Banner tone="error" title="Could not load your inbox" action={{ label: 'Retry', onClick: () => list.refresh() }} />}
       {list.loading && !list.data && <div class="lin-center"><Spinner label="Loading inbox" /></div>}

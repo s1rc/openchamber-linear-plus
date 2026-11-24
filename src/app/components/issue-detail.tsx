@@ -132,7 +132,7 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
             ? <Markdown source={issue.description} onOpenIssue={onOpenIssue} onToggleTask={toggleTask} />
             : <div class="sui-muted">No description.</div>}
         </div>
-        <div class="lin-description-foot"><Button label={issue.description ? 'Edit description' : 'Add description'} variant="ghost" size="xs" onClick={edit} /></div>
+        <div class="lin-description-foot"><Button label={issue.description ? 'Edit Description' : 'Add Description'} variant="ghost" size="xs" onClick={edit} /></div>
       </div>
     );
   }
@@ -354,11 +354,13 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
             <Button label="Decline" variant="ghost" size="xs" disabled={triaging} onClick={() => { void triage('decline'); }} />
           </>
         )}
-        <Button label={stacked ? 'Plan' : 'Start plan'} size="xs" onClick={() => setStarting('plan')} />
-        <Button label={stacked ? 'Start' : 'Start session'} variant="outline" size="xs" onClick={() => setStarting('session')} />
-        {buildSource && <Button label={stacked ? 'Build' : 'Start build'} variant="outline" size="xs" onClick={() => setBuilding(true)} />}
-        {buildSource && <AddPlanButton identifier={issue.identifier} source={buildSource} label={stacked ? 'Add plan' : 'Add plan only'} size="xs" />}
-        <Button label={stacked ? 'Attach' : 'Attach to message'} variant="outline" size="xs" onClick={() => { void attach(); }} />
+        <span class="lin-issue-actions">
+          <Button label="Attach" variant="outline" size="xs" onClick={() => { void attach(); }} />
+          <Button label="Start Session" variant="outline" size="xs" onClick={() => setStarting('session')} />
+          <Button label="Plan" variant="outline" size="xs" onClick={() => setStarting('plan')} />
+          {buildSource && <AddPlanButton identifier={issue.identifier} source={buildSource} size="xs" />}
+          {buildSource && <Button label="Build" variant="outline" size="xs" onClick={() => setBuilding(true)} />}
+        </span>
         <Menu
           label="More"
           variant="ghost"

@@ -191,7 +191,7 @@ export const LabelPicker = ({ teamId, chosen, onChange, startOpen = false }: { t
     <div class="lin-stack lin-stack--tight">
       <div class="sui-row">
         {chosen.map((l) => <LabelChip key={l.id} label={l} />)}
-        <Button label={open ? 'Done' : chosen.length ? 'Edit labels' : 'Add label'} variant="ghost" size="xs" onClick={() => setOpen(!open)} />
+        <Button label={open ? 'Done' : chosen.length ? 'Edit Labels' : 'Add Label'} variant="ghost" size="xs" onClick={() => setOpen(!open)} />
       </div>
       {open && (
         <div class="lin-label-picker">

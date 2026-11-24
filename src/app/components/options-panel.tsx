@@ -96,7 +96,7 @@ export const OptionsPanel = ({ mode, options, hasSubTeams, onMode, onChange, onR
       )}
       <Toggle label={board ? 'Show empty columns' : 'Show empty groups'} checked={options.showEmpty} onChange={(on) => onChange({ showEmpty: on })} />
       {board && Object.keys(options.columns).length > 0 && (
-        <div><Button label="Reset hidden and pinned columns" variant="ghost" size="xs" onClick={() => onChange({ columns: {} })} /></div>
+        <div><Button label="Reset Hidden and Pinned Columns" variant="ghost" size="xs" onClick={() => onChange({ columns: {} })} /></div>
       )}
       <div class="lin-option-heading">Display properties</div>
       <div class="lin-chip-toggles">
@@ -111,7 +111,7 @@ export const OptionsPanel = ({ mode, options, hasSubTeams, onMode, onChange, onR
       <div class="sui-row">
         <Button label="Reset" variant="ghost" size="sm" onClick={onReset} />
         <span class="sui-grow" />
-        <Button label={`Set as my default ${board ? 'board' : 'list'}`} variant="outline" size="sm" onClick={onSetDefault} />
+        <Button label={`Set as My Default ${board ? 'Board' : 'List'}`} variant="outline" size="sm" onClick={onSetDefault} />
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ export const DeleteIssueDialog = ({ issue, onClose, onDeleted }: Props) => {
       footer={(
         <>
           <Button label="Cancel" variant="ghost" size="sm" disabled={busy} onClick={onClose} />
-          <Button label={busy ? 'Deleting...' : 'Delete issue'} variant="destructive" size="sm" disabled={busy} onClick={() => { void remove(); }} />
+          <Button label={busy ? 'Deleting...' : 'Delete Issue'} variant="destructive" size="sm" disabled={busy} onClick={() => { void remove(); }} />
         </>
       )}
     >

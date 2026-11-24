@@ -128,7 +128,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
           tone="warning"
           title="The last reply is not a plan"
           body={'Ask the planning session: "Repeat the final plan in full, unchanged, as your last message. No question cards." Then reopen this. Writing or building from a chat answer would put the wrong text in the issue and the build.'}
-          action={force ? undefined : { label: 'Use it anyway', onClick: () => setForce(true) }}
+          action={force ? undefined : { label: 'Use It Anyway', onClick: () => setForce(true) }}
         />
       )}
       {preview?.earlier && <div class="sui-muted sui-small">The last reply in that session is not the plan, so this is the latest reply that was.</div>}
@@ -144,8 +144,8 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
       <MoveRow choice={choice} disabled={busy} />
       <ModelPick role="build" directory={source.directory} value={model} onChange={setModel} disabled={busy} />
       <div class="sui-row">
-        <Button label={busy ? 'Starting...' : post && preview ? 'Add plan and build' : 'Start build'} size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void start(); }} />
-        <Button label={added ? 'Plan added' : 'Add plan only'} variant="outline" size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void addOnly(); }} />
+        <Button label={busy ? 'Starting...' : post && preview ? 'Write Plan and Build' : 'Start Build'} size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void start(); }} />
+        <Button label={added ? 'Plan Written' : 'Write Plan'} variant="outline" size="sm" disabled={busy || !preview || (!preview.isPlan && !force)} onClick={() => { void addOnly(); }} />
         <Button label="Cancel" variant="ghost" size="sm" disabled={busy} onClick={onClose} />
       </div>
     </div>

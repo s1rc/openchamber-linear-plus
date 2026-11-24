@@ -39,7 +39,7 @@ export const Done = ({ title, issue, canLink }: Props) => {
       <Banner tone="success" title={title} body={`${issue.identifier} ${issue.title}`} />
       <div class="lin-form-foot">
         <Button label="Close" variant="ghost" size="sm" onClick={() => { void host.close(); }} />
-        {canLink && <Button label={linked ? 'Linked' : 'Link to this session'} variant="outline" size="sm" disabled={linked} onClick={() => { void link(); }} />}
+        {canLink && <Button label={linked ? 'Linked' : 'Link to This Session'} variant="outline" size="sm" disabled={linked} onClick={() => { void link(); }} />}
         <Button label="Open in Linear" size="sm" onClick={() => { void host.openUrl(issue.url); }} />
       </div>
     </div>

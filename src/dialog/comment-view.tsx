@@ -100,14 +100,14 @@ export const CommentView = ({ item, directory }: { item: GuestMessageItem; direc
         <>
           <div class="lin-comment-target">
             <Chip><StatusGlyph type={issue.state.type} color={issue.state.color} teamId={issue.team.id} stateId={issue.state.id} /> <span class="sui-mono">{issue.identifier}</span> <span class="lin-ellipsis">{issue.title}</span></Chip>
-            <Button label="Change issue" variant="ghost" size="xs" onClick={() => setPicking(true)} />
+            <Button label="Change Issue" variant="ghost" size="xs" onClick={() => setPicking(true)} />
           </div>
           <div class="lin-grow">
             <TextField label="Comment" value={body} onChange={setBody} multiline rows={8} placeholder="Write a comment. Markdown works." />
           </div>
           <div class="lin-form-foot">
             <Button label="Cancel" variant="ghost" size="sm" onClick={() => { void host.close(); }} />
-            <Button label="Post comment" size="sm" disabled={!body.trim()} loading={busy} onClick={() => { void post(); }} />
+            <Button label="Post Comment" size="sm" disabled={!body.trim()} loading={busy} onClick={() => { void post(); }} />
           </div>
         </>
       )}

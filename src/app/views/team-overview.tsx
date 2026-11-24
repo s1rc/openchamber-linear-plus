@@ -37,7 +37,7 @@ export const TeamOverview = ({ team, orgKey, onProject }: { team: Team; orgKey: 
         <Empty title="No active projects" body={`${team.name} has no project in progress.`} />
       )}
       <div class="sui-row">
-        <Button label="Open team in Linear" variant="outline" size="sm" onClick={() => { void host.openUrl(`https://linear.app/${orgKey}/team/${team.key}/active`); }} />
+        <Button label="Open Team in Linear" variant="outline" size="sm" onClick={() => { void host.openUrl(`https://linear.app/${orgKey}/team/${team.key}/active`); }} />
       </div>
     </Section>
   );
