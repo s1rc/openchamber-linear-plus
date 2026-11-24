@@ -9,7 +9,7 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 485 unit and route tests in `test/` (see below) |
+| `bun test` | 488 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
@@ -113,7 +113,8 @@ Things to watch:
 - [ ] Start plan and Start build: the **Plan model** or **Build model** dropdown starts on "From Settings: <model>"; a pick is used for that start only and Settings stay as they were.
 - [ ] Lead on (Settings, Plan and build): Start plan makes one session in the worktree, and it starts "<KEY> plan" nested under it on the plan agent and model. When the plan is done, the lead repeats it with the card, and the Work Status row offers Start build. Start build opens the lead, which starts "<KEY> build" under it on the build agent and model. No empty session is left.
 - [ ] Lead off: Start plan makes the worktree, an empty first session and "<KEY> plan"; Start build makes "<KEY> build".
-- [ ] After the build: the **All folders** choice and AI reviewers reach the build in a folder left on "All folders"; **This folder** (Off included) overrides it in a pinned folder.
+- [ ] After the build: the **All folders** choice and AI reviewers reach the build in a folder left on "All folders"; **This folder** (Off included) overrides it in a pinned folder. Saving All folders with an empty reviewer field stores CodeRabbit explicitly, and it still shows after switching projects.
+- [ ] After the build: a silent AI reviewer produces Request Review and Request Full Review cards, and no comment is posted without a click. Outstanding required approvals keep the MR watch active; optional approvals do not. A mergeable MR with all required approvals gets Merge and Cancel, and only Merge merges it.
 - [ ] Finish comments and Add the plan: the **All folders** choice applies in a pinned folder left on "All folders" (an existing folder that was Off follows it); **This folder** (Off included) overrides it.
 - [ ] Finish comments (Settings, Draft): a draft appears in Work Status after a turn; Post comments, Discard drops it.
 

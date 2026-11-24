@@ -6,7 +6,7 @@ import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewCh
 import { buildInstructions, INSTRUCTIONS_TARGET } from '../src/service/instructions.ts';
 import { docMarkdown, locate, mentionRows, projectMarkdown, ROWS_MAX } from '../src/service/mentions.ts';
 import { mergePush, readConfig, readPush, knownTeamKeys } from '../src/service/snapshot.ts';
-import { finishChoice, folderFinish, postPlanChoice, withTargets } from '../src/shared/folder-settings.ts';
+import { finishChoice, folderFinish, postPlanChoice, savedAllFolderReviewers, withTargets } from '../src/shared/folder-settings.ts';
 import type { DirSnapshot, Draft, SnapProject } from '../src/service/types.ts';
 
 const files = (map: Record<string, string>): ReadText => (path) => map[path] ?? null;
@@ -229,7 +229,7 @@ describe('what the build does after the code', () => {
     const text = handoffPrompt({ ...base, review: { mode: 'mr', reviewers: '' } });
     expect(text).toContain('show me those options and wait for my choice');
     expect(text).not.toContain('I authorize these three steps');
-    for (const part of ['pipeline', 'CodeRabbit', 'unresolved', 'at most 5 rounds', 'do not merge']) expect(text).toContain(part);
+    for (const part of ['pipeline', 'CodeRabbit', 'unresolved', 'at most 5 rounds', 'required approval']) expect(text).toContain(part);
   });
   test('auto: commits, pushes and opens the merge request on its own, assigned to the user', () => {
     const text = handoffPrompt({ ...base, review: { mode: 'auto', reviewers: 'CodeRabbit, Greptile' } });
@@ -244,6 +244,22 @@ describe('what the build does after the code', () => {
     expect(steps).toContain('go back to step 5: close out any new AI comments before you finish');
     expect(steps).toContain('only those: do not reply to, resolve or edit anyone else\'s threads');
     expect(steps).toContain('Never finish while an AI comment is unresolved without telling me why');
+  });
+  test('a silent reviewer gets explicit incremental and full review request cards', () => {
+    const steps = reviewSteps('auto', 'ENG-5', 'CodeRabbit').join('\n');
+    expect(steps).toContain('Request Review From CodeRabbit');
+    expect(steps).toContain('Request Full Review From CodeRabbit');
+    expect(steps).toContain('@coderabbitai review');
+    expect(steps).toContain('@coderabbitai full review');
+    expect(steps).toContain('actual username');
+    expect(steps).toContain('Only post a request after I click');
+  });
+  test('required approvals block the merge card, optional approvals do not, and merging needs a click', () => {
+    const steps = reviewSteps('auto', 'ENG-5', '').join('\n');
+    expect(steps).toContain('Optional approvals never block');
+    expect(steps).toContain('zero required approvals counts');
+    expect(steps).toContain('stop watching and show me one card with "Merge" and "Cancel"');
+    expect(steps).toContain('Do not merge unless I click Merge');
   });
   test('reviewer names are split, cleaned and limited; empty means CodeRabbit', () => {
     expect(reviewerNames(' CodeRabbit ,  Greptile;Sourcery\nQodo, Bito, Extra ')).toEqual(['CodeRabbit', 'Greptile', 'Sourcery', 'Qodo', 'Bito']);
@@ -447,6 +463,12 @@ describe('reviewChoice', () => {
 });
 
 describe('folder or every folder', () => {
+  test('an empty global reviewer field saves CodeRabbit explicitly while review is enabled', () => {
+    expect(savedAllFolderReviewers('auto', '')).toBe('CodeRabbit');
+    expect(savedAllFolderReviewers('mr', '  ')).toBe('CodeRabbit');
+    expect(savedAllFolderReviewers('auto', ' Greptile ')).toBe('Greptile');
+    expect(savedAllFolderReviewers('off', '')).toBeUndefined();
+  });
   test('finish comments: a picked draft, or an off marked as picked, wins; the off every mapping starts with follows every folder', () => {
     expect(folderFinish({ finishComments: 'off' })).toBeUndefined();
     expect(folderFinish({ finishComments: 'off', finishSet: true })).toBe('off');

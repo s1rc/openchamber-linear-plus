@@ -1,6 +1,11 @@
 // Settings a folder can set for itself or leave to the one for every folder. Pure; the frames and the service share it.
 
 type FinishComments = 'off' | 'draft';
+type ReviewMode = 'off' | 'mr' | 'auto';
+
+/** Reviewers saved for every folder: an enabled review with an empty field explicitly keeps the CodeRabbit default. */
+export const savedAllFolderReviewers = (mode: ReviewMode, reviewers: string): string | undefined =>
+  mode === 'off' ? undefined : reviewers.trim() || 'CodeRabbit';
 
 /**
  * A folder's own finish-comments choice, or undefined when it follows every folder's. Every mapping stores

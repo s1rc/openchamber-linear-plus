@@ -2,6 +2,17 @@
 
 What changed in each Linear+ release. The newest is first. The release workflow uses a version's section as the notes of its GitHub release.
 
+## 1.3.1 (2026-11-24)
+
+### Added
+
+- After the build offers Request Review and Request Full Review cards when an AI reviewer stays silent. CodeRabbit requests use the actual bot account on the merge request, and nothing is posted without a click.
+- A mergeable merge request with a green pipeline and every required approval gets Merge and Cancel cards. Optional approvals do not block, and only clicking Merge authorizes the merge.
+
+### Fixed
+
+- Saving All folders with an empty AI reviewers field stores CodeRabbit explicitly, so the reviewer choice persists across folders and projects.
+
 ## 1.3.0 (2026-11-23)
 
 ### Added

@@ -12,7 +12,7 @@ import { fetchDrafts } from '../../shared/drafts.ts';
 import { rowKey } from '../../shared/handoff-rules.ts';
 import { host } from '../../shared/host.ts';
 import { Banner, Button, Select, Spinner, Switch, TextField } from '../../shared/kit.tsx';
-import { finishChoice, folderFinish } from '../../shared/folder-settings.ts';
+import { finishChoice, folderFinish, savedAllFolderReviewers } from '../../shared/folder-settings.ts';
 import { getAgentDefaults, getLeadMode, setAgentDefaults, setLeadMode, type AgentDefaults, type FinishComments, type ReviewMode } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 
@@ -185,7 +185,7 @@ const reviewLabel = (mode: ReviewMode) => REVIEW_OPTIONS.find((o) => o.id === mo
 
 const reviewText = (mode: ReviewMode) => (mode === 'off'
   ? 'The build ends when the code is written and tested.'
-  : `${mode === 'auto' ? 'The build commits, pushes and opens the merge request without asking, assigned to you. ' : 'The build shows its usual commit, push and merge request options and waits for your choice. '}Then it watches the pipeline and fixes AI review comments, and replies to or resolves only the threads the AI reviewers started. It never touches other people's threads and never merges. If a comment needs your decision it asks, and after your answer it checks for new AI comments again before finishing. Choosing this is your permission for those pushes and replies.`);
+  : `${mode === 'auto' ? 'The build commits, pushes and opens the merge request without asking, assigned to you. ' : 'The build shows its usual commit, push and merge request options and waits for your choice. '}Then it watches the pipeline and fixes AI review comments, and replies to or resolves only the threads the AI reviewers started. It never touches other people's threads. If a reviewer stays silent it can ask you to request a review, and it offers Merge only when required approvals and merge checks pass. Review requests and merges each need your click. If a comment needs your decision it asks, and after your answer it checks for new AI comments again before finishing. Choosing this is your permission for those pushes and AI thread replies.`);
 
 /** One "After the build" choice and its AI reviewers: the one for every folder, or this folder's. */
 type ReviewPair = {
@@ -213,7 +213,7 @@ const ReviewPairFields = ({ pair }: { pair: ReviewPair }) => {
             value={reviewers}
             onChange={setReviewers}
             placeholder={pair.reviewersPlaceholder}
-            helper={`Names, separated by commas. Empty means ${pair.reviewersPlaceholder}.`}
+            helper={`Names, separated by commas. Empty means ${pair.reviewersPlaceholder}. CodeRabbit also matches instance-specific CodeRabbit bot accounts.`}
             disabled={pair.disabled}
           />
           <div class="sui-row">
@@ -232,7 +232,7 @@ const ReviewFields = ({ state }: { state: DetectionState }) => {
   const all = defaults.data;
   const mapping = state.detection.mapping;
   const allMode: ReviewMode = all.reviewMode ?? 'off';
-  const allReviewers = all.aiReviewers ?? '';
+  const allReviewers = all.aiReviewers ?? (allMode === 'off' ? '' : 'CodeRabbit');
   const effective: ReviewMode = mapping?.reviewMode ?? allMode;
   const everywhere: ReviewPair = {
     value: allMode,
@@ -241,7 +241,10 @@ const ReviewFields = ({ state }: { state: DetectionState }) => {
     reviewersPlaceholder: 'CodeRabbit',
     effective: allMode,
     disabled: false,
-    save: (mode, reviewers) => saveDefaults(all, { reviewMode: mode === 'mr' || mode === 'auto' ? mode : undefined, aiReviewers: reviewers || undefined }),
+    save: (mode, reviewers) => saveDefaults(all, {
+      reviewMode: mode === 'mr' || mode === 'auto' ? mode : undefined,
+      aiReviewers: savedAllFolderReviewers(mode as ReviewMode, reviewers),
+    }),
   };
   const folder: ReviewPair = {
     value: mapping?.reviewMode ?? DEFAULT_ID,
