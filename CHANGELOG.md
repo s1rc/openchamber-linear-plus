@@ -14,7 +14,7 @@ What changed in each Linear+ release. The newest is first. The release workflow 
 
 - Sub-issues sit on a card, like the description and the comments.
 - Buttons are in title case everywhere (Start Session, Edit Description, New Issue). Add plan only is now **Write Plan**, in the Work Status row, the Start build panel and everywhere else.
-- The issue card in chat and the issue view share one set of buttons, none of them orange: Start Session, Plan, Write Plan and Build. The issue view starts with Attach, and in the rail and the side pane its buttons take a row of their own under Close and More. The longer "Start plan", "Start session", "Start build" and "Attach to message" labels are gone.
+- The issue card in chat and the issue view share one set of buttons, none of them orange: Start Session, Plan, Write Plan and Build. Before an issue has a planning session, Write Plan and Build show disabled, and hovering them says to plan first. The issue view starts with Attach, and in the rail and the side pane its buttons take a row of their own under Close and More. The longer "Start plan", "Start session", "Start build" and "Attach to message" labels are gone.
 - Add the plan to the issue has its own section in Settings, and so does After the build.
 - A folder whose finish comments were left at Off now follows All folders. A folder set to Draft keeps it.
 

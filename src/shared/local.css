@@ -208,6 +208,9 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-comment-body--reply { border-top: 1px solid var(--oc-border); padding-left: 36px; }
 .lin-nowrap { white-space: nowrap; }
 .lin-inline { display: inline-flex; }
+/* Write Plan and Build with no plan yet: disabled buttons take no pointer, so the wrapper's hint shows on hover. */
+.lin-plan-first { gap: 6px; cursor: help; }
+.lin-plan-first button:disabled { pointer-events: none; }
 @container (max-width: 480px) { .lin-issue-crumb { display: none; } }
 .lin-issue-trail { margin-bottom: -6px; }
 /* With the trail above, the bar does not repeat the team. */

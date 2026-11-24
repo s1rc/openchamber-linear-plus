@@ -4,8 +4,7 @@ import { Card, Chip, KV } from '@openchamber-ext/shared-ui/preact';
 import { useState } from 'preact/hooks';
 import { LabelChip } from '../app/components/issue-chips.tsx';
 import { splitIds } from '../shared/block-args.ts';
-import { AddPlanButton } from '../shared/add-plan-button.tsx';
-import { BuildPanel, useBuildSource } from '../shared/build-panel.tsx';
+import { BuildPanel, PlanActions, useBuildSource } from '../shared/build-panel.tsx';
 import { relativeTime, shortDate } from '../shared/format.ts';
 import { Avatar, PriorityGlyph, ProjectIcon, StatusGlyph } from '../shared/glyphs.tsx';
 import { PRIORITY_NAMES } from '../shared/grouping.ts';
@@ -43,8 +42,7 @@ const IssueCard = ({ issue }: { issue: IssueRow }) => {
         <Button label="Open in Linear" variant="outline" size="sm" onClick={() => { void host.openUrl(issue.url); }} />
         <Button label="Start Session" variant="outline" size="sm" disabled={panel === 'session'} onClick={() => setPanel('session')} />
         <Button label="Plan" variant="outline" size="sm" disabled={panel === 'plan'} onClick={() => setPanel('plan')} />
-        {source && <AddPlanButton identifier={issue.identifier} source={source} />}
-        {source && <Button label="Build" variant="outline" size="sm" disabled={panel === 'build'} onClick={() => setPanel('build')} />}
+        <PlanActions identifier={issue.identifier} source={source} size="sm" building={panel === 'build'} onBuild={() => setPanel('build')} />
       </div>
       {(panel === 'session' || panel === 'plan') && <StartPanel issue={issue} plan={panel === 'plan'} onClose={() => setPanel(null)} />}
       {panel === 'build' && source && (

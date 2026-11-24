@@ -10,6 +10,7 @@ import { Banner, Button, Spinner, Switch } from './kit.tsx';
 import { ModelPick } from './model-pick.tsx';
 import { MoveRow, useMoveChoice } from './move-row.tsx';
 import { gql } from './linear.ts';
+import { AddPlanButton } from './add-plan-button.tsx';
 import { ISSUE_DETAIL } from './queries.ts';
 import { startBuildFor, writePlan } from './start-build.ts';
 import { openStartedSession } from './start-session.ts';
@@ -152,15 +153,46 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
   );
 };
 
-/** A build source for an issue, found once when the frame draws it. Null until found, and when there is none. */
-export const useBuildSource = (directory: string | null, identifier: string): BuildSource | null => {
-  const [source, setSource] = useState<BuildSource | null>(null);
+/** A build source for an issue, found once when the frame draws it. Undefined while it is looked for, null when there is none. */
+export const useBuildSource = (directory: string | null, identifier: string): BuildSource | null | undefined => {
+  const [source, setSource] = useState<BuildSource | null | undefined>(undefined);
   useEffect(() => {
     let live = true;
-    setSource(null);
-    if (!directory) return undefined;
-    void findBuildSource(directory, identifier).then((found) => { if (live) setSource(found); });
+    setSource(undefined);
+    if (!directory) { setSource(null); return undefined; }
+    void findBuildSource(directory, identifier).then((found) => { if (live) setSource(found); }, () => { if (live) setSource(null); });
     return () => { live = false; };
   }, [directory, identifier]);
   return source;
+};
+
+export const PLAN_FIRST = 'Plan first: click Plan to start a planning session for this issue. Write Plan and Build work once it has a plan.';
+
+/**
+ * Write Plan and Build for an issue, after Plan. With no planning session yet they show disabled, and hovering says
+ * to plan first; while the session is still looked for they show disabled with no hint.
+ */
+export const PlanActions = ({ identifier, source, size, onBuild, building }: {
+  identifier: string;
+  source: BuildSource | null | undefined;
+  size: 'xs' | 'sm';
+  onBuild: () => void;
+  /** The build panel is open: Build is pressed. */
+  building?: boolean;
+}) => {
+  if (source) {
+    return (
+      <>
+        <AddPlanButton identifier={identifier} source={source} size={size} />
+        <Button label="Build" variant="outline" size={size} disabled={building} onClick={onBuild} />
+      </>
+    );
+  }
+  const hint = source === null ? PLAN_FIRST : undefined;
+  return (
+    <span class="lin-inline lin-plan-first" title={hint} aria-label={hint}>
+      <Button label="Write Plan" variant="outline" size={size} disabled onClick={() => undefined} />
+      <Button label="Build" variant="outline" size={size} disabled onClick={() => undefined} />
+    </span>
+  );
 };

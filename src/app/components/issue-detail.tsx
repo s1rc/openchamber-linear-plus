@@ -24,8 +24,7 @@ import { IssueRow } from './issue-row.tsx';
 import {
   AssigneeEdit, CycleEdit, DueDateEdit, EstimateEdit, LabelsEdit, PriorityEdit, ProjectEdit, save, StatusEdit,
 } from './property-editors.tsx';
-import { AddPlanButton } from '../../shared/add-plan-button.tsx';
-import { BuildPanel, useBuildSource } from '../../shared/build-panel.tsx';
+import { BuildPanel, PlanActions, useBuildSource } from '../../shared/build-panel.tsx';
 import { Modal } from './modal.tsx';
 import { RichEditor } from './rich-editor.tsx';
 import { StartSessionDialog } from './start-session.tsx';
@@ -358,8 +357,7 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
           <Button label="Attach" variant="outline" size="xs" onClick={() => { void attach(); }} />
           <Button label="Start Session" variant="outline" size="xs" onClick={() => setStarting('session')} />
           <Button label="Plan" variant="outline" size="xs" onClick={() => setStarting('plan')} />
-          {buildSource && <AddPlanButton identifier={issue.identifier} source={buildSource} size="xs" />}
-          {buildSource && <Button label="Build" variant="outline" size="xs" onClick={() => setBuilding(true)} />}
+          <PlanActions identifier={issue.identifier} source={buildSource} size="xs" onBuild={() => setBuilding(true)} />
         </span>
         <Menu
           label="More"

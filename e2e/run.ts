@@ -499,6 +499,11 @@ const tests: Test[] = [
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'the issue card adds the plan to the description');
       await until(async () => (await toasts(block)).includes('Added the plan to ENG-13'), 'and says so');
       await block.page.context().close();
+      const none = await open(browser, { page: 'blocks/index.html', block: 'LinearIssue', args: JSON.stringify({ id: 'ENG-11' }), projects: PROJECTS }, 720, 700);
+      const first = none.frame.locator('.lin-plan-first');
+      await until(async () => ((await first.getAttribute('title')) ?? '').startsWith('Plan first'), 'with no plan yet the card says to plan first');
+      expect(await first.locator('button:disabled').count() === 2, 'and shows Write Plan and Build disabled');
+      await none.page.context().close();
       const panel = await open(browser, { page: 'panel/index.html', surface: 'page', projects: PROJECTS, sessions });
       await navItem(panel, 'Issues').click();
       await panel.frame.locator('[data-issue="ENG-13"]').click();
