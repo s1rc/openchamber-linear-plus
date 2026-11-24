@@ -6,7 +6,7 @@ import { cleanAgent, cleanModel, handoffPrompt, PLAN_LIMIT, planPrompt, reviewCh
 import { buildInstructions, INSTRUCTIONS_TARGET } from '../src/service/instructions.ts';
 import { docMarkdown, locate, mentionRows, projectMarkdown, ROWS_MAX } from '../src/service/mentions.ts';
 import { mergePush, readConfig, readPush, knownTeamKeys } from '../src/service/snapshot.ts';
-import { finishChoice, folderFinish, postPlanChoice } from '../src/shared/folder-settings.ts';
+import { finishChoice, folderFinish, postPlanChoice, withTargets } from '../src/shared/folder-settings.ts';
 import type { DirSnapshot, Draft, SnapProject } from '../src/service/types.ts';
 
 const files = (map: Record<string, string>): ReadText => (path) => map[path] ?? null;
@@ -461,5 +461,20 @@ describe('folder or every folder', () => {
     expect(postPlanChoice({ postPlan: false }, { postPlan: true })).toBe(false);
     expect(postPlanChoice({ postPlan: true }, undefined)).toBe(true);
     expect(postPlanChoice(undefined, undefined)).toBe(false);
+  });
+});
+
+describe('withTargets', () => {
+  const before = { directory: '/r', teamIds: ['t1'], linearProjectIds: ['p1', 'p2'], activeProjectId: 'p2', finishComments: 'draft' as const, finishSet: true, planModel: 'openai/gpt-5', buildAgent: 'builder', reviewMode: 'auto' as const, aiReviewers: 'Greptile', postPlan: false, updatedAt: 1 };
+
+  test('new teams and projects keep the folder\'s own settings', () => {
+    const next = withTargets(before, '/r', ['t2'], ['p2', 'p3'], 9);
+    expect(next).toEqual({ ...before, teamIds: ['t2'], linearProjectIds: ['p2', 'p3'], activeProjectId: 'p2', updatedAt: 9 });
+  });
+
+  test('the active project moves when it is no longer picked; a first mapping starts with finish comments off', () => {
+    expect(withTargets(before, '/r', [], ['p3', 'p4'], 9).activeProjectId).toBe('p3');
+    expect(withTargets(before, '/r', ['t2'], [], 9).activeProjectId).toBe('t2');
+    expect(withTargets(null, '/r', [], [], 9)).toEqual({ directory: '/r', teamIds: [], linearProjectIds: [], activeProjectId: 'all', finishComments: 'off', updatedAt: 9 });
   });
 });

@@ -19,3 +19,32 @@ export const finishChoice = (
 /** Whether Start build adds the plan to the description first: the folder's own choice, else every folder's, else no. */
 export const postPlanChoice = (folder: { postPlan?: boolean } | undefined, defaults: { postPlan?: boolean } | undefined): boolean =>
   folder?.postPlan ?? defaults?.postPlan ?? false;
+
+/** The fields a folder's mapping needs; its own settings ride along. */
+type MappingLike = {
+  directory: string;
+  teamIds: string[];
+  linearProjectIds: string[];
+  activeProjectId: string;
+  finishComments: FinishComments;
+  updatedAt: number;
+};
+
+/**
+ * A folder's mapping with new teams and projects. Its own settings (agents, models, the build's last steps, finish
+ * comments, add the plan) are kept: picking other teams is no reason to lose them. The active project stays when it
+ * is still picked.
+ */
+export const withTargets = <M extends MappingLike>(previous: M | null | undefined, directory: string, teamIds: string[], projectIds: string[], now: number): M => {
+  const ids = [...teamIds, ...projectIds];
+  const active = previous?.activeProjectId;
+  return {
+    ...(previous ?? {}),
+    directory,
+    linearProjectIds: projectIds,
+    teamIds,
+    activeProjectId: ids.length === 1 ? ids[0]! : active && ids.includes(active) ? active : (ids[0] ?? 'all'),
+    finishComments: previous?.finishComments ?? 'off',
+    updatedAt: now,
+  } as M;
+};

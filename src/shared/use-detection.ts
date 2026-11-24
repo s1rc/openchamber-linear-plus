@@ -1,6 +1,7 @@
 // Runs detection for the open folder through the real host, and saves or clears its mapping.
 import { toast } from '@openchamber-ext/shared-ui';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { withTargets } from './folder-settings.ts';
 import { detect, NO_DETECTION, resolvePlace, type DetectEnv, type Detection, type Place } from './detect.ts';
 import { host } from './host.ts';
 import { gql } from './linear.ts';
@@ -91,17 +92,7 @@ export const useDetection = (directory: string | null, workspace: Workspace | un
 
   const save = useCallback(async (teamIds: string[], projectIds: string[]): Promise<boolean> => {
     if (!place) return false;
-    const ids = [...teamIds, ...projectIds];
-    const previous = detection.mapping?.activeProjectId;
-    const mapping: Mapping = {
-      directory: place.projectDirectory,
-      linearProjectIds: projectIds,
-      teamIds,
-      activeProjectId: ids.length === 1 ? ids[0]! : previous && ids.includes(previous) ? previous : (ids[0] ?? 'all'),
-      finishComments: detection.mapping?.finishComments ?? 'off',
-      ...(detection.mapping?.finishSet ? { finishSet: true } : {}),
-      updatedAt: Date.now(),
-    };
+    const mapping = withTargets<Mapping>(detection.mapping, place.projectDirectory, teamIds, projectIds, Date.now());
     // Apply it now either way; a failed save only means it will not survive a reload.
     setDetection((d) => ({ ...d, source: 'mapping', inferred: false, evidence: 'saved for this folder', teamIds, projectIds, mapping }));
     const saved = await setMapping(place.key, mapping);
