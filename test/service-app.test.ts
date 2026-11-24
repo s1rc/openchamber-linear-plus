@@ -29,12 +29,12 @@ const disk: Record<string, string> = {
 };
 const mapping: MappingConfig = { directory: REPO, teamIds: ['t-eng'], linearProjectIds: ['p1'], activeProjectId: 'p1', finishComments: 'draft', updatedAt: 1 };
 
-type Calls = { instructions: [string | null, string][]; started: Record<string, unknown>[]; settings: Record<string, string>; reply: string | null; status: 'idle' | 'busy' | 'waiting' };
+type Calls = { instructions: [string | null, string][]; started: Record<string, unknown>[]; sent: [string, string][]; settings: Record<string, string>; reply: string | null; status: 'idle' | 'busy' | 'waiting' };
 
 const setup = (options: { key?: string; gql?: Gql; flags?: string[]; config?: boolean } = {}) => {
   const store = memoryStore(options.flags);
   if (options.config !== false) store.files.set('config.json', { directories: { [REPO]: mapping } });
-  const calls: Calls = { instructions: [], started: [], settings: options.key ? { 'api-key': options.key } : {}, reply: '1. Do it', status: 'idle' };
+  const calls: Calls = { instructions: [], started: [], sent: [], settings: options.key ? { 'api-key': options.key } : {}, reply: '1. Do it', status: 'idle' };
   let clock = 1_000_000;
   const deps: Deps = {
     host: {
@@ -42,7 +42,7 @@ const setup = (options: { key?: string; gql?: Gql; flags?: string[]; config?: bo
       readSettings: async () => calls.settings,
       sessions: {
         start: async (input) => { calls.started.push(input as Record<string, unknown>); return { sessionId: 'ses_build', directory: input.directory ?? null }; },
-        send: async () => ({ sent: true }),
+        send: async (sessionId, prompt) => { calls.sent.push([sessionId, prompt]); return { sent: true }; },
         retry: async () => ({ sent: true }),
         status: async () => ({ status: calls.status }),
         lastReply: async () => ({ reply: calls.reply }),
@@ -381,6 +381,69 @@ describe('start plan', () => {
   });
 });
 
+const PLAN_REPLY = `# ENG-5 plan\n\n${'Context for the change. '.repeat(30)}\n\n## Steps\n1. Change the login timeout\n2. Add a test\n3. Run the suite\n\n## Risks\n- Slow networks`;
+
+describe('lead mode', () => {
+  test('the session the frame made gets the plan step, with the plan agent and model for its child', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, planAgent: 'planner', planModel: 'openai/gpt-5' } } });
+    const { body } = await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, issueTitle: 'Slow login', context: 'ENG-5: Slow login', lead: 'ses_lead', leadTitle: 'ENG-5 Slow login' });
+    expect(body).toEqual({ ok: true, sessionId: 'ses_lead', directory: WT, lead: true });
+    expect(ctx.calls.started).toEqual([]);
+    const [to, prompt] = ctx.calls.sent[0]!;
+    expect(to).toBe('ses_lead');
+    expect(prompt).toContain('session.create');
+    expect(prompt).toContain('- ownWork: true');
+    expect(prompt).toContain('- agent: "planner"');
+    expect(prompt).toContain('- model: "openai/gpt-5"');
+    expect(prompt).toContain('- title: "ENG-5 plan"');
+    expect(prompt).toContain('PLAN PROMPT START\nPlan the work for Linear issue ENG-5');
+    expect(prompt).toContain('question tools reach nobody here');
+    expect((await ctx.call('GET', '/plans', undefined, 'identifier=ENG-5')).body.sessions[0]).toMatchObject({ sessionId: 'ses_lead', title: 'ENG-5 Slow login' });
+  });
+
+  test('with no session from the frame, the service starts the lead', async () => {
+    const ctx = setup();
+    const { body } = await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, lead: true });
+    expect(body.sessionId).toBe('ses_build');
+    expect(ctx.calls.started[0]).toMatchObject({ directory: WT, title: 'ENG-5 lead' });
+    expect(ctx.calls.started[0]!.agent).toBeUndefined();
+    expect(String(ctx.calls.started[0]!.prompt)).toContain('PLAN PROMPT START');
+  });
+
+  test('the lead\'s progress line is no plan row; its plan is', async () => {
+    const ctx = setup();
+    await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, lead: 'ses_1' });
+    await deliver(ctx, finished({}, 'The plan session is running.'));
+    expect((await ctx.call('GET', '/handoffs')).body.handoffs).toEqual([]);
+    await deliver(ctx, finished({}, PLAN_REPLY));
+    const rows = (await ctx.call('GET', '/handoffs')).body.handoffs;
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toMatchObject({ sessionId: 'ses_1', plan: true });
+  });
+
+  test('Start build on a lead sends it the build step and opens the lead', async () => {
+    const ctx = setup();
+    await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, buildAgent: 'builder' } } });
+    await ctx.call('POST', '/plan', { identifier: 'ENG-5', directory: WT, lead: 'ses_1' });
+    ctx.calls.reply = PLAN_REPLY;
+    expect((await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5' })).body.lead).toBe(true);
+    const { body } = await ctx.call('POST', '/handoff', { sessionId: 'ses_1', identifier: 'ENG-5', issueTitle: 'Slow login' });
+    expect(body).toEqual({ ok: true, sessionId: 'ses_1', directory: WT, lead: true });
+    expect(ctx.calls.started).toEqual([]);
+    const [to, prompt] = ctx.calls.sent[1]!;
+    expect(to).toBe('ses_1');
+    expect(prompt).toContain('- agent: "builder"');
+    expect(prompt).toContain('- title: "ENG-5 build"');
+    expect(prompt).toContain('BUILD PROMPT START\nBuild the plan below for Linear issue ENG-5');
+    expect(prompt).toContain('1. Change the login timeout');
+    expect(prompt.length).toBeLessThan(64_000);
+    // Its build reports after that are not plans.
+    await deliver(ctx, finished({}, PLAN_REPLY));
+    expect((await ctx.call('GET', '/handoffs')).body.handoffs).toEqual([]);
+  });
+});
+
 describe('a chat answer is not a plan', () => {
   const PLAN = '## Plan\n\n1. Read the module\n2. Change the check\n3. Add tests\n4. Run the suite\n\nRisk: callers break. '.padEnd(700, 'x');
 
@@ -469,7 +532,7 @@ describe('post the plan', () => {
     ctx.calls.reply = '## Plan\n1. Do it';
     await ctx.call('PUT', '/config', { directories: { [REPO]: { ...mapping, postPlan: true } } });
     const { body } = await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5', sessionDirectory: WT });
-    expect(body).toEqual({ ok: true, plan: '## Plan\n1. Do it', postPlan: true, earlier: false, isPlan: false });
+    expect(body).toEqual({ ok: true, plan: '## Plan\n1. Do it', postPlan: true, earlier: false, isPlan: false, lead: false });
     expect(ctx.calls.started.length).toBe(0);
     ctx.calls.status = 'busy';
     expect((await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5', sessionDirectory: WT })).body.error).toContain('still working');

@@ -9,7 +9,7 @@ import type { Choices } from './choices.ts';
 import { CLAIM_STALE_MS, parsePlanExtras, type ExtrasState } from '../shared/plan-extras.ts';
 import { issueOfBranch, readBranch, resolveMapped, trimDir, type ReadText } from './directories.ts';
 import { buildDraft, handoffId, HANDOFFS_MAX, linearIssuesOf, looksLikePlan, PLANS_KEPT, upsertDraft, upsertHandoff, withoutBlocks } from './events.ts';
-import { handoffPrompt, PLAN_LIMIT, planPrompt, sessionChoice } from './handoff.ts';
+import { handoffPrompt, leadBuildPrompt, leadPlanPrompt, PLAN_LIMIT, planPrompt, sessionChoice } from './handoff.ts';
 import { buildInstructions } from './instructions.ts';
 import { fetchBranchIssue, fetchDocText, fetchIssueText, fetchProjectText, refreshFromLinear, searchMentionIssues, type Gql } from './linear-node.ts';
 import { docMarkdown, issueMarkdown, keyOf, locate, locateIssue, mentionRows, projectMarkdown } from './mentions.ts';
@@ -395,7 +395,7 @@ export const createApp = (deps: Deps) => {
     if (body.mode === 'preview') {
       try {
         const got = await readPlan(sessionId);
-        return { body: 'error' in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan } };
+        return { body: 'error' in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === 'lead' } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
         return fail(message(error));
@@ -408,7 +408,7 @@ export const createApp = (deps: Deps) => {
       if ('error' in got) return fail(got.error);
       // A chat answer is not a plan: building from it starts the wrong work. The frame can say "use it anyway".
       if (!got.isPlan && body.force !== true) return fail(NOT_A_PLAN);
-      const prompt = handoffPrompt({
+      const input = {
         identifier,
         issueTitle: typeof body.issueTitle === 'string' ? body.issueTitle : null,
         branch: readBranch(sessionDirectory, read),
@@ -417,12 +417,22 @@ export const createApp = (deps: Deps) => {
         plan: got.plan,
         review: { mode: mapping?.reviewMode ?? 'off', reviewers: mapping?.aiReviewers ?? '' },
         splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? [],
-      });
+      };
+      const choice = sessionChoice('build', mapping, config.defaults, { model: body.model });
+      const lead = handoffs.builds[sessionId];
+      if (lead?.role === 'lead') {
+        // The lead hands the build to a child of its own; the lead stays the session to open.
+        await host.sessions.send(sessionId, leadBuildPrompt({ ...input, choice }));
+        rememberSession(sessionId, { ...lead, building: true });
+        handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
+        saveHandoffs();
+        return { body: { ok: true, sessionId, directory: sessionDirectory, lead: true } };
+      }
       const started = await host.sessions.start({
-        prompt,
+        prompt: handoffPrompt(input),
         directory: sessionDirectory,
         title: `${identifier} build`,
-        ...sessionChoice('build', mapping, config.defaults, { model: body.model }),
+        ...choice,
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? sessionDirectory, createdAt: now(), role: 'build', sessionDirectory, title: `${identifier} build` });
       handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
@@ -440,30 +450,53 @@ export const createApp = (deps: Deps) => {
    * Starts the plan session for an issue in a folder the frame has already made (the issue's worktree), with the
    * folder's plan agent and model. A frame cannot choose an agent or model for a session it starts, so this is
    * the service's part of Start plan.
+   *
+   * With `lead`, the plan goes to a lead instead: `lead` names the session the frame made with the worktree, or is
+   * `true` for a new one here. The lead starts the plan as a child session of its own on the plan agent and model.
    */
   const startPlan = async (raw: string): Promise<Reply> => {
     const body = parse(raw);
     const identifier = typeof body.identifier === 'string' ? body.identifier.trim().toUpperCase() : '';
     const directory = typeof body.directory === 'string' ? body.directory.trim() : '';
     if (!IDENTIFIER.test(identifier) || !directory.startsWith('/')) return fail('Expected { identifier, directory }.', 400);
+    const lead = typeof body.lead === 'string' && body.lead.trim() ? body.lead.trim().slice(0, 120) : body.lead === true;
     const key = `plan:${directory}:${identifier}`;
     if (starting.has(key)) return fail('A plan is already starting for that issue.');
     starting.add(key);
     try {
       const folder = mappedFor(directory);
       const mapping = folder ? config.directories[folder] : undefined;
+      const input = {
+        identifier,
+        issueTitle: typeof body.issueTitle === 'string' ? body.issueTitle : null,
+        branch: readBranch(directory, read),
+        directory,
+        context: typeof body.context === 'string' ? body.context : '',
+        scale: typeof body.scale === 'string' ? body.scale : null,
+      };
+      const choice = sessionChoice('plan', mapping, config.defaults, { model: body.model });
+      if (lead) {
+        const prompt = leadPlanPrompt({ ...input, choice });
+        const title = typeof body.leadTitle === 'string' && body.leadTitle.trim() ? body.leadTitle.trim().slice(0, 200) : `${identifier} lead`;
+        let sessionId: string;
+        let sessionDirectory = directory;
+        if (typeof lead === 'string') {
+          await host.sessions.send(lead, prompt);
+          sessionId = lead;
+        } else {
+          const started = await host.sessions.start({ prompt, directory, title });
+          sessionId = started.sessionId;
+          sessionDirectory = started.directory ?? directory;
+        }
+        rememberSession(sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: 'lead', sessionDirectory, title });
+        saveHandoffs();
+        return { body: { ok: true, sessionId, directory: sessionDirectory, lead: true } };
+      }
       const started = await host.sessions.start({
-        prompt: planPrompt({
-          identifier,
-          issueTitle: typeof body.issueTitle === 'string' ? body.issueTitle : null,
-          branch: readBranch(directory, read),
-          directory,
-          context: typeof body.context === 'string' ? body.context : '',
-          scale: typeof body.scale === 'string' ? body.scale : null,
-        }),
+        prompt: planPrompt(input),
         directory,
         title: `${identifier} plan`,
-        ...sessionChoice('plan', mapping, config.defaults, { model: body.model }),
+        ...choice,
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: 'plan', sessionDirectory: directory, title: `${identifier} plan` });
       saveHandoffs();
@@ -476,10 +509,10 @@ export const createApp = (deps: Deps) => {
     }
   };
 
-  /** Plan sessions this service started, newest first, for one issue or one session. They carry no link the host shows. */
+  /** Plan and lead sessions this service started, newest first, for one issue or one session. Plan sessions carry no link the host shows. */
   const plansFor = (identifier: string | null, sessionId: string | null): { sessionId: string; identifier: string; directory: string; sessionDirectory: string; title: string; createdAt: number }[] =>
     Object.entries(handoffs.builds)
-      .filter(([id, b]) => b.role === 'plan' && (!identifier || b.identifier === identifier.toUpperCase()) && (!sessionId || id === sessionId))
+      .filter(([id, b]) => (b.role === 'plan' || b.role === 'lead') && (!identifier || b.identifier === identifier.toUpperCase()) && (!sessionId || id === sessionId))
       .map(([id, b]) => ({ sessionId: id, identifier: b.identifier, directory: b.directory, sessionDirectory: b.sessionDirectory ?? b.directory, title: b.title ?? `${b.identifier} plan`, createdAt: b.createdAt }))
       .sort((x, y) => y.createdAt - x.createdAt);
 
@@ -576,6 +609,8 @@ export const createApp = (deps: Deps) => {
     if (event.type !== 'turn-finished') return;
 
     const build = handoffs.builds[event.session.id];
+    // A lead's replies are plans until it hands out the build, and build reports after; only a plan-like one is a plan.
+    const role = build?.role === 'lead' ? (build.building ? 'build' : 'lead') : build?.role;
     const issues = [...linearIssuesOf(event.linked)];
     if (build && !issues.includes(build.identifier)) issues.push(build.identifier);
     if (!issues.length) return;
@@ -590,7 +625,7 @@ export const createApp = (deps: Deps) => {
       saveDrafts();
     }
 
-    if (reply.trim() && looksLikePlan(reply) && build?.role !== 'build') {
+    if (reply.trim() && looksLikePlan(reply) && role !== 'build') {
       const kept = { ...(handoffs.plans ?? {}), [event.session.id]: { text: reply.slice(0, PLAN_LIMIT + 2000), at: now() } };
       handoffs.plans = Object.fromEntries(Object.entries(kept).sort((x, y) => y[1].at - x[1].at).slice(0, PLANS_KEPT));
       saveHandoffs();
@@ -599,8 +634,8 @@ export const createApp = (deps: Deps) => {
     // The first estimate and split-out list of a planning session is kept for a frame to write. A later turn replaces
     // it only while nobody has started writing it, so a revised plan never creates the issues twice.
     const raw = content?.type === 'turn-finished' ? content.reply : '';
-    const extras = build?.role !== 'build' && raw ? parsePlanExtras(raw) : null;
-    if (extras && (build?.role === 'plan' || looksLikePlan(reply))) {
+    const extras = role !== 'build' && raw ? parsePlanExtras(raw) : null;
+    if (extras && (role === 'plan' || looksLikePlan(reply))) {
       const before = handoffs.extras?.[event.session.id];
       if (!before || before.state === 'pending') {
         keepExtras({
@@ -615,7 +650,7 @@ export const createApp = (deps: Deps) => {
       }
     }
 
-    if (build?.role !== 'build' && reply.trim()) {
+    if (role !== 'build' && reply.trim() && (role !== 'lead' || looksLikePlan(reply))) {
       const identifier = issues[issues.length - 1]!;
       const handoff: Handoff = {
         id: handoffId(event.session.id, identifier),
@@ -624,7 +659,7 @@ export const createApp = (deps: Deps) => {
         sessionId: event.session.id,
         identifier,
         sessionTitle: title?.trim() || 'Untitled session',
-        plan: build?.role === 'plan' || looksLikePlan(reply),
+        plan: role === 'plan' || looksLikePlan(reply),
         createdAt: now(),
       };
       // One plan row per issue and folder: a newer planning session for the same issue replaces an older one.

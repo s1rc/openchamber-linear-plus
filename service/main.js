@@ -528,7 +528,7 @@ var planPrompt = (input) => {
     "",
     "Read the code you need, then write a plan: what to change and where, in order, how to test it, and the risks.",
     "",
-    "You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.",
+    input.child ? "You may ask questions first to clarify the issue; I want that. Write them as a normal message (question tools reach nobody here), and the answers come back as a message. When you are done asking, write the complete plan as a normal message." : "You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.",
     "",
     ...extrasLines(input.identifier, input.scale),
     'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
@@ -541,6 +541,55 @@ var planPrompt = (input) => {
   ].join(`
 `);
 };
+var childCall = (directory, title, choice, marker) => [
+  "Call the openchamber tool with action session.create and these fields:",
+  "- ownWork: true",
+  `- directory: ${JSON.stringify(directory)}`,
+  `- title: ${JSON.stringify(title)}`,
+  `- agent: ${JSON.stringify(choice.agent)}`,
+  ...choice.model ? [`- model: ${JSON.stringify(choice.model)}`] : [],
+  `- prompt: everything between the ${marker} START and ${marker} END lines at the end of this message, word for word, without those two lines`
+];
+var titled = (identifier, issueTitle) => `${identifier}${issueTitle ? ` (${issueTitle.replace(/\s+/g, " ").trim().slice(0, 160)})` : ""}`;
+var leadPlanPrompt = (input) => {
+  const where = `${input.directory}${input.branch ? `, on branch ${input.branch}` : ""}`;
+  return [
+    `You lead the work on Linear issue ${titled(input.identifier, input.issueTitle)} in ${where}. You do not plan or build it yourself: each goes to a session of your own, nested under you, and you check what it hands back.`,
+    "",
+    "Start the plan session now.",
+    ...childCall(input.directory, `${input.identifier} plan`, input.choice, "PLAN PROMPT"),
+    "Then end your turn with one line saying the plan session is running. Do not read the code or write a plan yourself.",
+    "",
+    "While it plans:",
+    "- Its questions come to you. Answer them yourself from the issue and the code where you can, with session.send to that session. Ask the user only what only the user can settle (a preference, a trade-off they would judge, a step that is hard to undo), then pass the answer on the same way.",
+    "- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.",
+    "",
+    "When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.",
+    "",
+    "Do not start the build. When the user clicks Start build, Linear+ sends you the build step.",
+    "",
+    "PLAN PROMPT START",
+    planPrompt({ ...input, child: true }),
+    "PLAN PROMPT END"
+  ].join(`
+`);
+};
+var leadBuildPrompt = (input) => [
+  `The user clicked Start build for ${titled(input.identifier, input.issueTitle)}. Start the build session now, as a new session of your own (not the plan session).`,
+  ...childCall(input.directory, `${input.identifier} build`, input.choice, "BUILD PROMPT"),
+  "Then end your turn with one line saying the build session is running.",
+  "",
+  "While it builds:",
+  "- Answer its questions yourself where you can, with session.send. Ask the user only what only the user can settle, such as the commit, push and merge request options it offers, then pass the answer on.",
+  "- Check its answer against the plan: what it changed, the tests and checks it ran and what they showed. An answer without that proof, or with work left, goes back to it as unfinished.",
+  "",
+  "When the build is done, reply to the user with what changed, the tests and what they showed, and the merge request link when there is one.",
+  "",
+  "BUILD PROMPT START",
+  handoffPrompt(input),
+  "BUILD PROMPT END"
+].join(`
+`);
 
 // src/service/instructions.ts
 var INSTRUCTIONS_TARGET = 800;
@@ -1907,7 +1956,7 @@ var createApp = (deps) => {
     if (body.mode === "preview") {
       try {
         const got = await readPlan(sessionId);
-        return { body: "error" in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan } };
+        return { body: "error" in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: mapping?.postPlan === true, earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === "lead" } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
         return fail(message(error));
@@ -1922,7 +1971,7 @@ var createApp = (deps) => {
         return fail(got.error);
       if (!got.isPlan && body.force !== true)
         return fail(NOT_A_PLAN);
-      const prompt = handoffPrompt({
+      const input = {
         identifier,
         issueTitle: typeof body.issueTitle === "string" ? body.issueTitle : null,
         branch: readBranch(sessionDirectory, read),
@@ -1931,12 +1980,21 @@ var createApp = (deps) => {
         plan: got.plan,
         review: { mode: mapping?.reviewMode ?? "off", reviewers: mapping?.aiReviewers ?? "" },
         splitOut: handoffs.extras?.[sessionId]?.extras.issues.map((i) => i.title) ?? []
-      });
+      };
+      const choice = sessionChoice("build", mapping, config.defaults, { model: body.model });
+      const lead = handoffs.builds[sessionId];
+      if (lead?.role === "lead") {
+        await host.sessions.send(sessionId, leadBuildPrompt({ ...input, choice }));
+        rememberSession(sessionId, { ...lead, building: true });
+        handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
+        saveHandoffs();
+        return { body: { ok: true, sessionId, directory: sessionDirectory, lead: true } };
+      }
       const started = await host.sessions.start({
-        prompt,
+        prompt: handoffPrompt(input),
         directory: sessionDirectory,
         title: `${identifier} build`,
-        ...sessionChoice("build", mapping, config.defaults, { model: body.model })
+        ...choice
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? sessionDirectory, createdAt: now(), role: "build", sessionDirectory, title: `${identifier} build` });
       handoffs.pending = handoffs.pending.filter((h) => h.sessionId !== sessionId);
@@ -1955,6 +2013,7 @@ var createApp = (deps) => {
     const directory = typeof body.directory === "string" ? body.directory.trim() : "";
     if (!IDENTIFIER.test(identifier) || !directory.startsWith("/"))
       return fail("Expected { identifier, directory }.", 400);
+    const lead = typeof body.lead === "string" && body.lead.trim() ? body.lead.trim().slice(0, 120) : body.lead === true;
     const key = `plan:${directory}:${identifier}`;
     if (starting.has(key))
       return fail("A plan is already starting for that issue.");
@@ -1962,18 +2021,37 @@ var createApp = (deps) => {
     try {
       const folder = mappedFor(directory);
       const mapping = folder ? config.directories[folder] : undefined;
+      const input = {
+        identifier,
+        issueTitle: typeof body.issueTitle === "string" ? body.issueTitle : null,
+        branch: readBranch(directory, read),
+        directory,
+        context: typeof body.context === "string" ? body.context : "",
+        scale: typeof body.scale === "string" ? body.scale : null
+      };
+      const choice = sessionChoice("plan", mapping, config.defaults, { model: body.model });
+      if (lead) {
+        const prompt = leadPlanPrompt({ ...input, choice });
+        const title = typeof body.leadTitle === "string" && body.leadTitle.trim() ? body.leadTitle.trim().slice(0, 200) : `${identifier} lead`;
+        let sessionId;
+        let sessionDirectory = directory;
+        if (typeof lead === "string") {
+          await host.sessions.send(lead, prompt);
+          sessionId = lead;
+        } else {
+          const started = await host.sessions.start({ prompt, directory, title });
+          sessionId = started.sessionId;
+          sessionDirectory = started.directory ?? directory;
+        }
+        rememberSession(sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: "lead", sessionDirectory, title });
+        saveHandoffs();
+        return { body: { ok: true, sessionId, directory: sessionDirectory, lead: true } };
+      }
       const started = await host.sessions.start({
-        prompt: planPrompt({
-          identifier,
-          issueTitle: typeof body.issueTitle === "string" ? body.issueTitle : null,
-          branch: readBranch(directory, read),
-          directory,
-          context: typeof body.context === "string" ? body.context : "",
-          scale: typeof body.scale === "string" ? body.scale : null
-        }),
+        prompt: planPrompt(input),
         directory,
         title: `${identifier} plan`,
-        ...sessionChoice("plan", mapping, config.defaults, { model: body.model })
+        ...choice
       });
       rememberSession(started.sessionId, { identifier, directory: folder ?? directory, createdAt: now(), role: "plan", sessionDirectory: directory, title: `${identifier} plan` });
       saveHandoffs();
@@ -1985,7 +2063,7 @@ var createApp = (deps) => {
       starting.delete(key);
     }
   };
-  const plansFor = (identifier, sessionId) => Object.entries(handoffs.builds).filter(([id, b]) => b.role === "plan" && (!identifier || b.identifier === identifier.toUpperCase()) && (!sessionId || id === sessionId)).map(([id, b]) => ({ sessionId: id, identifier: b.identifier, directory: b.directory, sessionDirectory: b.sessionDirectory ?? b.directory, title: b.title ?? `${b.identifier} plan`, createdAt: b.createdAt })).sort((x, y) => y.createdAt - x.createdAt);
+  const plansFor = (identifier, sessionId) => Object.entries(handoffs.builds).filter(([id, b]) => (b.role === "plan" || b.role === "lead") && (!identifier || b.identifier === identifier.toUpperCase()) && (!sessionId || id === sessionId)).map(([id, b]) => ({ sessionId: id, identifier: b.identifier, directory: b.directory, sessionDirectory: b.sessionDirectory ?? b.directory, title: b.title ?? `${b.identifier} plan`, createdAt: b.createdAt })).sort((x, y) => y.createdAt - x.createdAt);
   const snapshotRows = (directory) => {
     const folder = mappedFor(directory);
     return Object.entries(snapshots).map(([dir, snapshot]) => ({ snapshot, preferred: dir === folder }));
@@ -2080,6 +2158,7 @@ var createApp = (deps) => {
     if (event.type !== "turn-finished")
       return;
     const build = handoffs.builds[event.session.id];
+    const role = build?.role === "lead" ? build.building ? "build" : "lead" : build?.role;
     const issues = [...linearIssuesOf(event.linked)];
     if (build && !issues.includes(build.identifier))
       issues.push(build.identifier);
@@ -2095,14 +2174,14 @@ var createApp = (deps) => {
       }
       saveDrafts();
     }
-    if (reply.trim() && looksLikePlan(reply) && build?.role !== "build") {
+    if (reply.trim() && looksLikePlan(reply) && role !== "build") {
       const kept = { ...handoffs.plans ?? {}, [event.session.id]: { text: reply.slice(0, PLAN_LIMIT + 2000), at: now() } };
       handoffs.plans = Object.fromEntries(Object.entries(kept).sort((x, y) => y[1].at - x[1].at).slice(0, PLANS_KEPT));
       saveHandoffs();
     }
     const raw = content?.type === "turn-finished" ? content.reply : "";
-    const extras = build?.role !== "build" && raw ? parsePlanExtras(raw) : null;
-    if (extras && (build?.role === "plan" || looksLikePlan(reply))) {
+    const extras = role !== "build" && raw ? parsePlanExtras(raw) : null;
+    if (extras && (role === "plan" || looksLikePlan(reply))) {
       const before = handoffs.extras?.[event.session.id];
       if (!before || before.state === "pending") {
         keepExtras({
@@ -2116,7 +2195,7 @@ var createApp = (deps) => {
         });
       }
     }
-    if (build?.role !== "build" && reply.trim()) {
+    if (role !== "build" && reply.trim() && (role !== "lead" || looksLikePlan(reply))) {
       const identifier = issues[issues.length - 1];
       const handoff = {
         id: handoffId(event.session.id, identifier),
@@ -2125,7 +2204,7 @@ var createApp = (deps) => {
         sessionId: event.session.id,
         identifier,
         sessionTitle: title?.trim() || "Untitled session",
-        plan: build?.role === "plan" || looksLikePlan(reply),
+        plan: role === "plan" || looksLikePlan(reply),
         createdAt: now()
       };
       handoffs.pending = upsertHandoff(handoffs.pending.filter((h) => h.sessionId !== event.session.id && !(h.identifier === identifier && h.directory === folder)), handoff).slice(-HANDOFFS_MAX);

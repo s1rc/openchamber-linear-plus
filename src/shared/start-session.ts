@@ -5,6 +5,7 @@ import { requestPlan } from './handoff.ts';
 import { estimateLabel } from './format.ts';
 import { planningStateOf, startedStateOf, teamScale, worktreeOnBranch } from './moves.ts';
 import { scaleText } from './plan-extras.ts';
+import { getLeadMode } from './storage.ts';
 import type { IssueDetail, WorkflowState } from './types.ts';
 import { updateIssue, writeErrorText } from './writes.ts';
 
@@ -23,11 +24,15 @@ export type StartOptions = {
   directoryHint?: string | null;
   /** Start plan: `provider/model` for this plan only, instead of the one in Settings. */
   model?: string;
+  /** Start plan: run it under a lead session. Without it, the setting in Settings decides. */
+  lead?: boolean;
+  /** Start plan with a lead: the session made with `existing` earlier, to send the plan step to instead of a new lead. */
+  existingSession?: string | null;
 };
 
 export type StartOutcome =
-  /** The worktree exists but the session did not start. `error` is why, when the service said. */
-  | { started: false; directory: string; error?: string }
+  /** The worktree exists but the session did not start. `error` is why, when the service said. `session`: a lead made with it, to retry in. */
+  | { started: false; directory: string; error?: string; session?: string }
   | { started: true; sessionId: string; target: WorkflowState | null; moved: boolean; moveError: string | null };
 
 export const startSessionFor = async (issue: IssueDetail, options: StartOptions): Promise<StartOutcome> => {
@@ -69,9 +74,14 @@ const moveAfterStart = async (issue: IssueDetail, target: WorkflowState | null, 
  * Start plan: the frame makes the worktree (a session with no first message, linked to the issue, since a frame
  * cannot choose an agent or model), then the service starts the plan session in it with the folder's plan agent
  * and model. The empty first session stays in the sidebar; the plan session is the one to open.
+ *
+ * With lead mode on (Settings), that first session is the lead: the service sends it the plan step, and it starts
+ * the plan, and later the build, as child sessions nested under it. Nothing is left empty, and the lead is the one to open.
  */
 export const startPlanFor = async (issue: IssueDetail, options: StartOptions): Promise<StartOutcome> => {
+  const lead = options.lead ?? (await getLeadMode().catch(() => false));
   let directory = options.existing ?? null;
+  let leadSession = lead ? options.existingSession ?? null : null;
   if (!directory) {
     const made = await host.startSession({
       providerId: 'linear-dashboard',
@@ -86,14 +96,19 @@ export const startPlanFor = async (issue: IssueDetail, options: StartOptions): P
     if (made.sessionId === null) return { started: false, directory: made.directory };
     directory = made.worktree?.directory ?? made.directory ?? options.directoryHint ?? null;
     if (!directory) return { started: false, directory: '', error: 'The host did not say which folder the session is in.' };
+    if (lead) leadSession = made.sessionId;
   }
   let sessionId: string;
   try {
     // The team's scale goes with the plan, so it ends with an estimate on it.
     const scale = scaleText(teamScale(issue.team), (v) => estimateLabel(v, issue.team.issueEstimationType));
-    sessionId = (await requestPlan({ identifier: issue.identifier, directory, issueTitle: issue.title, context: issueContext(issue), scale, ...(options.model ? { model: options.model } : {}) })).sessionId;
+    sessionId = (await requestPlan({
+      identifier: issue.identifier, directory, issueTitle: issue.title, context: issueContext(issue), scale,
+      ...(options.model ? { model: options.model } : {}),
+      ...(lead ? { lead: leadSession ?? true, leadTitle: `${issue.identifier} ${issue.title}` } : {}),
+    })).sessionId;
   } catch (error) {
-    return { started: false, directory, error: error instanceof Error ? error.message : String(error) };
+    return { started: false, directory, error: error instanceof Error ? error.message : String(error), ...(leadSession ? { session: leadSession } : {}) };
   }
   const target = options.state ?? planningStateOf(issue, issue.team.states.nodes);
   const { moved, moveError } = await moveAfterStart(issue, target, options.move);

@@ -80,6 +80,8 @@ export const requestBuild = async (input: { source: Pick<BuildSource, 'sessionId
 export type PlanPreview = { plan: string; postPlan: boolean; /** The last reply was not the plan: this is the latest reply that was. */ earlier: boolean;
   /** The reply reads like a plan. When it does not, building or writing it needs a deliberate "use it anyway". */
   isPlan: boolean;
+  /** The session is a lead: the build runs as a session it starts under it. */
+  lead: boolean;
 };
 
 /** Reads the plan a build would start from, and the folder's post-the-plan setting. Throws with the service's own words. */
@@ -89,11 +91,14 @@ export const previewPlan = async (input: { source: Pick<BuildSource, 'sessionId'
     name: 'Linear+',
   });
   if (reply.ok === false || typeof reply.plan !== 'string') throw new Error(reply.error ?? 'The Linear+ service could not read the plan.');
-  return { plan: reply.plan, postPlan: reply.postPlan === true, earlier: reply.earlier === true, isPlan: reply.isPlan !== false };
+  return { plan: reply.plan, postPlan: reply.postPlan === true, earlier: reply.earlier === true, isPlan: reply.isPlan !== false, lead: reply.lead === true };
 };
 
-/** Asks the service to start the plan session in a folder with the plan agent and model from Settings, or `model` for this one. */
-export const requestPlan = async (input: { identifier: string; directory: string; issueTitle: string; context: string; model?: string; scale?: string }): Promise<BuildStarted> => {
+/**
+ * Asks the service to start the plan session in a folder with the plan agent and model from Settings, or `model` for this one.
+ * `lead`: the plan goes to a lead session instead, the one named (made with the worktree) or a new one for `true`.
+ */
+export const requestPlan = async (input: { identifier: string; directory: string; issueTitle: string; context: string; model?: string; scale?: string; lead?: string | true; leadTitle?: string }): Promise<BuildStarted> => {
   const { model, ...rest } = input;
   const reply = await api(host, 'POST', '/plan', { body: model ? { ...rest, model } : rest, name: 'Linear+' });
   if (reply.ok === false || typeof reply.sessionId !== 'string') throw new Error(reply.error ?? 'The Linear+ service did not start the plan.');

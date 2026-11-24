@@ -96,6 +96,13 @@ export const setNavOpen = (value: NavOpen) => set('pref:nav-open', value);
 export const getAssignToMe = async (): Promise<boolean> => (await get<boolean>('pref:assign-me')) === true;
 export const setAssignToMe = (on: boolean) => set('pref:assign-me', on);
 
+/**
+ * Whether Start plan makes one lead session that hands the plan and the build to child sessions of its own, instead
+ * of a plan session and a build session side by side. Off unless turned on in Settings.
+ */
+export const getLeadMode = async (): Promise<boolean> => (await get<boolean>('pref:lead-mode')) === true;
+export const setLeadMode = (on: boolean) => set('pref:lead-mode', on);
+
 /** The status Start session moved an issue to last on a team, by name, so the next start offers it first. */
 export const getStartState = async (teamId: string): Promise<string | null> => {
   const value = await get<string>(`pref:start-state:${teamId}`);

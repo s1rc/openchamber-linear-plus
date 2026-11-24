@@ -145,7 +145,10 @@ export type BuildSession = {
   /** The mapped folder, or the session's own when the folder is not mapped. */
   directory: string;
   createdAt: number;
-  role?: 'plan' | 'build';
+  /** `lead`: the session hands the plan, then the build, to child sessions of its own. */
+  role?: 'plan' | 'build' | 'lead';
+  /** A lead that has handed out the build: its later replies are build reports, not plans. */
+  building?: boolean;
   /** Where the session runs, usually the issue's worktree. */
   sessionDirectory?: string;
   title?: string;

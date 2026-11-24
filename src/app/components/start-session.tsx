@@ -8,7 +8,7 @@ import { ModelPick } from '../../shared/model-pick.tsx';
 import { MoveRow, useMoveChoice } from '../../shared/move-row.tsx';
 import { retryBranchName } from '../../shared/moves.ts';
 import { findIssueWorktree, openStartedSession, startPlanFor, startSessionFor } from '../../shared/start-session.ts';
-import { getStartMoves, getStartState, setStartState } from '../../shared/storage.ts';
+import { getLeadMode, getStartMoves, getStartState, setStartState } from '../../shared/storage.ts';
 import type { IssueDetail } from '../../shared/types.ts';
 import { Modal } from './modal.tsx';
 
@@ -21,6 +21,9 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
   const [reason, setReason] = useState<string | null>(null);
   // A worktree that was made for a session that then failed to start: retry there, never make a second.
   const [made, setMade] = useState<string | null>(null);
+  // The lead session made with that worktree, to send the plan step to on retry.
+  const [madeSession, setMadeSession] = useState<string | null>(null);
+  const [lead, setLead] = useState<boolean | null>(null);
   // A worktree that already holds the issue's branch: the session starts there, as a second one would be refused.
   const [found, setFound] = useState<string | null>(null);
   const directory = useReady()?.directory ?? null;
@@ -34,15 +37,17 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
   const choice = useMoveChoice(plan ? 'plan' : 'session', issue, lastState, allowMove);
   const [model, setModel] = useState('');
   useEffect(() => { void getStartMoves().then(setAllowMove); }, []);
+  useEffect(() => { if (plan) void getLeadMode().then(setLead, () => setLead(false)); }, [plan]);
   useEffect(() => { void getStartState(issue.team.id).then(setLastState, () => undefined).finally(() => setPrefLoaded(true)); }, [issue.team.id]);
   useEffect(() => { void findIssueWorktree(directory, issue.branchName).then(setFound); }, [directory, issue.branchName]);
 
   const start = async () => {
     setBusy(true);
     try {
-      const outcome = await (plan ? startPlanFor : startSessionFor)(issue, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}) });
+      const outcome = await (plan ? startPlanFor : startSessionFor)(issue, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}), ...(plan && lead !== null ? { lead, existingSession: madeSession } : {}) });
       if (!outcome.started) {
         setMade(outcome.directory);
+        setMadeSession(outcome.session ?? null);
         setReason(outcome.error ?? null);
         return;
       }
@@ -87,9 +92,11 @@ export const StartSessionDialog = ({ issue, plan, onClose }: { issue: IssueDetai
       <MoveRow choice={choice} disabled={busy} />
       {plan && <ModelPick role="plan" directory={directory} value={model} onChange={setModel} disabled={busy} />}
       <div class="sui-muted sui-small">
-        {plan
-          ? "The plan session gets the issue's title, status, description and latest comments, and the plan agent from Settings, on the model above. It plans and stops: it changes no files. An empty first session also appears: the host needs it to make the worktree."
-          : "The session gets the issue's title, status, description and latest comments."}
+        {!plan
+          ? "The session gets the issue's title, status, description and latest comments."
+          : lead
+            ? "The first session in the worktree is the lead. It starts the plan as a session nested under it, with the issue's title, status, description and latest comments, the plan agent from Settings and the model above. When you click Start build, the lead starts the build the same way. The plan changes no files."
+            : "The plan session gets the issue's title, status, description and latest comments, and the plan agent from Settings, on the model above. It plans and stops: it changes no files. An empty first session also appears: the host needs it to make the worktree. Turn on the lead in Settings to use that session instead."}
       </div>
     </Modal>
   );

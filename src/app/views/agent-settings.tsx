@@ -12,7 +12,7 @@ import { fetchDrafts } from '../../shared/drafts.ts';
 import { rowKey } from '../../shared/handoff-rules.ts';
 import { host } from '../../shared/host.ts';
 import { Banner, Button, Select, Spinner, Switch, TextField } from '../../shared/kit.tsx';
-import { getAgentDefaults, setAgentDefaults, type FinishComments } from '../../shared/storage.ts';
+import { getAgentDefaults, getLeadMode, setAgentDefaults, setLeadMode, type FinishComments } from '../../shared/storage.ts';
 import type { DetectionState } from '../../shared/use-detection.ts';
 
 type ServiceState = { reachable: boolean; hasKey: boolean };
@@ -147,6 +147,26 @@ const RoleFields = ({ state, role }: { state: DetectionState; role: Role }) => {
   );
 };
 
+/** Whether Start plan runs the plan and the build under one lead session or as two sessions of their own. */
+const LeadModeSwitch = () => {
+  const mode = useQuery('settings:lead-mode', getLeadMode);
+  const on = mode.data === true;
+  return (
+    <Switch
+      label="Run the plan and the build under one lead session"
+      description={on
+        ? "Start plan makes the issue's worktree with one session, the lead. The lead starts the plan as a session nested under it, and when you click Start build, the build the same way, each with the agent and model below. It answers their questions itself and asks you only what it cannot settle. Make it a lead from its menu in the sidebar to also get its brief and digest."
+        : "Start plan makes the issue's worktree, then a plan session in it, and Start build a build session next to it. The host also leaves an empty first session in the worktree: it needs one to make the worktree. Turn this on to use that session as the lead instead."}
+      checked={on}
+      disabled={mode.data === undefined}
+      onChange={(next) => {
+        put('settings:lead-mode', next);
+        void setLeadMode(next).then((saved) => { if (!saved) invalidate('settings:lead-mode'); });
+      }}
+    />
+  );
+};
+
 const REVIEW_OPTIONS = [
   { id: 'off', label: 'Stop when the code is done' },
   { id: 'mr', label: 'My usual commit, push and merge request options, then AI review' },
@@ -233,6 +253,9 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
           ))
         )}
       </Section>
+      <Section title="Plan and build">
+        <LeadModeSwitch />
+      </Section>
       <Section title="Start plan">
         <div class="sui-muted sui-small">
           Start plan makes the issue's worktree and starts a planning session in it with this agent and model. The session plans and stops: it changes no files.
@@ -241,7 +264,7 @@ export const AgentSettings = ({ state }: { state: DetectionState }) => {
       </Section>
       <Section title="Start build">
         <div class="sui-muted sui-small">
-          Start build begins a new session in the same worktree with the plan from the planning session. Pick the agent and model it uses for every folder, and this folder's own when it should differ.
+          Start build begins a new session in the same worktree with the plan from the planning session (with the lead on, a session the lead starts under it). Pick the agent and model it uses for every folder, and this folder's own when it should differ.
         </div>
         <RoleFields state={state} role="build" />
         <ReviewFields state={state} />

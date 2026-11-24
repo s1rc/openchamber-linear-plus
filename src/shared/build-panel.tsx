@@ -119,7 +119,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
   return (
     <div class={fill ? 'lin-build lin-build--fill' : 'lin-build'} data-state="options">
       <div class="sui-small">
-        Builds from the last reply in <strong>{source.title}</strong>{source.agent ? ` (${source.agent} agent)` : ''}, in {folderName(source.directory)}, as a new session.
+        Builds from the last reply in <strong>{source.title}</strong>{source.agent ? ` (${source.agent} agent)` : ''}, in {folderName(source.directory)}, {preview?.lead ? 'as a session that lead starts under it' : 'as a new session'}.
         It uses the build agent from Settings, on the model below.
       </div>
       {previewError && <Banner tone="warning" title="The plan cannot be read yet" body={previewError} />}

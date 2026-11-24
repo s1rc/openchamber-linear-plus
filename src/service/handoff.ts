@@ -104,6 +104,8 @@ export type PlanPromptInput = {
   context: string;
   /** The team's estimate scale, as `scaleText` writes it. Without it the plan gives no estimate block. */
   scale?: string | null;
+  /** The plan runs as a lead's child session: its questions go to the lead in its reply, not to the user in a form. */
+  child?: boolean;
 };
 
 /**
@@ -141,7 +143,9 @@ export const planPrompt = (input: PlanPromptInput): string => {
     '',
     'Read the code you need, then write a plan: what to change and where, in order, how to test it, and the risks.',
     '',
-    'You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.',
+    input.child
+      ? 'You may ask questions first to clarify the issue; I want that. Write them as a normal message (question tools reach nobody here), and the answers come back as a message. When you are done asking, write the complete plan as a normal message.'
+      : 'You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.',
     '',
     ...extrasLines(input.identifier, input.scale),
     'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
@@ -153,3 +157,64 @@ export const planPrompt = (input: PlanPromptInput): string => {
     '```',
   ].join('\n');
 };
+
+/** The agent and model a lead gives one of its child sessions. */
+export type ChildChoice = { agent: string; model?: string };
+
+/** The `session.create` call a lead makes for a child, with the child's prompt between two marker lines. */
+const childCall = (directory: string, title: string, choice: ChildChoice, marker: string): string[] => [
+  'Call the openchamber tool with action session.create and these fields:',
+  '- ownWork: true',
+  `- directory: ${JSON.stringify(directory)}`,
+  `- title: ${JSON.stringify(title)}`,
+  `- agent: ${JSON.stringify(choice.agent)}`,
+  ...(choice.model ? [`- model: ${JSON.stringify(choice.model)}`] : []),
+  `- prompt: everything between the ${marker} START and ${marker} END lines at the end of this message, word for word, without those two lines`,
+];
+
+const titled = (identifier: string, issueTitle: string | null | undefined) =>
+  `${identifier}${issueTitle ? ` (${issueTitle.replace(/\s+/g, ' ').trim().slice(0, 160)})` : ''}`;
+
+/**
+ * The first message of a lead session: it hands the plan to a child session on the plan agent and model, answers
+ * the child's questions, and repeats the finished plan as its own reply, which Start build reads.
+ */
+export const leadPlanPrompt = (input: PlanPromptInput & { choice: ChildChoice }): string => {
+  const where = `${input.directory}${input.branch ? `, on branch ${input.branch}` : ''}`;
+  return [
+    `You lead the work on Linear issue ${titled(input.identifier, input.issueTitle)} in ${where}. You do not plan or build it yourself: each goes to a session of your own, nested under you, and you check what it hands back.`,
+    '',
+    'Start the plan session now.',
+    ...childCall(input.directory, `${input.identifier} plan`, input.choice, 'PLAN PROMPT'),
+    'Then end your turn with one line saying the plan session is running. Do not read the code or write a plan yourself.',
+    '',
+    'While it plans:',
+    '- Its questions come to you. Answer them yourself from the issue and the code where you can, with session.send to that session. Ask the user only what only the user can settle (a preference, a trade-off they would judge, a step that is hard to undo), then pass the answer on the same way.',
+    '- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.',
+    '',
+    'When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.',
+    '',
+    'Do not start the build. When the user clicks Start build, Linear+ sends you the build step.',
+    '',
+    'PLAN PROMPT START',
+    planPrompt({ ...input, child: true }),
+    'PLAN PROMPT END',
+  ].join('\n');
+};
+
+/** What Linear+ sends a lead on Start build: hand the build to a new child session and report its result. */
+export const leadBuildPrompt = (input: HandoffPromptInput & { choice: ChildChoice }): string => [
+  `The user clicked Start build for ${titled(input.identifier, input.issueTitle)}. Start the build session now, as a new session of your own (not the plan session).`,
+  ...childCall(input.directory, `${input.identifier} build`, input.choice, 'BUILD PROMPT'),
+  'Then end your turn with one line saying the build session is running.',
+  '',
+  'While it builds:',
+  '- Answer its questions yourself where you can, with session.send. Ask the user only what only the user can settle, such as the commit, push and merge request options it offers, then pass the answer on.',
+  '- Check its answer against the plan: what it changed, the tests and checks it ran and what they showed. An answer without that proof, or with work left, goes back to it as unfinished.',
+  '',
+  'When the build is done, reply to the user with what changed, the tests and what they showed, and the merge request link when there is one.',
+  '',
+  'BUILD PROMPT START',
+  handoffPrompt(input),
+  'BUILD PROMPT END',
+].join('\n');

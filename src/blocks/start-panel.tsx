@@ -12,7 +12,7 @@ import { MoveRow, useMoveChoice } from '../shared/move-row.tsx';
 import { retryBranchName } from '../shared/moves.ts';
 import { ISSUE_DETAIL } from '../shared/queries.ts';
 import { findIssueWorktree, openStartedSession, startPlanFor, startSessionFor } from '../shared/start-session.ts';
-import { getStartMoves, getStartState, setStartState } from '../shared/storage.ts';
+import { getLeadMode, getStartMoves, getStartState, setStartState } from '../shared/storage.ts';
 import type { IssueDetail, IssueDetailResult, IssueRow } from '../shared/types.ts';
 
 const failureText = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -27,6 +27,9 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
   const [busy, setBusy] = useState(false);
   // A worktree made for a session that then failed to start: retry there, never make a second.
   const [made, setMade] = useState<string | null>(null);
+  // The lead session made with that worktree, to send the plan step to on retry.
+  const [madeSession, setMadeSession] = useState<string | null>(null);
+  const [lead, setLead] = useState<boolean | null>(null);
   // A worktree that already holds the issue's branch: the session starts there, as a second one would be refused.
   const [found, setFound] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +49,14 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
       gql<IssueDetailResult>(ISSUE_DETAIL, { id: issue.identifier }),
       getStartMoves().catch(() => true),
       getStartState(issue.team.id).catch(() => null),
+      getLeadMode().catch(() => false),
     ]).then(
-      ([data, moves, last]) => {
+      ([data, moves, last, leadMode]) => {
         if (!live) return;
         setDetail(data.issue);
         setAllowMove(moves);
         setLastState(last);
+        setLead(leadMode);
         void findIssueWorktree(directory, data.issue.branchName).then((dir) => { if (live) setFound(dir); });
       },
       (error: unknown) => { if (live) setLoadError(failureText(error)); },
@@ -75,9 +80,10 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
     setBusy(true);
     setError(null);
     try {
-      const outcome = await (plan ? startPlanFor : startSessionFor)(detail, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}) });
+      const outcome = await (plan ? startPlanFor : startSessionFor)(detail, { worktree, move: choice.move, existing, branch, state: choice.selected, directoryHint: directory, ...(plan && model ? { model } : {}), ...(plan && lead !== null ? { lead, existingSession: madeSession } : {}) });
       if (!outcome.started) {
         setMade(outcome.directory);
+        setMadeSession(outcome.session ?? null);
         setError(outcome.error ?? null);
         return;
       }
@@ -103,7 +109,13 @@ export const StartPanel = ({ issue, plan, onClose }: { issue: IssueRow; plan?: b
     <div class="lin-block-start" data-state="options">
       {made && <Banner tone="warning" title={`The worktree is ready, but the ${noun} did not start`} body={`Retry starts the ${noun} in ${made}.`} />}
       {!made && found && <Banner tone="info" title="This issue already has a worktree" body={`The session starts in ${found}, on branch ${detail.branchName}.`} />}
-      {plan && !made && <div class="sui-muted sui-small">Makes the worktree, then starts a planning session in it with the plan agent from Settings, on the model below. It plans and stops: it changes no files.</div>}
+      {plan && !made && (
+        <div class="sui-muted sui-small">
+          {lead
+            ? 'Makes the worktree with one lead session. The lead starts the plan as a session nested under it, with the plan agent from Settings on the model below, and later the build the same way. The plan changes no files.'
+            : 'Makes the worktree, then starts a planning session in it with the plan agent from Settings, on the model below. It plans and stops: it changes no files.'}
+        </div>
+      )}
       {error && <Banner tone="error" title={`Could not start a ${noun}`} body={error} />}
       <Switch
         label={existing ? 'Work in the existing worktree' : 'Work in a new worktree'}
