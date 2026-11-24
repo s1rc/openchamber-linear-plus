@@ -206,6 +206,15 @@ try {
   r = await call('POST', '/handoffs', { id: 'ses_plan1:ENG-123', action: 'dismiss' });
   check('POST /handoffs dismiss removes the row', r.json.ok === true && (await call('GET', '/handoffs')).json.handoffs.length === 0, r.json);
 
+  const startsBefore = calls.filter((c) => c.method === 'sessions.start').length;
+  const lastSend = () => calls.filter((c) => c.method === 'sessions.send').at(-1)?.input as { sessionId?: string; prompt?: string } | undefined;
+  r = await call('POST', '/plan', { identifier: 'ENG-123', directory: worktree, issueTitle: 'Fix login timeout', context: 'ENG-123: Fix login timeout\nLogins time out.', lead: 'ses_lead1', leadTitle: 'ENG-123 Fix login timeout' });
+  const leadPlan = lastSend();
+  check('POST /plan with a lead sends the plan step to that session', r.json.ok === true && r.json.sessionId === 'ses_lead1' && leadPlan?.sessionId === 'ses_lead1' && Boolean(leadPlan.prompt?.includes('- ownWork: true') && leadPlan.prompt.includes('PLAN PROMPT START')), r.json);
+  r = await call('POST', '/handoff', { sessionId: 'ses_lead1', identifier: 'ENG-123', issueTitle: 'Fix login timeout' });
+  const leadBuild = lastSend();
+  check('POST /handoff on a lead sends it the build step and starts no session', r.json.ok === true && r.json.sessionId === 'ses_lead1' && Boolean(leadBuild?.prompt?.includes('BUILD PROMPT START') && leadBuild.prompt.includes('Raise the token refresh window')) && calls.filter((c) => c.method === 'sessions.start').length === startsBefore, r.json);
+
   r = await call('PUT', '/config', { directories: {} });
   await settle();
   check('removing the mapping clears the instructions', calls.some((c) => c.method === 'instructions.set' && c.input.directory === repo && c.input.text === ''), calls.filter((c) => c.method === 'instructions.set').map((c) => [c.input.directory, String(c.input.text).length]));

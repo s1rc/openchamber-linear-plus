@@ -156,8 +156,8 @@ const LeadModeSwitch = () => {
     <Switch
       label="Run the plan and the build under one lead session"
       description={on
-        ? "Start plan makes the issue's worktree with one session, the lead. The lead starts the plan as a session nested under it, and when you click Start build, the build the same way, each with the agent and model below. It answers their questions itself and asks you only what it cannot settle. Make it a lead from its menu in the sidebar to also get its brief and digest."
-        : "Start plan makes the issue's worktree, then a plan session in it, and Start build a build session next to it. The host also leaves an empty first session in the worktree: it needs one to make the worktree. Turn this on to use that session as the lead instead."}
+        ? "Start plan makes the issue's worktree with one session, the lead. The lead starts the plan as a session nested under it, and when you click Start build, the build the same way, each with the agent and model below. It answers their questions itself and asks you only what it cannot settle. Make it a lead from its menu in the sidebar to also get its brief and digest (OpenChamber 2.8 or later). Needs OpenChamber 2.7.3 or later."
+        : "Start plan makes the issue's worktree, then a plan session in it, and Start build a build session next to it. The host also leaves an empty first session in the worktree: it needs one to make the worktree. Turn this on to use that session as the lead instead (OpenChamber 2.7.3 or later)."}
       checked={on}
       disabled={mode.data === undefined}
       onChange={(next) => {

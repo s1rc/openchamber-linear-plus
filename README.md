@@ -8,7 +8,7 @@ A Linear dashboard and agent toolkit for [OpenChamber](https://openchamber.dev).
 
 ## Requirements
 
-- OpenChamber desktop 2.7.0 or later. Extensions are not available in VS Code or on the phone.
+- OpenChamber desktop 2.7.0 or later. Extensions are not available in VS Code or on the phone. Running the plan and the build under one lead session needs 2.7.3 or later.
 - A Linear workspace connected to OpenChamber.
 - Optional: a Linear personal API key. It keeps agent context and `@` rows fresh while the dashboard is closed.
 
@@ -47,7 +47,7 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 
 With **Run the plan and the build under one lead session** on (Settings, Plan and build), Start plan makes the worktree with one session, the lead. The lead starts the plan, and on Start build the build, as sessions nested under it, and answers their questions itself where it can. With it off, the plan and the build are sessions of their own, and the host leaves an empty first session in the worktree.
 
-Agent and model defaults live in **Settings** (in the rail panel, the Settings button beside Refresh). A one-off model choice on Start plan or Start build does not change those defaults.
+Agent and model defaults live in **Settings** (in the rail panel, the Settings button beside Refresh). A one-off model choice on Start plan or Start build does not change those defaults. The plan and build agents and models, After the build, Finish comments and Add the plan to the issue each have an **All folders** choice, and **This folder** overrides it in a pinned folder.
 
 The plan estimate and split-out issues are the only writes Linear+ makes without a click. Comments, status changes, and project updates require an action from you.
 
@@ -98,9 +98,9 @@ GitHub Actions runs `openchamber-guest-check` on pushes to `main` and on pull re
 
 To publish a release:
 
-1. Raise `version` in `package.json`.
+1. Raise `version` in `package.json`, and add the version's section at the top of [CHANGELOG.md](CHANGELOG.md).
 2. Run the checks in [TESTING.md](TESTING.md), rebuild, and commit the source and built `.js` files.
 3. Tag the commit as `vX.Y.Z`, matching the package version.
-4. Push the commit and tag. The release workflow validates the package again and creates a GitHub release with generated notes.
+4. Push the commit and tag. The release workflow validates the package again and creates a GitHub release with the version's CHANGELOG section as its notes (generated notes when there is none).
 
 OpenChamber installs from the repository, not from release assets. After a version increase, users update in **Settings → Extensions**.

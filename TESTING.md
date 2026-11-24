@@ -9,11 +9,11 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 473 unit and route tests in `test/` (see below) |
+| `bun test` | 485 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
-| `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff |
+| `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff and lead mode |
 | `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 17 screen tests, fake data only |
 
 Also check by grep:
