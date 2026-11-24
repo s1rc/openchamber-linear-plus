@@ -238,7 +238,11 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-due-dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--oc-muted); flex: none; }
 .lin-avatar-empty--sm { width: 16px; height: 16px; }
 .lin-subissues { display: flex; flex-direction: column; }
-.lin-subissues-head { margin-bottom: 4px; }
+.lin-subissues-head { margin-bottom: 6px; }
+/* On a card like the description and the comments; the last row needs no line under it. */
+.lin-subissues-list { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); overflow: hidden; }
+.lin-subissues-list .lin-issue-row { padding: 4px 12px; }
+.lin-subissues-list .lin-issue-row:last-child { border-bottom: 0; }
 .lin-activity { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--oc-border); }
 .lin-activity-title { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .lin-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

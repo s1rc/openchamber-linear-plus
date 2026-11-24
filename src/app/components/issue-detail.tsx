@@ -435,7 +435,9 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
                 <span class="lin-activity-title">Sub-issues</span>
                 <Chip><ProgressRing done={done} total={issue.children.nodes.length} />{done}/{issue.children.nodes.length}</Chip>
               </div>
-              {issue.children.nodes.map((child) => <IssueRow key={child.id} issue={child} compact onOpen={(c) => onOpenIssue(c.identifier)} />)}
+              <div class="lin-subissues-list">
+                {issue.children.nodes.map((child) => <IssueRow key={child.id} issue={child} compact onOpen={(c) => onOpenIssue(c.identifier)} />)}
+              </div>
             </section>
           )}
           <Activity issue={issue} onOpenIssue={onOpenIssue} />
