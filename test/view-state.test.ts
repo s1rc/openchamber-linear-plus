@@ -41,6 +41,21 @@ describe('view state', () => {
     expect(vs.openIssueFor('p:b', 'project-issues:x')).toBe('CON-9');
   });
 
+  test('each worktree of a project remembers its own open issue', async () => {
+    await vs.loadViewState('p:a');
+    const main = vs.issueOwnerKey('/work/repo', 'project-issues:x');
+    const worktree = vs.issueOwnerKey('/work/repo-nil-779', 'project-issues:x');
+    vs.saveOpenIssue('p:a', main, 'SC-1');
+    vs.saveOpenIssue('p:a', worktree, 'NIL-779');
+    expect(vs.openIssueFor('p:a', main)).toBe('SC-1');
+    expect(vs.openIssueFor('p:a', worktree)).toBe('NIL-779');
+    await settle();
+    vs.forgetViewStateMemory();
+    await vs.loadViewState('p:a');
+    expect(vs.openIssueFor('p:a', main)).toBe('SC-1');
+    expect(vs.openIssueFor('p:a', worktree)).toBe('NIL-779');
+  });
+
   test('closing an issue is remembered too', async () => {
     await vs.loadViewState('p:a');
     vs.saveOpenIssue('p:a', 'l', 'SC-1');

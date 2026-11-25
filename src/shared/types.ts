@@ -178,9 +178,16 @@ export type ProjectUpdate = { id: string; body: string; health: ProjectHealth; c
 
 export type DocumentSummary = { id: string; title: string; url: string; updatedAt: string; project?: { id: string; name: string } | null };
 
+export type ProjectStatus = { id: string; name: string; type: ProjectStatusType; color: string; position: number };
+
 export type ProjectDetail = ProjectSummary & {
+  /** The short summary under the title. */
   description: string;
+  /** The long description, as Markdown. */
   content: string | null;
+  /** 0 none, 1 urgent, 2 high, 3 medium, 4 low. */
+  priority: 0 | 1 | 2 | 3 | 4;
+  createdAt: string;
   members: Connection<User>;
   projectMilestones: Connection<ProjectMilestoneSummary & { description?: string | null; targetDate: string | null; /** A percent, 0 to 100 (a project's own progress is 0 to 1). */ progress: number }>;
   lastUpdate: { id: string; health: ProjectHealth; createdAt: string } | null;
@@ -223,6 +230,7 @@ export type TeamPeopleResult = { team: { id: string; members: Connection<User & 
 export type WorkspaceLabelsResult = { issueLabels: Connection<Label & { team: { id: string } | null }> };
 export type ProjectsResult = { projects: Page<ProjectSummary> };
 export type ProjectDetailResult = { project: ProjectDetail };
+export type ProjectStatusesResult = { projectStatuses: Connection<ProjectStatus> };
 export type ProjectMilestonesResult = { project: { id: string; projectMilestones: Connection<ProjectMilestoneSummary> } };
 export type IssuesResult = { issues: Page<IssueRow> };
 export type IssueDetailResult = { issue: IssueDetail };
@@ -286,7 +294,20 @@ export type PickerIssue = {
   children: Connection<{ id: string; state: { type: StateType } }>;
 };
 export type TriageCountsResult = { issues: Page<{ team: { id: string } }> };
-export type MilestoneIssuesResult = { issues: Page<{ projectMilestone: { id: string } | null }> };
+/** What a project's issue timeline needs: when each issue was made, started and finished. */
+export type ProjectIssueTimeline = {
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  canceledAt: string | null;
+  estimate: number | null;
+  state: { type: StateType };
+  projectMilestone: { id: string } | null;
+};
+export type MilestoneIssuesResult = { issues: Page<ProjectIssueTimeline> };
+export type ProjectHistoryNode = { id: string; createdAt: string; entries: unknown };
+export type ProjectActivityResult = { project: { id: string; history: Connection<ProjectHistoryNode> } };
+export type UsersResult = { users: Connection<User> };
 export type PickerIssuesResult = { issues: Connection<PickerIssue> };
 export type PickerSearchResult = { searchIssues: Connection<PickerIssue> };
 export type SearchProjectsResult = { searchProjects: Connection<ProjectSummary> };

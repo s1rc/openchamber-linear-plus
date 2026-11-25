@@ -8,7 +8,7 @@ import { Banner, Button, Empty, List, Select, Spinner } from '../shared/kit.tsx'
 import { LinearError } from '../shared/linear.ts';
 import { getLastView } from '../shared/storage.ts';
 import { takeOpenTarget } from '../shared/open-target.ts';
-import { loadViewState, PlaceKey, saveOpenIssue, saveRoute, saveTab, setViewStateScope } from './view-state.ts';
+import { issueOwnerKey, loadViewState, PlaceKey, saveOpenIssue, saveRoute, saveTab, setViewStateScope, WorktreeKey } from './view-state.ts';
 import { AssignedPusher, SnapshotPusher } from '../shared/snapshot-pusher.tsx';
 import { PlanExtrasRunner } from '../shared/plan-extras-runner.tsx';
 import { useDetection, type DetectionState } from '../shared/use-detection.ts';
@@ -367,7 +367,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
         onRoute({ view: 'picker' });
       } else if (target.issue) {
         saveTab(key, 'my-issues', 'assigned');
-        saveOpenIssue(key, 'my-issues:assigned', target.issue);
+        saveOpenIssue(key, issueOwnerKey(state.place?.directory ?? '', 'my-issues:assigned'), target.issue);
         setScoped(state.mapped);
         onRoute({ view: 'my-issues' });
         setNonce((n) => n + 1);
@@ -430,6 +430,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   const data = workspace.data;
   return (
     <PlaceKey.Provider value={state.place?.key ?? null}>
+    <WorktreeKey.Provider value={state.place?.directory ?? ''}>
     <IssuePaneProvider>
     <AssignedPusher directory={ctx.directory ?? null} orgKey={data.viewer.organization?.urlKey ?? null} />
     {state.place && state.mapped && <SnapshotPusher directory={state.place.directory} workspace={data} state={state} />}
@@ -467,6 +468,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
       </main>
     </div>
     </IssuePaneProvider>
+    </WorktreeKey.Provider>
     </PlaceKey.Provider>
   );
 };

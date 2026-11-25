@@ -27,7 +27,7 @@ import { IssueActionDialog } from './issue-action-dialogs.tsx';
 import { IssueRelationDialog } from './issue-relation-dialog.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import {
-  openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults,
+  issueOwnerKey, openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults, WorktreeKey,
 } from '../view-state.ts';
 import { Board } from './board.tsx';
 import { GroupIcon } from './group-icon.tsx';
@@ -74,6 +74,7 @@ type Props = {
 
 export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = null, teamIds: scopeTeamIds = [], viewerId, showProject = true, states = 'open', defaultMode = 'list', viewTeamId = null, projectId = null, milestones = [], milestone = null, onMilestone, origin = 'Issues', emptyTitle, emptyBody, plain = false }: Props) => {
   const placeKey = useContext(PlaceKey);
+  const worktree = useContext(WorktreeKey);
   const workspace = useWorkspace();
   const statesByTeam = workspace.data?.statesByTeam;
 
@@ -126,7 +127,7 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   const [relation, setRelation] = useState<{ issue: Issue; relation: RelationChoice; create: boolean } | null>(null);
   // The open issue is drawn by the shell's pane, the same from every view (src/app/issue-pane.tsx).
   const [openId, setOpenId] = usePaneIssue(placeKey, listKey, origin);
-  const [cursorId, setCursorId] = useState<string | null>(() => openIssueFor(placeKey, listKey));
+  const [cursorId, setCursorId] = useState<string | null>(() => openIssueFor(placeKey, issueOwnerKey(worktree, listKey)));
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!openId && cursorId) root.current?.querySelector(`[data-issue="${cursorId}"]`)?.scrollIntoView({ block: 'center' });

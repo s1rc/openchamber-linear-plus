@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { load, useQuery } from './cache.ts';
 import { gql } from './linear.ts';
-import { PROJECT_MILESTONES, PROJECTS, SEARCH_PROJECTS } from './queries.ts';
-import type { ProjectMilestonesResult, ProjectMilestoneSummary, ProjectsResult, ProjectSummary, SearchProjectsResult } from './types.ts';
+import { PROJECT_MILESTONES, PROJECT_STATUSES, PROJECTS, SEARCH_PROJECTS } from './queries.ts';
+import { fetchTeamPeople } from './team-data.ts';
+import type { ProjectMilestonesResult, ProjectMilestoneSummary, ProjectsResult, ProjectStatusesResult, ProjectSummary, SearchProjectsResult } from './types.ts';
 
 const known = new Map<string, ProjectSummary>();
 
@@ -46,6 +47,21 @@ export const useTeamProjects = (teamIds: string[]) => {
     return lists.flat().filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
   });
 };
+
+/** The workspace's project statuses in Linear's order. */
+export const useProjectStatuses = () =>
+  useQuery('project-statuses', async () => {
+    const data = await gql<ProjectStatusesResult>(PROJECT_STATUSES);
+    return [...data.projectStatuses.nodes].sort((a, b) => a.position - b.position);
+  });
+
+/** Active members of any of the teams, each once: who can lead or join a project of those teams. */
+export const useProjectPeople = (teamIds: string[]) =>
+  useQuery(teamIds.length ? `project-people:${[...teamIds].sort().join(',')}` : null, async () => {
+    const teams = await Promise.all(teamIds.map((id) => fetchTeamPeople(id)));
+    const seen = new Set<string>();
+    return teams.flatMap((t) => t.members.nodes).filter((m) => m.active && !seen.has(m.id) && seen.add(m.id)).sort((a, b) => a.name.localeCompare(b.name));
+  });
 
 export const useProjectMilestones = (projectId: string | null) =>
   useQuery(projectId ? `project-milestones:${projectId}` : null, async () => {

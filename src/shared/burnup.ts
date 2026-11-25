@@ -1,7 +1,7 @@
 // A cycle's burn-up, built from its issues. Linear's own daily history is one nightly snapshot, so
 // it lags a day behind and has too few points to draw a curve; the issues' timestamps give today's
 // real numbers and a history. Pure, so tests can check them.
-import type { IssueRow } from './types.ts';
+import type { IssueRow, ProjectIssueTimeline } from './types.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -59,10 +59,14 @@ const timelineOf = (issue: IssueRow, weight: number): Timeline => {
 export const burnupOf = (cycle: { startsAt: string; endsAt: string }, issues: IssueRow[], estimates: boolean, now = Date.now()): Burnup => {
   const start = new Date(cycle.startsAt).getTime();
   const end = new Date(cycle.endsAt).getTime();
-  const days = Math.max(1, (end - start) / DAY);
   const unit: Burnup['unit'] = estimates && issues.some((i) => (i.estimate ?? 0) > 0) ? 'points' : 'issues';
   const timelines = issues.map((i) => timelineOf(i, unit === 'points' ? (i.estimate ?? 0) : 1));
+  return chartOf(timelines, start, end, unit, now);
+};
 
+/** The samples and totals for a set of issue timelines between two times, in milliseconds. */
+const chartOf = (timelines: Timeline[], start: number, end: number, unit: Burnup['unit'], now: number): Burnup => {
+  const days = Math.max(1, (end - start) / DAY);
   const at = (t: number): Sample => {
     let scope = 0;
     let started = 0;
@@ -93,6 +97,44 @@ export const burnupOf = (cycle: { startsAt: string; endsAt: string }, issues: Is
     inProgress: Math.max(0, final.started - final.completed),
     max: Math.max(1, ...samples.map((s) => s.scope)),
   };
+};
+
+/** The span a project's burn-up covers: its start date, else its first issue, to its target, else now. */
+export const projectRange = (
+  project: { startDate: string | null; targetDate: string | null; createdAt: string },
+  issues: readonly ProjectIssueTimeline[],
+  now = Date.now(),
+): { start: number; end: number } | null => {
+  const live = issues.filter((i) => i.state.type !== 'canceled' && i.state.type !== 'duplicate');
+  if (!live.length) return null;
+  const first = Math.min(time(project.createdAt) ?? now, ...live.map((i) => time(i.createdAt) ?? now));
+  const start = time(project.startDate) ?? first;
+  const end = time(project.targetDate) ?? now;
+  return end > start ? { start, end } : null;
+};
+
+/**
+ * A project's burn-up in issue counts, from its issues' own timestamps. Projects span teams whose
+ * estimate scales differ, so issues are counted, not pointed. Canceled and duplicate issues are not
+ * scope, as in Linear. Null when there is nothing to draw.
+ */
+export const projectBurnupOf = (
+  project: { startDate: string | null; targetDate: string | null; createdAt: string },
+  issues: readonly ProjectIssueTimeline[],
+  now = Date.now(),
+): Burnup | null => {
+  const range = projectRange(project, issues, now);
+  if (!range) return null;
+  const timelines: Timeline[] = issues
+    .filter((i) => i.state.type !== 'canceled' && i.state.type !== 'duplicate')
+    .map((i) => ({
+      weight: 1,
+      added: time(i.createdAt) ?? 0,
+      canceled: time(i.canceledAt),
+      started: time(i.startedAt) ?? time(i.completedAt),
+      completed: time(i.completedAt),
+    }));
+  return chartOf(timelines, range.start, range.end, 'issues', now);
 };
 
 export type Point = { x: number; y: number };

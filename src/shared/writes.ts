@@ -6,12 +6,13 @@ import { gql, LinearError } from './linear.ts';
 import type { Change, IssueInput, IssuePatch } from './moves.ts';
 import {
   ATTACHMENT_CREATE, COMMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_CREATE, ISSUE_DELETE,
-  ISSUE_FAVORITE, ISSUE_RELATION_CREATE, ISSUE_REMINDER, ISSUE_UPDATE, markReadMany, NOTIFICATION_MARK_READ, PROJECT_CREATE, PROJECT_UPDATE_CREATE,
+  ISSUE_FAVORITE, ISSUE_RELATION_CREATE, ISSUE_REMINDER, ISSUE_UPDATE, markReadMany, MILESTONE_CREATE, MILESTONE_DELETE, MILESTONE_EDIT,
+  NOTIFICATION_MARK_READ, PROJECT_CREATE, PROJECT_EDIT, PROJECT_UPDATE_CREATE,
 } from './queries.ts';
 import type { RelationChoice } from './issue-menu.ts';
 import type {
   CommentCreateResult, DocumentCreateResult, IssueCreateResult, IssueFavoriteResult, IssueRow, IssueUpdateResult, Notification, Page,
-  ProjectCreateResult, ProjectUpdateCreateResult, SuccessResult,
+  ProjectCreateResult, ProjectDetail, ProjectUpdateCreateResult, SuccessResult,
 } from './types.ts';
 
 /** What to tell the user when a write fails. A connection that can only read says so. */
@@ -182,6 +183,51 @@ export const postProjectUpdate = async (projectId: string, body: string, health:
   const data = await gql<ProjectUpdateCreateResult>(PROJECT_UPDATE_CREATE, { input: { projectId, body, health } });
   if (!data.projectUpdateCreate.success) throw new LinearError('graphql', 'Linear did not post the update.');
   refreshKey(`project:${projectId}`);
+};
+
+/** What Linear's projectUpdate takes, and what to show at once while it saves. */
+export type ProjectChange = { input: Record<string, unknown>; patch: Partial<ProjectDetail> };
+
+/** One project property edit: shown at once, then reloaded from Linear, or rolled back when Linear refuses it. */
+export const updateProject = async (project: Pick<ProjectDetail, 'id'>, change: ProjectChange): Promise<void> => {
+  const key = `project:${project.id}`;
+  const rollback = patchEntries((k, value) => (k === key && typeof value === 'object' && value !== null ? { ...value, ...change.patch } : value));
+  try {
+    requireSuccess(await gql<SuccessResult>(PROJECT_EDIT, { id: project.id, input: change.input }), 'Linear did not save the change.');
+    refreshKey(key);
+    // Lists, pickers and the milestone filter read the project's status, teams and name.
+    invalidate('projects:');
+    invalidate('team-projects:');
+  } catch (error) {
+    rollback();
+    throw error;
+  }
+};
+
+export type MilestoneInput = { name: string; description: string | null; targetDate: string | null };
+
+const milestonesChanged = (projectId: string) => {
+  refreshKey(`project:${projectId}`);
+  invalidate('project-milestones:');
+  invalidate('milestone-counts:');
+};
+
+export const createMilestone = async (projectId: string, input: MilestoneInput): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(MILESTONE_CREATE, { input: { projectId, ...input } }), 'Linear did not add the milestone.');
+  milestonesChanged(projectId);
+};
+
+export const updateMilestone = async (projectId: string, id: string, input: MilestoneInput): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(MILESTONE_EDIT, { id, input }), 'Linear did not save the milestone.');
+  milestonesChanged(projectId);
+};
+
+/** Removes the milestone for good. Its issues stay in the project with no milestone. */
+export const deleteMilestone = async (projectId: string, id: string): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(MILESTONE_DELETE, { id }), 'Linear did not delete the milestone.');
+  milestonesChanged(projectId);
+  invalidate('issues:');
+  invalidate('view-issues:');
 };
 
 const NOTIFICATIONS_KEY = 'notifications';

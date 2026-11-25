@@ -3,7 +3,7 @@
 // The view that opened it stays mounted underneath, so Back returns to it as it was. A crumb names where it came from.
 import { createContext, type ComponentChildren } from 'preact';
 import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { openIssueFor, saveOpenIssue } from './view-state.ts';
+import { issueOwnerKey, openIssueFor, saveOpenIssue, WorktreeKey } from './view-state.ts';
 
 /** The open issue, and who opened it: `owner` is the list's key, `origin` the name shown in the crumb. */
 export type OpenIssue = { id: string; owner: string; origin: string; /** Called when the pane's own Back or Close shuts it, so the owner forgets it too. */ onClosed?: () => void };
@@ -40,19 +40,22 @@ export const openFor = (pane: IssuePaneApi, owner: string): string | null => (pa
  */
 export const usePaneIssue = (placeKey: string | null, owner: string, origin: string) => {
   const pane = useIssuePane();
+  // The saved issue is per worktree: another worktree of the same project restores its own.
+  const worktree = useContext(WorktreeKey);
+  const storedOwner = issueOwnerKey(worktree, owner);
   const latest = useRef(pane);
   latest.current = pane;
-  const forget = () => saveOpenIssue(placeKey, owner, null);
+  const forget = () => saveOpenIssue(placeKey, storedOwner, null);
   useEffect(() => {
-    const saved = openIssueFor(placeKey, owner);
+    const saved = openIssueFor(placeKey, storedOwner);
     if (saved) latest.current.open(owner, origin, saved, forget);
     return () => latest.current.close(owner);
-  }, [owner]);
+  }, [owner, storedOwner]);
   const openId = openFor(pane, owner);
   const setOpenId = (id: string | null) => {
     if (id) pane.open(owner, origin, id, forget);
     else pane.close(owner);
-    saveOpenIssue(placeKey, owner, id);
+    saveOpenIssue(placeKey, storedOwner, id);
   };
   return [openId, setOpenId] as const;
 };

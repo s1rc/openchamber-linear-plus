@@ -390,12 +390,36 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-date { font: inherit; font-size: 0.8125rem; color: var(--oc-fg); background: transparent; border: 1px solid transparent; border-radius: var(--oc-radius, 6px); padding: 3px 6px; min-width: 0; flex: 1 1 auto; color-scheme: light dark; }
 .lin-date:hover { background: var(--oc-hover); }
 .lin-date:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-project-view { container-type: inline-size; }
+.lin-project-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.lin-project-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.lin-project-props { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+.lin-project-props > .sui-muted { font-size: 0.8125rem; }
+.lin-project-props .lin-project-prop { max-width: none; }
+.lin-project-props .lin-project-dates { flex-direction: column; align-items: stretch; gap: 2px; }
+.lin-project-props .lin-project-dates > .sui-muted { display: none; }
+.lin-activity-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.lin-activity-text { min-width: 0; overflow-wrap: anywhere; }
+.lin-milestone-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lin-milestone-row .lin-milestone-name { flex: 1 1 auto; }
+.lin-milestone-row .lin-milestone-count { flex: none; white-space: nowrap; }
+@container (max-width: 900px) {
+  .lin-project-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.lin-project-prop { max-width: 16rem; }
+.lin-project-title { font-size: 1.15rem; font-weight: 650; line-height: 1.3; margin: 0; padding: 0 2px; overflow-wrap: anywhere; }
+.lin-project-summary { padding: 0 2px; overflow-wrap: anywhere; }
+.lin-project-dates { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.lin-project-dates .lin-prop-edit { gap: 4px; }
+.lin-project-dates .lin-date { flex: 0 0 auto; }
+.lin-milestone-form { padding: 8px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }
 .lin-editable { cursor: text; border-radius: var(--oc-radius, 6px); }
 .lin-editable:hover { background: var(--oc-hover); }
 .lin-stack--tight { gap: 6px; }
-.lin-description { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); overflow: hidden; }
-.lin-description-body { padding: 10px 12px; min-height: 1.5em; }
-.lin-description-foot { display: flex; padding: 4px 6px; border-top: 1px solid var(--oc-border); }
+/* The description reads as page text, as in Linear: no card, border or background around it. */
+.lin-description { display: flex; flex-direction: column; }
+.lin-description-body { min-height: 1.5em; }
+.lin-description-foot { display: flex; padding: 12px 0 0; }
 .lin-description-preview { min-height: 120px; padding: 8px 10px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }
 .lin-composer { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .lin-label-picker { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); }

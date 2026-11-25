@@ -214,15 +214,57 @@ const tests: Test[] = [
       const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
       await navItem(ctx, 'Projects').click();
       await ctx.frame.locator('.lin-table-row:not(.lin-table-head)', { hasText: 'Checkout' }).click();
-      const count = ctx.frame.locator('.lin-milestone-count', { hasText: '3 issues' });
+      const count = ctx.frame.locator('.lin-milestone-count', { hasText: '50% of 3' });
       await count.waitFor();
       // Linear gives a milestone's progress as a percent: 50 is half done, not complete.
-      const half = await ctx.frame.locator('.lin-milestone', { hasText: 'Idempotent payments' }).innerText();
+      const half = await ctx.frame.locator('.lin-milestone-row', { hasText: 'Idempotent payments' }).innerText();
       expect(half.includes('50%') && !half.includes('100%'), `a half-done milestone shows 50% (got ${half.replace(/\s+/g, ' ')})`);
       expect((await ctx.frame.locator('.sui-card', { hasText: 'Milestones' }).first().innerText()).includes('1 of 2'), 'and only the finished one counts as done');
       await count.click();
       await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
       await until(async () => (await ctx.frame.locator('[data-issue]').count()) === 3, 'the milestone shows its three issues');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'project-edit',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Projects').click();
+      await ctx.frame.locator('.lin-table-row:not(.lin-table-head)', { hasText: 'Checkout' }).click();
+      const title = ctx.frame.locator('.lin-project-title');
+      await title.waitFor();
+      // The side column shows the burn-up and the activity; the main column keeps full milestone text.
+      const side = ctx.frame.locator('.lin-project-side');
+      await side.locator('.lin-project-panel').filter({ has: ctx.frame.locator('.lin-burnup') }).waitFor();
+      expect((await side.innerText()).includes('Scope'), 'the Progress panel shows the scope');
+      await until(async () => (await side.locator('.lin-burnup svg').count()) === 1, 'and draws the burn-up chart');
+      const activity = side.locator('.lin-project-panel', { hasText: 'Activity' });
+      await activity.waitFor();
+      const activityText = await activity.innerText();
+      expect(activityText.includes('changed status from Planned to In Progress'), 'the activity names a status change');
+      expect(activityText.includes('added milestone Idempotent payments'), 'and a milestone added');
+      expect(activityText.includes('set the lead to Ada Park'), 'and who leads the project');
+      await ctx.frame.locator('.lin-milestone-desc', { hasText: 'Batch the tax lookups so a 60 item cart prices in under 2 s.' }).waitFor();
+      const before = calls.length;
+      await title.click();
+      await ctx.frame.getByLabel('Name').fill('Checkout speed');
+      await ctx.frame.locator('button', { hasText: /^Save$/ }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation ProjectEdit') && c.key.includes('"name":"Checkout speed"') && c.hit), 'a renamed project saves');
+      const status = ctx.frame.locator('.lin-project-props .oc-sdk-trigger', { hasText: 'In Progress' });
+      await status.click();
+      await ctx.frame.locator('[role="option"]', { hasText: 'Completed' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation ProjectEdit') && c.key.includes('"statusId":"ps-done"') && c.hit), 'a project status saves');
+      const lead = ctx.frame.locator('.lin-project-props .oc-sdk-trigger', { hasText: 'Ada Park' }).first();
+      await lead.click();
+      await ctx.frame.locator('[role="option"]', { hasText: 'Matt Example' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation ProjectEdit') && c.key.includes('"leadId":"u-matt"') && c.hit), 'a project lead saves');
+      expect((await ctx.frame.locator('.lin-project-props').innerText()).includes('Priority'), 'the properties include Priority');
+      await ctx.frame.locator('.lin-milestone-row', { hasText: 'Idempotent payments' }).locator('button', { hasText: 'Edit' }).click();
+      await ctx.frame.getByLabel('Description').fill('Retries never charge twice.');
+      await ctx.frame.locator('button', { hasText: /^Save$/ }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation MilestoneEdit') && c.key.includes('Retries never charge twice.') && c.hit), 'a milestone edit saves');
+      await ctx.frame.locator('.lin-description-foot button', { hasText: 'Edit Description' }).waitFor();
       await ctx.page.context().close();
     },
   },
@@ -650,6 +692,8 @@ const tests: Test[] = [
       expect(!(await block.frame.locator('.lin-block-card .oc-sdk-btn[data-variant="default"]').count()), 'no orange button on the card');
       const add = block.frame.locator('button', { hasText: 'Write Plan' });
       await add.waitFor();
+      // Build appears once the build source loads; reading the buttons before it drops it from the list.
+      await block.frame.locator('.lin-block-card button', { hasText: 'Build' }).waitFor();
       const card = (await block.frame.locator('.lin-block-card .oc-sdk-btn').allInnerTexts()).map((t) => t.trim());
       expect(card.join(',') === 'Open in Linear,Start Session,Plan,Write Plan,Build', `the card has the issue view's buttons in order (got ${card.join(', ')})`);
       const before = calls.length;

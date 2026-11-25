@@ -1,4 +1,5 @@
-// Where the dashboard was, per folder: the view, the issue open in each list, and the chosen tabs.
+// Where the dashboard was, per folder: the view, the chosen tabs and the list options. The issue open
+// in each list is per worktree (see WorktreeKey), so two worktrees of one project restore their own.
 // Kept in memory so switching folders and back is instant, and in extension storage so a reload of
 // the panel (OpenChamber reloads it when you switch projects) lands in the same place.
 import { createContext } from 'preact';
@@ -121,6 +122,13 @@ export const saveUserDefaults = (mode: Mode, options: Partial<ViewOptions>) => {
 
 /** The open folder's storage key, for views deep in the tree. Null with no folder open. */
 export const PlaceKey = createContext<string | null>(null);
+
+/** The open folder's own directory. Unlike `PlaceKey`, a worktree has its own, so the open issue is
+ * remembered per worktree while the view, tabs and list options stay shared per project. */
+export const WorktreeKey = createContext<string>('');
+
+/** The storage key for one list's open issue in one worktree. */
+export const issueOwnerKey = (worktree: string, owner: string): string => (worktree ? `${worktree}::${owner}` : owner);
 
 /** Tests only: forget memory, as a reloaded frame would. */
 export const forgetViewStateMemory = () => { memory.clear(); defaults = {}; defaultsLoaded = false; };

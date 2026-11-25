@@ -32,7 +32,7 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 - Right-click an issue row or card for an expanded Linear-style menu: edit properties, move teams, link releases, set SLA day counting, add links, customer requests and documents, create or mark relations, remove properties, convert or copy issues, favorite, set reminders, open and delete. Find suggestions uses Linear's semantic issue search. Linear's shortcut keys work while the menu is open.
 - Open an issue beside the list to edit its description and properties, including its project milestone, copy its ID, link or branch, and work with comments, relations, links, and sub-issues.
 - The description edits as rich text, with a toolbar and Markdown shortcuts (`# `, `- `, `[] `, `> `); a Markdown tab shows what Linear stores. Tick a checklist box right in the description without opening the editor.
-- Open a project for health, progress, updates, documents, and milestones. Select a milestone count to see its issues.
+- Open a project for health, progress, updates, documents, and milestones. Select a milestone count to see its issues. Edit a project in place: its name, summary and description, status, priority, lead, members, teams and dates, and add, edit or delete milestones.
 - Pin the detected team or project when a folder should keep a particular Linear scope.
 
 ![Issue list and issue details using fake Linear data](docs/screenshots/issue.png)

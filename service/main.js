@@ -751,13 +751,18 @@ var PROJECT_DETAIL = `
   query ProjectDetail($id: String!) {
     project(id: $id) {
       ${PROJECT_SUMMARY}
-      description content
+      description content priority createdAt
       members(first: 50) { nodes { ${USER} } }
       projectMilestones(first: 50) { nodes { id name description targetDate progress sortOrder } }
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
     }
+  }
+`;
+var PROJECT_STATUSES = `
+  query ProjectStatuses {
+    projectStatuses(first: 50) { nodes { id name type color position } }
   }
 `;
 var PROJECT_MILESTONES = `
@@ -869,9 +874,19 @@ var ISSUE_EXTRAS = `
 var MILESTONE_ISSUES = `
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
-      nodes { projectMilestone { id } }
+      nodes { createdAt startedAt completedAt canceledAt estimate state { type } projectMilestone { id } }
       ${PAGE}
     }
+  }
+`;
+var PROJECT_ACTIVITY = `
+  query ProjectActivity($id: String!) {
+    project(id: $id) { id history(first: 25) { nodes { id createdAt entries } } }
+  }
+`;
+var USERS = `
+  query Users($filter: UserFilter) {
+    users(first: 50, filter: $filter) { nodes { ${USER} } }
   }
 `;
 var TRIAGE_COUNTS = `
@@ -1087,6 +1102,26 @@ var PROJECT_CREATE = `
     projectCreate(input: $input) { success project { id name url } }
   }
 `;
+var PROJECT_EDIT = `
+  mutation ProjectEdit($id: String!, $input: ProjectUpdateInput!) {
+    projectUpdate(id: $id, input: $input) { success }
+  }
+`;
+var MILESTONE_CREATE = `
+  mutation MilestoneCreate($input: ProjectMilestoneCreateInput!) {
+    projectMilestoneCreate(input: $input) { success }
+  }
+`;
+var MILESTONE_EDIT = `
+  mutation MilestoneEdit($id: String!, $input: ProjectMilestoneUpdateInput!) {
+    projectMilestoneUpdate(id: $id, input: $input) { success }
+  }
+`;
+var MILESTONE_DELETE = `
+  mutation MilestoneDelete($id: String!) {
+    projectMilestoneDelete(id: $id) { success }
+  }
+`;
 var ISSUE_CREATE = `
   mutation IssueCreate($input: IssueCreateInput!) {
     issueCreate(input: $input) { success issue { ${ISSUE_ROW} } }
@@ -1126,6 +1161,7 @@ var ALL_DOCUMENTS = {
   WORKSPACE_LABELS,
   PROJECTS,
   PROJECT_DETAIL,
+  PROJECT_STATUSES,
   PROJECT_MILESTONES,
   ISSUE_RELEASES,
   CUSTOMERS,
@@ -1160,6 +1196,8 @@ var ALL_DOCUMENTS = {
   PICKER_ISSUES,
   PICKER_SEARCH,
   MILESTONE_ISSUES,
+  PROJECT_ACTIVITY,
+  USERS,
   TRIAGE_COUNTS,
   ISSUE_UPDATE,
   ISSUE_DELETE,
@@ -1172,6 +1210,10 @@ var ALL_DOCUMENTS = {
   FAVORITE_DELETE,
   ISSUE_REMINDER,
   PROJECT_CREATE,
+  PROJECT_EDIT,
+  MILESTONE_CREATE,
+  MILESTONE_EDIT,
+  MILESTONE_DELETE,
   COMMENT_CREATE,
   PROJECT_UPDATE_CREATE,
   NOTIFICATION_MARK_READ,

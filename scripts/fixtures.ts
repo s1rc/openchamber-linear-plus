@@ -153,7 +153,10 @@ const detail = {
 
 const checkoutDetail = {
   ...projects[1],
+  createdAt: '2026-10-01T09:00:00Z',
+  startDate: '2026-10-15',
   description: 'Faster, safer checkout.',
+  priority: 3,
   content: '## Goal\nCut checkout time in half and remove the payment timeouts.\n\n## Out of scope\nNew payment providers.',
   members: { nodes: [matt, ada] },
   projectMilestones: { nodes: [
@@ -200,6 +203,16 @@ for (const list of [engIssues, mine, engIssues.filter((i) => i.project?.id === '
   workspace[key(Q.CHILD_STATES, { ids, after: null })] = childStates(ids);
 }
 workspace[key(Q.PROJECT_DETAIL, { id: 'p-checkout' })] = ok({ project: checkoutDetail });
+// Editing a project: its statuses, and Linear's answers to a rename, a status, a lead and a milestone edit.
+workspace[key(Q.PROJECT_STATUSES)] = ok({ projectStatuses: { nodes: [
+  { id: 'ps-planned', name: 'Planned', type: 'planned', color: '#bec2c8', position: 1 },
+  { id: 'ps-started', name: 'In Progress', type: 'started', color: '#f2c94c', position: 2 },
+  { id: 'ps-done', name: 'Completed', type: 'completed', color: '#5e6ad2', position: 3 },
+] } });
+workspace[key(Q.PROJECT_EDIT, { id: 'p-checkout', input: { name: 'Checkout speed' } })] = ok({ projectUpdate: { success: true } });
+workspace[key(Q.PROJECT_EDIT, { id: 'p-checkout', input: { statusId: 'ps-done' } })] = ok({ projectUpdate: { success: true } });
+workspace[key(Q.PROJECT_EDIT, { id: 'p-checkout', input: { leadId: 'u-matt' } })] = ok({ projectUpdate: { success: true } });
+workspace[key(Q.MILESTONE_EDIT, { id: 'm2', input: { name: 'Idempotent payments', description: 'Retries never charge twice.', targetDate: '2026-11-12' } })] = ok({ projectMilestoneUpdate: { success: true } });
 for (const projectId of ['p-checkout', 'p-repo']) {
   workspace[key(Q.PROJECT_MILESTONES, { projectId })] = ok({ project: {
     id: projectId,
@@ -457,8 +470,22 @@ const checkoutIssues = engIssues.filter((i) => i.project?.id === 'p-checkout');
 const inM2 = checkoutIssues.slice(1, 4).map((i) => ({ ...i, projectMilestone: { id: 'm2', name: 'Idempotent payments' } }));
 const doneInM1 = { ...issue('Batch the tax lookups', 'Done', { completedAt: '2026-11-04T10:00:00Z' }), projectMilestone: { id: 'm1', name: 'Pricing under 2 s' } };
 workspace[key(Q.MILESTONE_ISSUES, { projectId: 'p-checkout', after: null })] = ok({ issues: page([
-  ...inM2.map(() => ({ projectMilestone: { id: 'm2' } })), { projectMilestone: { id: 'm1' } }, ...checkoutIssues.slice(4).map(() => ({ projectMilestone: null })),
+  ...inM2.map((i) => ({ ...i, projectMilestone: { id: 'm2' } })),
+  { ...doneInM1, projectMilestone: { id: 'm1' } },
+  ...checkoutIssues.slice(4).map((i) => ({ ...i, projectMilestone: null })),
 ]) });
+// The project's activity, and the people who made it.
+workspace[key(Q.PROJECT_ACTIVITY, { id: 'p-checkout' })] = ok({ project: { id: 'p-checkout', history: { nodes: [
+  { id: 'ph2', createdAt: '2026-11-08T10:00:00Z', entries: [
+    { type: 'status', from: 'Planned', to: 'In Progress', at: 1794132000000, actorId: 'u-matt' },
+    { type: 'milestones', added: ['Idempotent payments'], at: 1794132000000, actorId: 'u-matt' },
+  ] },
+  { id: 'ph1', createdAt: '2026-11-06T09:00:00Z', entries: [
+    { type: 'targetDate', from: null, to: '2026-11-12', at: 1793955600000, actorId: 'u-ada' },
+    { type: 'leadId', from: null, to: 'u-ada', at: 1793955600000, actorId: 'u-ada' },
+  ] },
+] } } });
+workspace[key(Q.USERS, { filter: { id: { in: ['u-ada', 'u-matt'] } } })] = ok({ users: { nodes: [matt, ada] } });
 workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m2')))] = ok({ issues: page(inM2) });
 workspace[issuesKey(all(scopeFilter([], ['p-checkout']), milestoneFilter('m1')))] = ok({ issues: page([doneInM1]) });
 

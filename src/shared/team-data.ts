@@ -3,8 +3,8 @@
 import { load, useQuery } from './cache.ts';
 import { cycleFloor } from './cycles.ts';
 import { gql } from './linear.ts';
-import { TEAM_CYCLES, TEAM_PEOPLE, WORKSPACE_LABELS } from './queries.ts';
-import type { CycleSummary, Label, TeamCyclesResult, TeamPeopleResult, User, WorkspaceLabelsResult } from './types.ts';
+import { TEAM_CYCLES, TEAM_PEOPLE, USERS, WORKSPACE_LABELS } from './queries.ts';
+import type { CycleSummary, Label, TeamCyclesResult, TeamPeopleResult, User, UsersResult, WorkspaceLabelsResult } from './types.ts';
 
 export type TeamPeople = { members: User[]; labels: Label[] };
 
@@ -23,6 +23,13 @@ export const useTeamPeople = (teamId: string | null) =>
     const seen = new Set<string>();
     const labels = [...team.labels.nodes, ...workspace].filter((l) => (seen.has(l.id) ? false : (seen.add(l.id), true))).sort(byName);
     return { members: team.members.nodes.filter((m) => m.active).sort(byName), labels };
+  });
+
+/** People by id, for naming the actors in a project's activity. */
+export const useUsers = (ids: string[]) =>
+  useQuery(ids.length ? `users:${[...ids].sort().join(',')}` : null, async () => {
+    const data = await gql<UsersResult>(USERS, { filter: { id: { in: [...ids].sort() } } });
+    return new Map(data.users.nodes.map((u) => [u.id, u]));
   });
 
 /** The cycles an issue can be added to: the current one and every upcoming one. */

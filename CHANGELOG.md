@@ -2,6 +2,21 @@
 
 What changed in each Linear+ release. The newest is first. The release workflow uses a version's section as the notes of its GitHub release.
 
+## 1.3.3 (2026-11-25)
+
+### Added
+
+- Projects can be edited in place, as in Linear: name, short summary and description (rich text or Markdown), status, priority, lead, members, teams, and start and target dates. Changes show at once and roll back with a toast when Linear refuses them.
+- Milestones can be added, edited and deleted from the project overview. Deleting one asks first and leaves its issues in the project.
+- The project overview has Linear's right-hand column: Properties and a compact Milestones panel whose rows open that milestone's issues. The main column keeps the full milestone descriptions and progress bars.
+- A Progress panel draws the project's burn-up, with Scope, Started and Completed, in the same style as the cycle chart. It counts issues, since a project can span teams with different estimate scales, and hides when there is nothing to draw.
+- An Activity panel lists the project's changes: status, lead, members, teams, milestones, priority, dates, renames and description edits, with who made them and when.
+
+### Changed
+
+- The issue description reads as page text, without a card, border or background, as in Linear. Edit Description is now an outline button, like Plan and Build. The project's description looks the same.
+- The open issue is remembered per worktree rather than per project, so two worktrees of one project each restore their own issue. The view, tabs and list options stay shared per project. Issues saved under the old project-wide key are not restored once.
+
 ## 1.3.2 (2026-11-24)
 
 ### Added

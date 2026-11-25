@@ -96,13 +96,20 @@ export const PROJECT_DETAIL = `
   query ProjectDetail($id: String!) {
     project(id: $id) {
       ${PROJECT_SUMMARY}
-      description content
+      description content priority createdAt
       members(first: 50) { nodes { ${USER} } }
       projectMilestones(first: 50) { nodes { id name description targetDate progress sortOrder } }
       lastUpdate { id health createdAt }
       projectUpdates(first: 5) { nodes { id body health createdAt url user { ${USER} } } }
       documents(first: 50) { nodes { id title url updatedAt } }
     }
+  }
+`;
+
+/** The workspace's project statuses (Backlog, Planned, In Progress, ...), for the status menu. */
+export const PROJECT_STATUSES = `
+  query ProjectStatuses {
+    projectStatuses(first: 50) { nodes { id name type color position } }
   }
 `;
 
@@ -241,9 +248,23 @@ export const ISSUE_EXTRAS = `
 export const MILESTONE_ISSUES = `
   query MilestoneIssues($projectId: ID!, $after: String) {
     issues(first: 250, after: $after, filter: { project: { id: { eq: $projectId } } }) {
-      nodes { projectMilestone { id } }
+      nodes { createdAt startedAt completedAt canceledAt estimate state { type } projectMilestone { id } }
       ${PAGE}
     }
+  }
+`;
+
+/** A project's activity: Linear records changes as JSON entries, described in shared/activity.ts. */
+export const PROJECT_ACTIVITY = `
+  query ProjectActivity($id: String!) {
+    project(id: $id) { id history(first: 25) { nodes { id createdAt entries } } }
+  }
+`;
+
+/** People by id, to name the actors in a project's activity. */
+export const USERS = `
+  query Users($filter: UserFilter) {
+    users(first: 50, filter: $filter) { nodes { ${USER} } }
   }
 `;
 
@@ -518,6 +539,30 @@ export const PROJECT_CREATE = `
   }
 `;
 
+export const PROJECT_EDIT = `
+  mutation ProjectEdit($id: String!, $input: ProjectUpdateInput!) {
+    projectUpdate(id: $id, input: $input) { success }
+  }
+`;
+
+export const MILESTONE_CREATE = `
+  mutation MilestoneCreate($input: ProjectMilestoneCreateInput!) {
+    projectMilestoneCreate(input: $input) { success }
+  }
+`;
+
+export const MILESTONE_EDIT = `
+  mutation MilestoneEdit($id: String!, $input: ProjectMilestoneUpdateInput!) {
+    projectMilestoneUpdate(id: $id, input: $input) { success }
+  }
+`;
+
+export const MILESTONE_DELETE = `
+  mutation MilestoneDelete($id: String!) {
+    projectMilestoneDelete(id: $id) { success }
+  }
+`;
+
 export const ISSUE_CREATE = `
   mutation IssueCreate($input: IssueCreateInput!) {
     issueCreate(input: $input) { success issue { ${ISSUE_ROW} } }
@@ -557,11 +602,11 @@ export const markReadMany = (ids: readonly string[]): string => `
 
 /** Every static document, for validation. */
 export const ALL_DOCUMENTS: Record<string, string> = {
-  VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, PROJECT_MILESTONES, ISSUE_RELEASES, CUSTOMERS, ISSUE_FAVORITE, SEMANTIC_ISSUES, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
+  VIEWER, TEAMS, WORKFLOW_STATES, TEAM_PEOPLE, WORKSPACE_LABELS, PROJECTS, PROJECT_DETAIL, PROJECT_STATUSES, PROJECT_MILESTONES, ISSUE_RELEASES, CUSTOMERS, ISSUE_FAVORITE, SEMANTIC_ISSUES, ISSUES, CHILD_STATES, CHILD_ISSUES, ISSUE_EXTRAS, ISSUE_DETAIL,
   STATUS_COUNTS, STATUS_MINE,
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, MENTION_ISSUE, MENTION_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
-  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, TRIAGE_COUNTS,
-  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, ATTACHMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_REMINDER, PROJECT_CREATE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, PROJECT_ACTIVITY, USERS, TRIAGE_COUNTS,
+  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, ATTACHMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_REMINDER, PROJECT_CREATE, PROJECT_EDIT, MILESTONE_CREATE, MILESTONE_EDIT, MILESTONE_DELETE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

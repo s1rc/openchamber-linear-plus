@@ -14,7 +14,7 @@ Run all of these before a release. Each must pass.
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff and lead mode |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 22 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 23 screen tests, fake data only |
 
 Also check by grep:
 
@@ -28,7 +28,7 @@ Also check by grep:
 
 - **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, lead mode (plan and build steps sent to the lead, every plan question relayed to the user, its progress lines are no plan rows), agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
 - **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
-- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), the rich editor's Markdown round trip and editing commands (`rich.test.ts`), grouping, board columns and drag, view options, nesting, burn-up, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
+- **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), the rich editor's Markdown round trip and editing commands (`rich.test.ts`), grouping, board columns and drag, view options, nesting, burn-up (cycles and projects), project activity text, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
 ### Screen tests (`bun run e2e`)
 
@@ -43,6 +43,7 @@ Also check by grep:
 | `issue-rail` | On the rail the issue replaces the view, with its trail; Back returns to the list |
 | `sidebar` | The folder's team is open with Home, Triage (count 1), Issues, Projects, Views; the sub-team sits under it and opens; a saved view opens the team's issues with it picked; open teams are remembered |
 | `milestones` | A milestone's issue count opens its three issues; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done |
+| `project-edit` | A project's name, status and lead save from its overview, its properties include Priority, and a milestone's description saves; each sends the matching mutation. The side column draws the burn-up chart and lists the activity; the main column keeps the full milestone descriptions |
 | `copy-buttons` | Copy ID copies the key |
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
 | `plan-extras` | The Work Status frame claims a finished plan, sets the estimate on the team's scale, creates the split-out issue once, relates it, reports it done, and toasts what it did |
@@ -126,8 +127,10 @@ Things to watch:
 - [ ] Sidebar: Your teams opens and closes, and each team shows Home, Triage (with its count, only where the team uses triage), Issues, Projects and Views. Sub-teams sit under their parent. Which teams are open is remembered.
 - [ ] Views: a saved view opens the team's Issues with that view picked.
 - [ ] Inbox: each notification says who did what (comments, assignments, mentions, status changes, reactions, project updates); a project or document one opens in Linear.
-- [ ] Issue pane: from a list, a project, a cycle and the Inbox the issue opens in the same right-hand pane, with a trail of where it came from. Close, Escape, and clicking another row work. On the rail panel the issue shows alone and Back returns to where you were.
+- [ ] Issue pane: from a list, a project, a cycle and the Inbox the issue opens in the same right-hand pane, with a trail of where it came from. Close, Escape, and clicking another row work. On the rail panel the issue shows alone and Back returns to where you were. The open issue is remembered per worktree: open one in a worktree, switch to another worktree of the same project and back, and each restores its own.
 - [ ] Project overview: a milestone's name or issue count opens its issues, done ones included.
+- [ ] Project overview layout: Properties and Milestones sit in a right-hand column; on a narrow panel they stack under the main content.
+- [ ] Project editing on a real project: rename it, set a summary, change status, priority and lead, tick members and teams (the last team cannot be unticked), set and clear both dates, edit the description (rich text and Markdown), then add, rename, re-date and delete a milestone. Check each in Linear. A read-only connection toasts the refusal and the value snaps back.
 - [ ] Projects page and a team's overview: the same table (health, lead, target, progress).
 - [ ] Issue view: copy link, ID and branch (left of Plan) copy and toast; text in the description can be selected, and only Edit description edits it.
 - [ ] Rich text editing on real descriptions: open, change one word, save, and check in Linear that the rest is unchanged (lists, links, mentions, images). Try one with a table and one with a `+++` collapsible section: both show as they render and come back exactly as written. Shortcuts: Cmd+B, I, E, K, Cmd+Shift+7/8/9, `# `, `- `, `[] `, `> `, ``` then space, Tab and Shift+Tab in lists.
