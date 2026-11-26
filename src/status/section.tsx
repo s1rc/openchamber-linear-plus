@@ -100,7 +100,7 @@ const Note = ({ children, action }: { children: string; action?: { label: string
   </div>
 );
 
-const Rows = ({ directory, workspace, state }: { directory: string; workspace: Workspace; state: DetectionState }) => {
+const Rows = ({ directory, sessionId, workspace, state }: { directory: string; sessionId: string | null; workspace: Workspace; state: DetectionState }) => {
   const shown = shownIds(state);
   const teamIds = shown.filter((id) => workspace.teamsById.has(id));
   const projectIds = shown.filter((id) => !workspace.teamsById.has(id));
@@ -118,7 +118,8 @@ const Rows = ({ directory, workspace, state }: { directory: string; workspace: W
   const mineRows = useMemo(() => sortMine(mine.data?.issues ?? []), [mine.data]);
   // A row done in this frame stays hidden, but a newer one for the same session (the plan was finished again) is a new row.
   const waiting = (drafts.data ?? []).filter((d) => !handled.has(rowKey(d)));
-  const plans = (handoffs.data ?? []).filter((h) => !handled.has(rowKey(h)));
+  // Beside a session's chat, only its own plan belongs here. With no session, keep the folder-wide list.
+  const plans = (handoffs.data ?? []).filter((h) => (!sessionId || h.sessionId === sessionId) && !handled.has(rowKey(h)));
 
   const open = async (identifier: string) => {
     if (!(await openInPanel({ placeKey, issue: identifier }))) await toast(host, 'info', `Open the Linear panel to see ${identifier}.`);
@@ -269,7 +270,7 @@ export const StatusSection = () => {
         {assigned}
         <SnapshotPusher directory={directory} workspace={workspace.data} state={state} />
         <PlanExtrasRunner directory={directory} viewerId={workspace.data.viewer.id} />
-        <Rows directory={directory} workspace={workspace.data} state={state} />
+        <Rows directory={directory} sessionId={ctx.session?.id ?? null} workspace={workspace.data} state={state} />
       </>
     );
   })();

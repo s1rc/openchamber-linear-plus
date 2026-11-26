@@ -30,9 +30,11 @@ type Props = {
   onDone?: () => void;
   /** In the dialog: show the whole plan and let it take the room the frame has, with the controls below it. */
   fill?: boolean;
+  /** The exact plan message chosen in the session. */
+  planText?: string;
 };
 
-export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone, fill }: Props) => {
+export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone, fill, planText }: Props) => {
   const [detail, setDetail] = useState<IssueDetail | null>(given ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [allowMove, setAllowMove] = useState(true);
@@ -53,12 +55,12 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
     let live = true;
     setPreview(null);
     setPreviewError(null);
-    void previewPlan({ source, identifier }).then(
+    void previewPlan({ source, identifier, ...(planText ? { planText } : {}) }).then(
       (read) => { if (live) { setPreview(read); setPost(read.postPlan); } },
       (failure: unknown) => { if (live) setPreviewError(failureText(failure)); },
     );
     return () => { live = false; };
-  }, [identifier, source.sessionId]);
+  }, [identifier, source.sessionId, planText]);
 
   useEffect(() => {
     let live = true;
@@ -86,9 +88,9 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
     setBusy(true);
     setError(null);
     try {
-      await writePlan(detail, source, force);
+      const written = await writePlan(detail, source, force, planText);
       invalidate('issue');
-      await toast(host, 'success', `Added the plan to ${detail.identifier}.`);
+      await toast(host, 'success', written.document ? `Added a concise plan to ${detail.identifier}, with the full plan in a linked document.` : `Added the plan to ${detail.identifier}.`);
       setAdded(true);
     } catch (failure) {
       setError(failureText(failure));
@@ -101,10 +103,10 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
     setBusy(true);
     setError(null);
     try {
-      const outcome = await startBuildFor(detail, source, { move: choice.move, post: post && Boolean(preview), force, state: choice.selected, lastState, ...(model ? { model } : {}) });
+      const outcome = await startBuildFor(detail, source, { move: choice.move, post: post && Boolean(preview), force, state: choice.selected, lastState, ...(model ? { model } : {}), ...(planText ? { planText } : {}) });
       if (outcome.moved && outcome.target) void setStartState(detail.team.id, outcome.target.name).catch(() => undefined);
       if (outcome.moveError) await toast(host, 'error', `Build started, but ${detail.identifier} was not moved: ${outcome.moveError}`);
-      const text = `${outcome.posted ? 'Added the plan to the issue and started' : 'Started'} a build for ${detail.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}.`;
+      const text = `${outcome.postedDocument ? 'Added a concise plan and full plan document to the issue and started' : outcome.posted ? 'Added the plan to the issue and started' : 'Started'} a build for ${detail.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}.`;
       await toast(host, 'success', text);
       setDone(text);
       if (outcome.moved) invalidate('block:');
@@ -137,7 +139,7 @@ export const BuildPanel = ({ identifier, source, detail: given, onClose, onDone,
       {error && <Banner tone="error" title="Could not start the build" body={error} />}
       <Switch
         label="Add the plan to the issue description first"
-        description={post ? `A plan section at the end of ${detail.identifier}'s description, replaced if one is already there. Then the build starts.` : undefined}
+        description={post ? `A plan section at the end of ${detail.identifier}'s description, replaced if one is already there. A long plan becomes a concise summary with a linked full-plan document. Then the build starts.` : undefined}
         checked={post && Boolean(preview)}
         disabled={!preview || busy}
         onChange={setPost}

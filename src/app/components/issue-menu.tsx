@@ -12,7 +12,7 @@ import { useProjectMilestones, useTeamProjects } from '../../shared/projects.ts'
 import { useOpenCycles, useTeamPeople } from '../../shared/team-data.ts';
 import type { IssueRow } from '../../shared/types.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
-import { remindIssue, toggleFavorite, updateIssue, writeErrorText } from '../../shared/writes.ts';
+import { deleteIssueRelation, remindIssue, toggleFavorite, updateIssue, writeErrorText } from '../../shared/writes.ts';
 
 const MENU_W = 236;
 const SUB_W = 240;
@@ -95,6 +95,7 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
   const items = sections.flat();
 
   const menu = useRef<HTMLDivElement>(null);
+  const subMenu = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState({ left: Math.max(EDGE, Math.min(x, window.innerWidth - MENU_W - EDGE)), top: y });
   const [openId, setOpenId] = useState<string | null>(null);
@@ -151,12 +152,28 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
         .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
     }
     if (action.kind === 'prompt' || action.kind === 'relation') onAction(issue, action);
+    if (action.kind === 'delete-relation') {
+      void deleteIssueRelation(issue, action.other, action.relationId)
+        .then(() => toast(host, 'success', `Removed relation with ${action.other.identifier}`))
+        .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+    }
     if (action.kind === 'delete') onDelete(issue);
     onClose();
   };
   const choose = (item: MenuItem, row: HTMLElement | null, byKey = false) => (item.children ? openSub(item, row, byKey) : run(item));
 
   const rowOf = (id: string) => menu.current?.ownerDocument.querySelector<HTMLElement>(`[data-menu-item="${CSS.escape(id)}"]`) ?? null;
+
+  // Anchor after the main menu has settled, and fit the submenu's real height, not its 320 px maximum.
+  useLayoutEffect(() => {
+    if (!openId) return;
+    const anchor = rowOf(openId);
+    if (!anchor) return;
+    const height = subMenu.current?.getBoundingClientRect().height ?? 320;
+    const wanted = anchor.getBoundingClientRect().top - 5;
+    const top = Math.max(EDGE, Math.min(wanted, window.innerHeight - height - EDGE));
+    if (top !== subTop) setSubTop(top);
+  }, [openId, drill, pos.left, pos.top, query, subItems.length]);
 
   // The listener stays the same while the handler is replaced on every render, so a key pressed just after a
   // change (a submenu opening) already sees it.
@@ -292,12 +309,13 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
       </div>
       {!drill && parent && (
         <div
+          ref={subMenu}
           class="lin-menu lin-menu--sub"
           role="menu"
           aria-label={parent.label}
           style={{
             left: `${flyLeft ? pos.left - SUB_W + 4 : pos.left + MENU_W - 4}px`,
-            top: `${Math.max(EDGE, Math.min(subTop, window.innerHeight - 320 - EDGE))}px`,
+            top: `${subTop}px`,
             width: `${SUB_W}px`,
           }}
         >

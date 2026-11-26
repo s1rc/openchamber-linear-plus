@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GuestSessionRecord } from '@openchamber/sdk';
-import { handoffShown, parseHandoffs, pickBuildSource, PLAN_AGENT, planExcerpt, rowKey, withPlan, DESCRIPTION_MAX, NOT_A_PLAN_TEXT, type Handoff } from '../src/shared/handoff-rules.ts';
+import { concisePlan, handoffShown, parseHandoffs, pickBuildSource, PLAN_AGENT, PLAN_SUMMARY_MAX, PLAN_SUMMARY_MIN, planExcerpt, planNeedsDocument, rowKey, withPlan, DESCRIPTION_MAX, NOT_A_PLAN_TEXT, type Handoff } from '../src/shared/handoff-rules.ts';
 import { buildStateOf, buildStatesOf, moveChoices, planningStateOf } from '../src/shared/moves.ts';
 import type { WorkflowState } from '../src/shared/types.ts';
 
@@ -123,16 +123,43 @@ describe('withPlan', () => {
     const own = 'Intro.\n\n---\n\n## Notes\nMy own notes.';
     expect(withPlan(own, 'p')).toBe(`${own}\n\n---\n## Plan\n\np`);
   });
-  test('a plan over 20,000 characters is cut', () => {
-    const text = withPlan('x', 'p'.repeat(30_000))!;
-    expect(text.endsWith('[cut]')).toBe(true);
-    expect(text.length).toBeLessThan(20_300);
+  test('a concise plan links its full document instead of cutting it off', () => {
+    const text = withPlan('x', '**In short:** ship the change.', 'https://linear.app/acme/document/full-plan')!;
+    expect(text).toContain('**In short:** ship the change.');
+    expect(text).toContain('**Full plan:** [Read the full plan document](https://linear.app/acme/document/full-plan)');
+    expect(text).not.toContain('[cut]');
+  });
+  test('a full plan passed without a document stays intact', () => {
+    const plan = 'p'.repeat(30_000);
+    expect(withPlan('x', plan)).toContain(plan);
   });
   test('a result over the description limit is refused', () => {
     expect(withPlan('d'.repeat(DESCRIPTION_MAX), 'plan')).toBeNull();
   });
   test('no banned dashes appear', () => {
     expect(withPlan('a', 'c')).not.toMatch(/[\u2013\u2014\u2015]/);
+  });
+});
+
+describe('concise plan summary', () => {
+  test('the document threshold and the issue limit are the same', () => {
+    expect(planNeedsDocument('p'.repeat(PLAN_SUMMARY_MAX))).toBe(false);
+    expect(planNeedsDocument('p'.repeat(PLAN_SUMMARY_MAX + 1))).toBe(true);
+  });
+  test('the source summary keeps the plan\'s steps without a model call', () => {
+    const plan = '# ENG-5 plan\n\n## Evidence\n\nEnough detail.\n\n**In short:** ship the safe fix.\n\n## Steps\n1. Fix it.';
+    const fitted = concisePlan(plan);
+    expect(fitted).toContain('**In short:** ship the safe fix.');
+    expect(fitted).toContain('## Steps\n1. Fix it.');
+    expect(fitted).not.toContain('# ENG-5 plan');
+  });
+  test('a long source is bounded at a paragraph or word boundary', () => {
+    const plan = `**In short:** ship it.\n\n${'Implementation detail. '.repeat(500)}`;
+    const fitted = concisePlan(plan);
+    expect(fitted.length).toBeGreaterThanOrEqual(PLAN_SUMMARY_MIN);
+    expect(fitted.length).toBeLessThanOrEqual(PLAN_SUMMARY_MAX);
+    expect(fitted.endsWith('…')).toBe(true);
+    expect(fitted).not.toContain('[cut]');
   });
 });
 

@@ -1,6 +1,6 @@
 {
   "name": "linear-dashboard",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -127,7 +127,15 @@
         {
           "id": "build-from-plan",
           "label": "Start build from this plan",
-          "where": "session"
+          "where": "session",
+          "payload": [
+            "messages"
+          ]
+        },
+        {
+          "id": "build-from-plan-message",
+          "label": "Start build from this plan",
+          "where": "message"
         },
         {
           "id": "comment-on-issue",

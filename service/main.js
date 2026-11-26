@@ -539,10 +539,10 @@ var planPrompt = (input) => {
     "",
     "Read the code you need, then write a plan: what to change and where, in order, how to test it, and the risks.",
     "",
-    input.child ? "You may ask questions first to clarify the issue; I want that. Write them as a normal message (question tools reach nobody here), and the answers come back as a message. When you are done asking, write the complete plan as a normal message." : "You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.",
+    input.child ? "Interview the user before writing the plan whenever a meaningful choice is not fully settled by the issue or code. Ask about architecture, behavior, rollout, security and external setup choices, even when you have a recommendation. Present the recommendation with the question, but never treat it as the user's answer. Write one question or a small related set as a normal message (question tools reach nobody here), then wait for the answer to come back as a message before continuing. When the interview is done, write the complete plan as a normal message." : "Interview me before writing the plan whenever a meaningful choice is not fully settled by the issue or code. Ask about architecture, behavior, rollout, security and external setup choices, even when you have a recommendation. Present the recommendation with the question, but never treat it as my answer. Ask one question or a small related set at a time, then wait for my answer before continuing. When the interview is done, write the complete plan as a normal message.",
     "",
     ...extrasLines(input.identifier, input.scale),
-    'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
+    'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. "Open decisions" is only for a genuine unknown that remains after the interview, not for a choice you could have asked about. Never leave a recommendation there as though the user had accepted it. Each genuine unknown needs your recommendation and why it cannot be settled now. If your draft contains an unasked choice under "Open decisions", stop and ask about it instead of sending the plan.',
     "",
     "End that final message with this block, exactly, so the Linear card with the Start build button appears under the plan (it is only a display, not a question):",
     "```openui-lang",
@@ -573,7 +573,7 @@ var leadPlanPrompt = (input) => {
     "",
     "While it plans:",
     "- Its questions come to you. Always ask the user every question, as the plan session wrote it, and wait for the user's answer. Never answer a plan question yourself, even when the answer seems obvious from the issue or code. Send the user's answer back to the plan session with session.send. Keep relaying questions and answers until the plan session has no more questions.",
-    "- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.",
+    `- Check the plan it hands back: what to change and where, in order, how to test it, the risks, and whether the interview happened. Send a plan that misses one of these back to it. A meaningful choice under "Open decisions" that was never asked and answered is unfinished: require the question. Its recommendation is not the user's answer.`,
     "",
     "When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.",
     "",
@@ -688,10 +688,10 @@ var ISSUE_ROW = `
   project { id name color icon }
   projectMilestone { id name }
   cycle { id number name }
-  parent { id identifier }
+  parent { id identifier title }
   attachments(first: 4) { nodes { id url title sourceType metadata } }
-  outRelations: relations(first: 5) { nodes { type relatedIssue { state { type } } } }
-  inRelations: inverseRelations(first: 5) { nodes { type issue { state { type } } } }
+  outRelations: relations(first: 5) { nodes { id type relatedIssue { id identifier title url state { ${STATE} } } } }
+  inRelations: inverseRelations(first: 5) { nodes { id type issue { id identifier title url state { ${STATE} } } } }
 `;
 var PROJECT_SUMMARY = `
   id name slugId url icon color health progress startDate targetDate updatedAt
@@ -814,6 +814,7 @@ var ISSUE_DETAIL = `
       children(first: 50) { nodes { ${ISSUE_ROW} } }
       comments(first: 100) { nodes { id body createdAt editedAt url user { ${USER} } parent { id } } }
       links: attachments(first: 50) { nodes { id title subtitle url sourceType metadata createdAt } }
+      documents(first: 50) { nodes { id title url updatedAt } }
       relations(first: 25) { nodes { id type relatedIssue { id identifier title url state { ${STATE} } } } }
       inverseRelations(first: 25) { nodes { id type issue { id identifier title url state { ${STATE} } } } }
       subscribers(first: 25) { nodes { ${USER} } }
@@ -1067,6 +1068,16 @@ var ISSUE_RELATION_CREATE = `
     issueRelationCreate(input: $input) { success }
   }
 `;
+var ISSUE_RELATION_UPDATE = `
+  mutation IssueRelationUpdate($id: String!, $input: IssueRelationUpdateInput!) {
+    issueRelationUpdate(id: $id, input: $input) { success }
+  }
+`;
+var ISSUE_RELATION_DELETE = `
+  mutation IssueRelationDelete($id: String!) {
+    issueRelationDelete(id: $id) { success }
+  }
+`;
 var ATTACHMENT_CREATE = `
   mutation AttachmentCreate($input: AttachmentCreateInput!) {
     attachmentCreate(input: $input) { success attachment { id url title } }
@@ -1080,6 +1091,11 @@ var CUSTOMER_NEED_CREATE = `
 var DOCUMENT_CREATE = `
   mutation DocumentCreate($input: DocumentCreateInput!) {
     documentCreate(input: $input) { success document { id title url updatedAt } }
+  }
+`;
+var DOCUMENT_UPDATE = `
+  mutation DocumentUpdate($id: String!, $input: DocumentUpdateInput!) {
+    documentUpdate(id: $id, input: $input) { success document { id title url updatedAt } }
   }
 `;
 var FAVORITE_CREATE = `
@@ -1203,9 +1219,12 @@ var ALL_DOCUMENTS = {
   ISSUE_DELETE,
   ISSUE_CREATE,
   ISSUE_RELATION_CREATE,
+  ISSUE_RELATION_UPDATE,
+  ISSUE_RELATION_DELETE,
   ATTACHMENT_CREATE,
   CUSTOMER_NEED_CREATE,
   DOCUMENT_CREATE,
+  DOCUMENT_UPDATE,
   FAVORITE_CREATE,
   FAVORITE_DELETE,
   ISSUE_REMINDER,
@@ -2089,9 +2108,11 @@ var createApp = (deps) => {
       return fail("The planning session has no folder the service can start a build in.");
     const folder = mappedFor(sessionDirectory);
     const mapping = folder ? config.directories[folder] : undefined;
+    const selected = typeof body.planText === "string" && body.planText.trim() ? withoutBlocks(body.planText).slice(0, PLAN_LIMIT) : null;
+    const choose = (got) => selected && !("error" in got) ? { plan: selected, earlier: true, isPlan: looksLikePlan(selected) } : got;
     if (body.mode === "preview") {
       try {
-        const got = await readPlan(sessionId);
+        const got = choose(await readPlan(sessionId));
         return { body: "error" in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: postPlanChoice(mapping, config.defaults), earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === "lead" } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
@@ -2102,7 +2123,7 @@ var createApp = (deps) => {
       return fail("A build is already starting from that session.");
     starting.add(sessionId);
     try {
-      const got = await readPlan(sessionId);
+      const got = choose(await readPlan(sessionId));
       if ("error" in got)
         return fail(got.error);
       if (!got.isPlan && body.force !== true)
@@ -2329,6 +2350,19 @@ var createApp = (deps) => {
           state: "pending",
           at: now()
         });
+      } else if (before.state === "done") {
+        const known = new Set(before.extras.issues.map((issue) => issue.title.replace(/\s+/g, " ").trim().toLowerCase()));
+        const added = extras.issues.filter((issue) => !known.has(issue.title.replace(/\s+/g, " ").trim().toLowerCase()));
+        if (added.length) {
+          keepExtras({
+            ...before,
+            sessionTitle: title?.trim() || before.sessionTitle,
+            extras: { ...extras, issues: added },
+            state: "pending",
+            created: [],
+            at: now()
+          });
+        }
       }
     }
     if (role !== "build" && reply.trim() && (role !== "lead" || looksLikePlan(reply))) {

@@ -78,6 +78,16 @@ describe('view state', () => {
     expect(vs.userDefaults('board')).toBeUndefined();
   });
 
+  test('list filters and a project milestone survive a frame reload', async () => {
+    await vs.loadViewState('p:a');
+    vs.saveFilters('p:a', 'project:p1', { search: 'checkout', assignee: 'me', status: 'started', showClosed: true });
+    vs.saveFilters('p:a', 'project:p1', { milestone: 'm2' });
+    await settle();
+    vs.forgetViewStateMemory();
+    await vs.loadViewState('p:a');
+    expect(vs.savedFiltersFor('p:a', 'project:p1')).toEqual({ search: 'checkout', assignee: 'me', status: 'started', showClosed: true, milestone: 'm2' });
+  });
+
   test('device storage is used when the host has it', async () => {
     vs.setViewStateScope(true);
     await vs.loadViewState('p:c');

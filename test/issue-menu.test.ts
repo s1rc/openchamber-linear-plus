@@ -153,11 +153,19 @@ describe('issueMenu', () => {
     expect(find(sections, 'mark-as:duplicate').action).toMatchObject({ relation: { type: 'duplicate' } });
   });
 
-  test('remove lists only properties the issue has and clears the chosen one', () => {
-    const sections = issueMenu(issue(), data());
-    expect(find(sections, 'remove').children!.map((c) => c.id)).toEqual(['remove:project', 'remove:milestone', 'remove:estimate', 'remove:labels']);
-    expect(find(sections, 'remove:project').action).toMatchObject({ change: { input: { projectId: null }, patch: { project: null, projectMilestone: null } } });
-    const empty = issueMenu(issue({ project: null, projectMilestone: null, cycle: null, parent: null, assignee: null, estimate: null, dueDate: null, labels: { nodes: [] }, slaType: null }), data());
+  test('remove lists the parent and each blocked or blocking issue, never property shortcuts', () => {
+    const blocked = { id: 'i2', identifier: 'NIL-2', title: 'Prerequisite', url: 'https://linear.app/acme/issue/NIL-2', state: STATES[1]! };
+    const blocking = { id: 'i3', identifier: 'NIL-3', title: 'Dependent', url: 'https://linear.app/acme/issue/NIL-3', state: STATES[1]! };
+    const sections = issueMenu(issue({
+      parent: { id: 'p1', identifier: 'NIL-1', title: 'Parent' },
+      inRelations: { nodes: [{ id: 'r2', type: 'blocks', issue: blocked }] },
+      outRelations: { nodes: [{ id: 'r3', type: 'blocks', relatedIssue: blocking }] },
+    }), data());
+    expect(find(sections, 'remove').children!.map((c) => c.id)).toEqual(['remove:parent', 'remove:blocked:r2', 'remove:blocking:r3']);
+    expect(find(sections, 'remove:parent').action).toMatchObject({ change: { input: { parentId: null } } });
+    expect(find(sections, 'remove:blocked:r2')).toMatchObject({ label: 'Blocked issue NIL-2 Prerequisite', action: { kind: 'delete-relation', relationId: 'r2', other: blocked } });
+    expect(find(sections, 'remove:blocking:r3')).toMatchObject({ label: 'Blocking issue NIL-3 Dependent', action: { kind: 'delete-relation', relationId: 'r3', other: blocking } });
+    const empty = issueMenu(issue({ parent: null }), data());
     expect(find(empty, 'remove').children).toEqual([]);
   });
 

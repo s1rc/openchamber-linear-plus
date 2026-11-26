@@ -73,6 +73,8 @@ const SAMPLES: Record<string, Record<string, unknown>[]> = {
   ISSUE_CREATE: [{ input: { teamId: 't1', title: 'T', description: 'D', projectId: 'p1', priority: 0, stateId: 's1', assigneeId: 'u1', labelIds: ['l1'], estimate: 2, cycleId: 'c1' } }],
   COMMENT_CREATE: [{ input: { issueId: 'i1', body: 'B' } }],
   ISSUE_RELATION_CREATE: [{ input: { issueId: 'i1', relatedIssueId: 'i2', type: 'related' } }],
+  ISSUE_RELATION_UPDATE: [{ id: 'r1', input: { issueId: 'i2', relatedIssueId: 'i1', type: 'blocks' } }],
+  ISSUE_RELATION_DELETE: [{ id: 'r1' }],
   ATTACHMENT_CREATE: [{ input: { issueId: 'i1', url: 'https://example.com', title: 'Example' } }],
   CUSTOMER_NEED_CREATE: [{ input: { issueId: 'i1', customerId: 'c1', body: 'Requested' } }],
   DOCUMENT_CREATE: [{ input: { issueId: 'i1', title: 'Notes', content: 'Text' } }],

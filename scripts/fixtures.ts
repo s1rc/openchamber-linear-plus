@@ -12,7 +12,7 @@ import { milestoneFilter } from '../src/shared/milestones.ts';
 import { extraDescription, scaleText } from '../src/shared/plan-extras.ts';
 import { teamScale } from '../src/shared/moves.ts';
 import { estimateLabel } from '../src/shared/format.ts';
-import { withPlan } from '../src/shared/handoff-rules.ts';
+import { concisePlan, withPlan } from '../src/shared/handoff-rules.ts';
 import { parseMarkdown, serializeMarkdown } from '../src/shared/rich/markdown.ts';
 import { issueContext } from '../src/shared/issue-context.ts';
 import { commentBody } from '../src/dialog/jobs.ts';
@@ -133,6 +133,7 @@ const detail = {
     { id: 'a1', title: 'ENG-11: batch tax lookups', subtitle: null, url: 'https://gitlab.com/acme/checkout/-/merge_requests/42', sourceType: 'gitlab', metadata: { status: 'opened' }, createdAt: '2026-11-07T12:00:00Z' },
     { id: 'a2', title: 'Datadog: checkout p99 latency', subtitle: null, url: 'https://app.datadoghq.com/dashboard/abc', sourceType: 'datadog', metadata: {}, createdAt: '2026-11-06T12:00:00Z' },
   ] },
+  documents: { nodes: [{ id: 'doc-long', title: 'ENG-13 full plan', url: 'https://linear.app/acme/document/eng-13-full-plan', updatedAt: '2026-11-09T11:50:00Z' }] },
   relations: { nodes: [
     { id: 'r1', type: 'blocks', relatedIssue: relationIssue('ENG-13', 'Show saved cards first in the payment step', 'Todo') },
     { id: 'r-done-out', type: 'blocks', relatedIssue: relationIssue('ENG-90', 'Done dependent', 'Done') },
@@ -323,6 +324,8 @@ workspace[key(Q.DOCUMENT_CREATE, { input: { issueId: 'i-eng-11', title: 'Checkou
 workspace[key(Q.SEARCH_ISSUES, { term: 'retry' })] = ok({ searchIssues: { nodes: [engIssues[3]] } });
 workspace[key(Q.SEMANTIC_ISSUES, { query: eng11.title })] = ok({ semanticSearch: { results: [{ id: engIssues[3]!.id, type: 'issue', issue: engIssues[3] }] } });
 workspace[key(Q.ISSUE_RELATION_CREATE, { input: { issueId: 'i-eng-11', relatedIssueId: 'i-eng-14', type: 'related' } })] = ok({ issueRelationCreate: { success: true } });
+workspace[key(Q.ISSUE_RELATION_UPDATE, { id: 'r-done-in', input: { issueId: 'i-eng-11', relatedIssueId: 'related-ENG-91', type: 'blocks' } })] = ok({ issueRelationUpdate: { success: true } });
+workspace[key(Q.ISSUE_RELATION_DELETE, { id: 'r-active-in' })] = ok({ issueRelationDelete: { success: true } });
 workspace[key(Q.PROJECT_CREATE, { input: { name: eng11.title, teamIds: ['t-eng'], convertedFromIssueId: 'i-eng-11' } })] = ok({ projectCreate: { success: true, project: { id: 'p-converted', name: eng11.title, url: 'https://linear.app/acme/project/converted' } } });
 // A connection that can only read: the change shows, then rolls back with a toast.
 workspace[update('i-eng-11', { priority: 2 })] = refused;
@@ -515,6 +518,7 @@ workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-14' })] = ok({ issue: {
 } });
 const eng13Detail = {
   ...detail, ...engIssues[2], description: 'Show the cards the customer used before first.', children: { nodes: [] }, comments: { nodes: [] }, links: { nodes: [] },
+  documents: { nodes: [{ id: 'doc-long', title: 'ENG-13 full plan', url: 'https://linear.app/acme/document/eng-13-full-plan', updatedAt: '2026-11-09T11:50:00Z' }] },
   relations: { nodes: [] }, inverseRelations: { nodes: [] }, history: { nodes: [] }, team: detail.team,
 };
 workspace[key(Q.ISSUE_DETAIL, { id: 'ENG-13' })] = ok({ issue: eng13Detail });
@@ -525,7 +529,14 @@ const handoff = {
   id: 'ses_plan:ENG-13', directory: '/work/engineering-api', sessionDirectory: '/work/engineering-api-wt', sessionId: 'ses_plan',
   identifier: 'ENG-13', sessionTitle: 'Plan: saved cards first', plan: true, createdAt: Date.parse('2026-11-09T11:30:00Z'),
 };
-service['GET /handoffs?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({ handoffs: [handoff] }) };
+const otherHandoff = {
+  id: 'ses_other:ENG-11', directory: '/work/engineering-api', sessionDirectory: '/work/engineering-api-other', sessionId: 'ses_other',
+  identifier: 'ENG-11', sessionTitle: 'Plan: batch tax lookups', plan: true, createdAt: Date.parse('2026-11-09T11:00:00Z'),
+};
+const longHandoff = {
+  ...handoff, id: 'ses_long:ENG-13', sessionId: 'ses_long', sessionTitle: 'Plan: a detailed checkout change', createdAt: Date.parse('2026-11-09T11:45:00Z'),
+};
+service['GET /handoffs?directory=/work/engineering-api '] = { status: 200, body: JSON.stringify({ handoffs: [handoff, otherHandoff, longHandoff] }) };
 service[`POST /handoffs ${JSON.stringify({ id: handoff.id, action: 'dismiss' })}`] = { status: 200, body: JSON.stringify({ ok: true }) };
 service['POST /snapshot *'] = { status: 200, body: JSON.stringify({ ok: true, mapped: true }) };
 service['PUT /config *'] = { status: 200, body: JSON.stringify({ hasKey: false, directories: {} }) };
@@ -562,6 +573,9 @@ service[`POST /plan ${JSON.stringify({ identifier: 'ENG-13', directory: handoff.
 service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
   status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: false }),
 };
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13', planText: PLAN_TEXT })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: false, earlier: true, isPlan: true }),
+};
 service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: handoff.sessionId, sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-11' })}`] = {
   status: 200, body: JSON.stringify({ ok: true, plan: PLAN_TEXT, postPlan: false }),
 };
@@ -580,6 +594,28 @@ service['GET /plans?identifier=ENG-13 '] = { status: 200, body: JSON.stringify({
 service['GET /plans?identifier=ENG-11 '] = { status: 200, body: JSON.stringify({ sessions: [] }) };
 const WITH_PLAN = withPlan(eng13Detail.description, PLAN_TEXT)!;
 workspace[update('i-eng-13', { description: WITH_PLAN })] = updated({ ...engIssues[2]!, description: WITH_PLAN } as never);
+
+// A plan past the inline limit becomes a short source-only summary and an issue-linked document.
+const LONG_PLAN = [
+  '# ENG-13 plan: a detailed checkout change', '',
+  '**In short:** save the card order without changing the payment API.', '',
+  '## Evidence and implementation detail', '',
+  'The checkout pipeline and its safeguards are explained here. '.repeat(500),
+].join('\n');
+const FULL_PLAN_URL = 'https://linear.app/acme/document/eng-13-full-plan';
+workspace[key(Q.DOCUMENT, { id: 'doc-long' })] = ok({ document: {
+  id: 'doc-long', title: 'ENG-13 full plan', url: FULL_PLAN_URL, updatedAt: '2026-11-09T11:50:00Z', project: null, creator: null,
+  content: '## Full plan\n\nThe complete implementation, verification steps, risks, and estimates stay inline in Linear+.',
+} });
+service[`POST /handoff ${JSON.stringify({ mode: 'preview', sessionId: 'ses_long', sessionDirectory: handoff.sessionDirectory, identifier: 'ENG-13' })}`] = {
+  status: 200, body: JSON.stringify({ ok: true, plan: LONG_PLAN, postPlan: false }),
+};
+workspace[key(Q.DOCUMENT_CREATE, { input: { issueId: 'i-eng-13', title: 'ENG-13 plan: Show saved cards first in the payment step', content: LONG_PLAN } })] = ok({
+  documentCreate: { success: true, document: { id: 'doc-long', title: 'ENG-13 full plan', url: FULL_PLAN_URL, updatedAt: '2026-11-09T11:50:00Z' } },
+});
+const LONG_POST = withPlan(eng13Detail.description, concisePlan(LONG_PLAN), FULL_PLAN_URL)!;
+workspace[update('i-eng-13', { description: LONG_POST })] = updated({ ...engIssues[2]!, description: LONG_POST } as never);
+
 const handoffPost = { ...handoff, directory: '/work/checkout', id: 'ses_post:ENG-13', sessionId: 'ses_post', postPlan: true };
 service['GET /handoffs?directory=/work/checkout '] = { status: 200, body: JSON.stringify({ handoffs: [handoffPost] }) };
 

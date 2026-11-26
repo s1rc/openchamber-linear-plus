@@ -22,7 +22,7 @@ import { teamPages, teamTree, type TeamNode } from './nav.ts';
 import { TeamViews } from './views/team-views.tsx';
 import { TeamOverview } from './views/team-overview.tsx';
 import { IssueDetail } from './components/issue-detail.tsx';
-import { IssuePaneProvider, useIssuePane } from './issue-pane.tsx';
+import { IssuePaneProvider, useIssuePane, type OpenIssue } from './issue-pane.tsx';
 import { FolderOverview } from './views/folder-overview.tsx';
 import { Cycles } from './views/cycles.tsx';
 import { Inbox } from './views/inbox.tsx';
@@ -80,7 +80,7 @@ const NotYet = ({ view }: { view: View }) => (
   <Empty title={TITLES[view]} body="This view arrives in the next build." />
 );
 
-const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, scoped, onScoped }: {
+const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, scoped, onScoped, onRestoreError }: {
   ctx: HostReadyContext;
   workspace: Workspace;
   state: DetectionState;
@@ -90,6 +90,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
   onActive: (id: string) => void;
   scoped: boolean;
   onScoped: (scoped: boolean) => void;
+  onRestoreError?: () => void;
 }) => {
   const ids = mappedIds(state);
   const toPicker = () => onRoute({ view: 'picker' });
@@ -130,7 +131,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
         {route.view === 'project' && route.projectId ? (
           <>
             <div><Button label="Back to Overview" variant="ghost" size="xs" onClick={() => onRoute({ view: 'project' })} /></div>
-            <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues />
+            <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues onUnavailable={onRestoreError} />
           </>
         ) : route.view === 'project' ? (
           <FolderOverview ctx={ctx} workspace={workspace} ids={shown} onProject={(projectId) => onRoute({ view: 'project', projectId })} />
@@ -162,7 +163,7 @@ const Content = ({ ctx, workspace, state, route, onRoute, activeId, onActive, sc
     return (
       <div class="lin-stack">
         <div><Button label="Back to Projects" variant="ghost" size="xs" onClick={() => onRoute({ view: 'projects' })} /></div>
-        <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues />
+        <ProjectDetail ctx={ctx} id={route.projectId} viewerId={workspace.viewer.id} withIssues onUnavailable={onRestoreError} />
       </div>
     );
   }
@@ -263,7 +264,7 @@ const typingIn = (target: EventTarget | null) =>
  * The view, and the open issue drawn the same way whatever view opened it: on the page a pane on the right of the
  * whole view, on the rail panel in place of the view (kept mounted and hidden, so Back finds it as it was).
  */
-const PaneLayout = ({ wide, children }: { wide: boolean; children: preact.ComponentChildren }) => {
+const PaneLayout = ({ wide, children, onRestoreError }: { wide: boolean; children: preact.ComponentChildren; onRestoreError: (open: OpenIssue) => void }) => {
   const pane = useIssuePane();
   const open = pane.current;
   const close = () => { open?.onClosed?.(); pane.close(); };
@@ -289,6 +290,7 @@ const PaneLayout = ({ wide, children }: { wide: boolean; children: preact.Compon
             origin={open.origin}
             onClose={close}
             onOpenIssue={(id) => pane.open(open.owner, open.origin, id, open.onClosed)}
+            onUnavailable={open.restored ? () => onRestoreError(open) : undefined}
           />
         </aside>
       )}
@@ -303,14 +305,15 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   const [activeId, setActiveId] = useState<string>(ALL);
   const [scoped, setScoped] = useState(true);
   const landedFor = useRef<string | null>(null);
+  const restoredRoute = useRef<Route | null>(null);
   const [landed, setLanded] = useState<string | null>(null);
   // Bumped to show a note from the Work Status section on a fresh view.
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => { setViewStateScope(Boolean(ctx.features?.deviceStorage)); }, [ctx.features?.deviceStorage]);
 
-  // Land once per folder: where you were last (view and open issue), else the folder's overview,
-  // else My issues. OpenChamber may reload this frame on a project switch, so it comes from storage.
+  // Land once per folder: where you were last (view and open issue), else the worktree's issue,
+  // the folder's overview, or My issues. OpenChamber may reload this frame on a project switch, so it comes from storage.
   useEffect(() => {
     if (!state.settled || !workspace.data) return;
     const key = state.place?.key ?? 'none';
@@ -335,7 +338,19 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
         if (last && (REMEMBERED as string[]).includes(last)) next = { view: last as View };
       }
       if (landedFor.current !== key) return;
-      setRoute(usable(next) ? next : fallback);
+      if (usable(next)) {
+        restoredRoute.current = next;
+        setRoute(next);
+      } else if (state.detection.work && state.place) {
+        // A stale route should not hide the issue this worktree was made for.
+        saveTab(key, 'my-issues', 'assigned');
+        saveOpenIssue(key, issueOwnerKey(state.place.directory, 'my-issues:assigned'), state.detection.work.identifier);
+        restoredRoute.current = null;
+        setRoute({ view: 'my-issues' });
+      } else {
+        restoredRoute.current = null;
+        setRoute(fallback);
+      }
       setLanded(key);
     })();
   }, [state.settled, state.place, state.detection, workspace.data]);
@@ -343,9 +358,21 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
   // Where the rail's Settings button goes back to.
   const lastRoute = useRef<Route>({ view: 'my-issues' });
   const onRoute = (next: Route) => {
+    restoredRoute.current = null;
     if (route.view !== 'settings') lastRoute.current = route;
     setRoute(next);
     if (state.place && next.view !== 'picker') saveRoute(state.place.key, next);
+  };
+
+  const restoreError = (stale?: OpenIssue) => {
+    const place = state.place;
+    const work = state.detection.work;
+    if (!place || !work || stale?.id === work.identifier) return;
+    if (stale) saveOpenIssue(place.key, issueOwnerKey(place.directory, stale.owner), null);
+    saveTab(place.key, 'my-issues', 'assigned');
+    saveOpenIssue(place.key, issueOwnerKey(place.directory, 'my-issues:assigned'), work.identifier);
+    onRoute({ view: 'my-issues' });
+    setNonce((n) => n + 1);
   };
 
   const onActive = (id: string) => {
@@ -451,7 +478,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
           )}
           <Button label="Refresh" variant="ghost" size="sm" onClick={refresh} />
         </header>
-        <PaneLayout wide={wide}>
+        <PaneLayout wide={wide} onRestoreError={restoreError}>
           <Content
             key={nonce}
             ctx={ctx}
@@ -463,6 +490,7 @@ export const Shell = ({ ctx }: { ctx: HostReadyContext }) => {
             onActive={onActive}
             scoped={scoped}
             onScoped={setScoped}
+            onRestoreError={restoredRoute.current === route ? () => restoreError() : undefined}
           />
         </PaneLayout>
       </main>

@@ -6,11 +6,11 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { issueOwnerKey, openIssueFor, saveOpenIssue, WorktreeKey } from './view-state.ts';
 
 /** The open issue, and who opened it: `owner` is the list's key, `origin` the name shown in the crumb. */
-export type OpenIssue = { id: string; owner: string; origin: string; /** Called when the pane's own Back or Close shuts it, so the owner forgets it too. */ onClosed?: () => void };
+export type OpenIssue = { id: string; owner: string; origin: string; /** True only for the issue restored when the frame opens. */ restored?: boolean; /** Called when the pane's own Back or Close shuts it, so the owner forgets it too. */ onClosed?: () => void };
 
 export type IssuePaneApi = {
   current: OpenIssue | null;
-  open: (owner: string, origin: string, id: string, onClosed?: () => void) => void;
+  open: (owner: string, origin: string, id: string, onClosed?: () => void, restored?: boolean) => void;
   /** Closes it when `owner` holds it; with no owner, whatever is open. */
   close: (owner?: string) => void;
 };
@@ -25,7 +25,7 @@ export const IssuePaneProvider = ({ children }: { children: ComponentChildren })
   const [current, setCurrent] = useState<OpenIssue | null>(null);
   const api = useMemo<IssuePaneApi>(() => ({
     current,
-    open: (owner, origin, id, onClosed) => setCurrent({ id, owner, origin, ...(onClosed ? { onClosed } : {}) }),
+    open: (owner, origin, id, onClosed, restored) => setCurrent({ id, owner, origin, ...(onClosed ? { onClosed } : {}), ...(restored ? { restored } : {}) }),
     close: (owner) => setCurrent((open) => (!owner || open?.owner === owner ? null : open)),
   }), [current]);
   return <IssuePaneContext.Provider value={api}>{children}</IssuePaneContext.Provider>;
@@ -48,7 +48,7 @@ export const usePaneIssue = (placeKey: string | null, owner: string, origin: str
   const forget = () => saveOpenIssue(placeKey, storedOwner, null);
   useEffect(() => {
     const saved = openIssueFor(placeKey, storedOwner);
-    if (saved) latest.current.open(owner, origin, saved, forget);
+    if (saved) latest.current.open(owner, origin, saved, forget, true);
     return () => latest.current.close(owner);
   }, [owner, storedOwner]);
   const openId = openFor(pane, owner);

@@ -13,7 +13,7 @@ mock.module('../src/shared/linear.ts', () => ({
   gql: async (query: string, variables: unknown) => { sent.push({ query, variables }); return answer(); },
 }));
 const {
-  addCustomerRequest, addIssueDocument, addIssueLink, convertIssueToProject, createIssueRelation, markRead, patchIssue, remindIssue, toggleFavorite, updateIssue, writeErrorText,
+  addCustomerRequest, addIssueDocument, addIssueLink, convertIssueToProject, createIssueRelation, deleteIssueRelation, markRead, patchIssue, remindIssue, toggleFavorite, updateIssue, updateIssueDocument, updateIssueRelation, writeErrorText,
 } = await import('../src/shared/writes.ts');
 const { LinearError } = await import('../src/shared/linear.ts');
 
@@ -77,7 +77,7 @@ describe('issue action writes', () => {
     };
     await addIssueLink({ id: 'i1', identifier: 'I1' }, { url: 'https://example.com', title: 'Example' });
     await addCustomerRequest({ id: 'i1', identifier: 'I1' }, { customerId: 'c1', body: 'Please add this' });
-    await addIssueDocument({ id: 'i1', identifier: 'I1' }, { title: 'Notes', content: 'Text' });
+    await expect(addIssueDocument({ id: 'i1', identifier: 'I1' }, { title: 'Notes', content: 'Text' })).resolves.toEqual({ id: 'd1' });
     expect(sent.map((c) => c.variables)).toEqual([
       { input: { issueId: 'i1', url: 'https://example.com', title: 'Example' } },
       { input: { issueId: 'i1', customerId: 'c1', body: 'Please add this' } },
@@ -85,10 +85,26 @@ describe('issue action writes', () => {
     ]);
   });
 
+  test('an existing plan document updates in place', async () => {
+    answer = async () => ({ documentUpdate: { success: true, document: { id: 'd1', url: 'https://example.com/doc' } } });
+    await expect(updateIssueDocument({ id: 'i1', identifier: 'I1' }, 'd1', { title: 'Plan', content: 'Full text' })).resolves.toEqual({ id: 'd1', url: 'https://example.com/doc' });
+    expect(sent[0]!.variables).toEqual({ id: 'd1', input: { title: 'Plan', content: 'Full text' } });
+  });
+
   test('a blocked-by relation reverses the issue ids', async () => {
     answer = async () => ({ issueRelationCreate: { success: true } });
     await createIssueRelation({ id: 'i1', identifier: 'I1' }, { id: 'i2', identifier: 'I2' }, { id: 'blocked', type: 'blocks', inverse: true });
     expect(sent[0]!.variables).toEqual({ input: { issueId: 'i2', relatedIssueId: 'i1', type: 'blocks' } });
+  });
+
+  test('relation changes can swap the ends, and removal uses the relation id', async () => {
+    answer = async () => sent.at(-1)!.query.includes('IssueRelationUpdate') ? { issueRelationUpdate: { success: true } } : { issueRelationDelete: { success: true } };
+    await updateIssueRelation({ id: 'i1', identifier: 'I1' }, { id: 'i2', identifier: 'I2' }, 'r1', { id: 'blocked', type: 'blocks', inverse: true });
+    await deleteIssueRelation({ id: 'i1', identifier: 'I1' }, { id: 'i2', identifier: 'I2' }, 'r1');
+    expect(sent.map((c) => c.variables)).toEqual([
+      { id: 'r1', input: { issueId: 'i2', relatedIssueId: 'i1', type: 'blocks' } },
+      { id: 'r1' },
+    ]);
   });
 
   test('favorite creates or deletes the caller\'s favorite reference', async () => {

@@ -30,10 +30,10 @@ export const AddPlanButton = ({ identifier, source, label = 'Write Plan', doneLa
     setBusy(true);
     onBusy?.(true);
     try {
-      await writePlan({ identifier }, source);
+      const written = await writePlan({ identifier }, source);
       setAdded(true);
       invalidate('issue');
-      await toast(host, 'success', `Added the plan to ${identifier}`);
+      await toast(host, 'success', written.document ? `Added a concise plan to ${identifier}, with the full plan in a linked document` : `Added the plan to ${identifier}`);
     } catch (error) {
       await toast(host, 'error', `Could not add the plan to ${identifier}: ${writeErrorText(error)}`);
     } finally {

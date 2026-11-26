@@ -180,6 +180,18 @@ describe('detect', () => {
     expect(result.work?.identifier).toBe('APPSEC-5');
   });
 
+  test('a worktree name prefix finds the issue when its branch has no key', async () => {
+    for (const directory of ['/wt/appsec-7-fix', '/wt/strength-helm-appsec-7-fix']) {
+      const env = envOf({
+        projects: [oc('strength-helm')],
+        worktrees: { 'oc-strength-helm': [{ directory, name: 'appsec-7-fix', branch: '', status: 'ready' }] },
+        issues: [issue('APPSEC-7', 'APPSEC', null)],
+      });
+      const result = await detect(env, await resolvePlace(env, directory), teams);
+      expect(result.work).toMatchObject({ identifier: 'APPSEC-7', from: 'worktree' });
+    }
+  });
+
   test('.linear.json resolves team keys, ids, slugs and names', async () => {
     const env = envOf({ projects: [oc('x')], files: { '.linear.json': JSON.stringify({ team: 'con', projects: ['p-wiz', 'https://linear.app/acme/project/checkout-spcheckout', 'nope'] }) } });
     const result = await detect(env, await resolvePlace(env, '/work/x'), teams);

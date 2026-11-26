@@ -20,7 +20,7 @@ export const HandoffRow = ({ handoff, onDone }: { handoff: Handoff; onDone: () =
     try {
       const outcome = await startBuildFromHandoff(handoff);
       if (outcome.moveError) await toast(host, 'error', `Build started, but ${handoff.identifier} was not moved: ${outcome.moveError}`);
-      await toast(host, 'success', `${outcome.posted ? 'Added the plan to the issue and started' : 'Started'} a build for ${handoff.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}`);
+      await toast(host, 'success', `${outcome.postedDocument ? 'Added a concise plan and full plan document to the issue and started' : outcome.posted ? 'Added the plan to the issue and started' : 'Started'} a build for ${handoff.identifier}${outcome.moved ? ` and moved it to ${outcome.target!.name}` : ''}`);
       if (outcome.moved) invalidate('status-');
       onDone();
       await openStartedSession(outcome.sessionId);

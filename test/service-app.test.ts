@@ -297,6 +297,16 @@ describe('plan to build', () => {
     expect(ctx.calls.started.length).toBe(1);
   });
 
+  test('a chosen plan message overrides the session\'s latest reply for preview and build', async () => {
+    const ctx = await planned();
+    const selected = PLAN_REPLY.replace('ENG-5', 'ENG-5 selected');
+    const preview = await ctx.call('POST', '/handoff', { mode: 'preview', sessionId: 'ses_1', identifier: 'ENG-5', planText: selected });
+    expect(preview.body).toMatchObject({ ok: true, plan: selected, earlier: true, isPlan: true });
+    await ctx.call('POST', '/handoff', { sessionId: 'ses_1', identifier: 'ENG-5', planText: selected });
+    expect(String(ctx.calls.started[0]!.prompt)).toContain(selected);
+    expect(String(ctx.calls.started[0]!.prompt)).not.toContain(ctx.calls.reply);
+  });
+
   test('a newer planning session for the same issue replaces the older one\'s row, another issue keeps its own', async () => {
     const ctx = await planned();
     await deliver(ctx, finished({ session: { id: 'ses_2', parentId: null } }, '## Plan\n1. Again'));
@@ -435,6 +445,8 @@ describe('lead mode', () => {
     expect(prompt).toContain('question tools reach nobody here');
     expect(prompt).toContain('Always ask the user every question');
     expect(prompt).toContain('Never answer a plan question yourself');
+    expect(prompt).toContain('A meaningful choice under "Open decisions" that was never asked and answered is unfinished');
+    expect(prompt).toContain('Its recommendation is not the user\'s answer');
     expect(prompt).toContain('Send the user\'s answer back to the plan session with session.send');
     expect(prompt).not.toContain('Answer them yourself from the issue and the code');
     expect((await ctx.call('GET', '/plans', undefined, 'identifier=ENG-5')).body.sessions[0]).toMatchObject({ sessionId: 'ses_lead', title: 'ENG-5 Slow login' });
@@ -740,9 +752,14 @@ describe('plan extras', () => {
     expect((await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'claim-extras' })).body.claimed).toBe(true);
     const done = (await ctx.call('POST', '/handoffs', { sessionId: 'ses_1', action: 'extras-done', estimateDone: true, estimateSet: 3, created: ['ENG-6', 'bad id'] })).body;
     expect(done.state).toMatchObject({ state: 'done', estimateSet: 3, created: ['ENG-6'] });
-    // A revised plan never writes again.
-    await deliver(ctx, finished({}, PLAN.replace('Cache rates', 'Other')));
+    // An unchanged revision writes nothing again. A revision that adds an issue writes only that issue.
+    await deliver(ctx, finished({}, PLAN));
     expect((await ctx.call('GET', '/extras', undefined, 'sessionId=ses_1')).body.extras).toMatchObject({ state: 'done', extras: { issues: [{ title: 'Cache rates' }] } });
+    const revisedExtras = '```linear-plan\n{"estimate": 3, "issues": [{"title": "Cache rates", "description": "Why", "estimate": 2}, {"title": "Add metrics", "description": "Measure it", "estimate": 1}]}\n```';
+    await deliver(ctx, finished({}, PLAN.replace(EXTRAS, revisedExtras)));
+    expect((await ctx.call('GET', '/extras', undefined, 'sessionId=ses_1')).body.extras).toMatchObject({
+      state: 'pending', estimateDone: true, estimateSet: 3, created: [], extras: { estimate: 3, issues: [{ title: 'Add metrics', description: 'Measure it', estimate: 1 }] },
+    });
   });
 
   test('a failure keeps what was written and can run again; the plan text and drafts lose the block', async () => {

@@ -3,7 +3,7 @@
 import { estimateLabel } from './format.ts';
 import { compareStates, PRIORITY_NAMES } from './grouping.ts';
 import type { Change } from './moves.ts';
-import type { CycleSummary, IssueRow, Label, ProjectMilestoneSummary, ProjectSummary, Team, User, WorkflowState } from './types.ts';
+import type { CycleSummary, IssueRow, Label, ProjectMilestoneSummary, ProjectSummary, RelatedIssue, Team, User, WorkflowState } from './types.ts';
 
 export type IssuePrompt = 'team' | 'release' | 'sla' | 'link' | 'customer' | 'document' | 'suggestions' | 'rename' | 'copy' | 'convert-project' | 'convert-subissue' | 'reminder-custom';
 
@@ -23,6 +23,7 @@ export type MenuAction =
   | { kind: 'relation'; relation: RelationChoice; create: boolean }
   | { kind: 'favorite' }
   | { kind: 'reminder'; at: string }
+  | { kind: 'delete-relation'; relationId: string; other: RelatedIssue }
   | { kind: 'delete' };
 
 export type MenuIcon =
@@ -256,15 +257,15 @@ export const issueMenu = (issue: IssueRow, data: MenuData): MenuSection[] => {
   const remove: MenuItem = {
     id: 'remove', label: 'Remove', icon: { kind: 'glyph', name: 'remove' },
     children: [
-      ...(issue.project ? [{ id: 'remove:project', label: 'From project', action: change({ projectId: null }, { project: null, projectMilestone: null }) }] : []),
-      ...(issue.projectMilestone ? [{ id: 'remove:milestone', label: 'From milestone', action: change({ projectMilestoneId: null }, { projectMilestone: null }) }] : []),
-      ...(issue.cycle ? [{ id: 'remove:cycle', label: 'From cycle', action: change({ cycleId: null }, { cycle: null }) }] : []),
-      ...(issue.parent ? [{ id: 'remove:parent', label: 'Parent', action: change({ parentId: null }, { parent: null }) }] : []),
-      ...(issue.assignee ? [{ id: 'remove:assignee', label: 'Assignee', action: change({ assigneeId: null }, { assignee: null }) }] : []),
-      ...(issue.estimate !== null ? [{ id: 'remove:estimate', label: 'Estimate', action: change({ estimate: null }, { estimate: null }) }] : []),
-      ...(issue.dueDate ? [{ id: 'remove:due', label: 'Due date', action: change({ dueDate: null }, { dueDate: null }) }] : []),
-      ...(issue.labels.nodes.length ? [{ id: 'remove:labels', label: 'Labels', action: change({ labelIds: [] }, { labels: { nodes: [] } }) }] : []),
-      ...(issue.slaType ? [{ id: 'remove:sla', label: 'SLA override', action: change({ slaType: null }, { slaType: null }) }] : []),
+      ...(issue.parent ? [{ id: 'remove:parent', label: `Parent issue ${issue.parent.identifier}${issue.parent.title ? ` ${issue.parent.title}` : ''}`, action: change({ parentId: null }, { parent: null }) }] : []),
+      ...issue.inRelations.nodes.filter((r) => r.type === 'blocks').map((r) => ({
+        id: `remove:blocked:${r.id}`, label: `Blocked issue ${r.issue.identifier} ${r.issue.title}`,
+        action: { kind: 'delete-relation' as const, relationId: r.id, other: r.issue },
+      })),
+      ...issue.outRelations.nodes.filter((r) => r.type === 'blocks').map((r) => ({
+        id: `remove:blocking:${r.id}`, label: `Blocking issue ${r.relatedIssue.identifier} ${r.relatedIssue.title}`,
+        action: { kind: 'delete-relation' as const, relationId: r.id, other: r.relatedIssue },
+      })),
     ],
   };
   const convert: MenuItem = {

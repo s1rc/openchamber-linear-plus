@@ -43,10 +43,11 @@ const NOTHING_TO_DRAFT = 'There is no text to draft from, so the form starts emp
 /** The job for an item the Create Linear issue actions open the dialog with; null for any other item. */
 /** The session menu entry that starts a build from the plan in that session. */
 export const BUILD_ACTION = 'build-from-plan';
+export const BUILD_MESSAGE_ACTION = 'build-from-plan-message';
 
 export const jobFor = (item: GuestItem | null, deps: JobDeps): Job | null => {
   if (!item || !('kind' in item)) return null;
-  if (item.kind === 'message' && item.action !== 'comment-on-issue') {
+  if (item.kind === 'message' && item.action !== 'comment-on-issue' && item.action !== BUILD_MESSAGE_ACTION) {
     return {
       key: `message:${item.messageId}`,
       source: item.role === 'user' ? 'From a message you sent' : 'From a reply by the assistant',

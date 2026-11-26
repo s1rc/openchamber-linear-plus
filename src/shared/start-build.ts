@@ -1,6 +1,6 @@
 // Start build: the service starts the session. Before it, a frame can add the plan to the issue's description (a Linear
 // write, on the click); after it, the issue moves, and the caller opens the session last, as Start session does.
-import { NOT_A_PLAN_TEXT, withPlan, type BuildSource, type Handoff } from './handoff-rules.ts';
+import { concisePlan, NOT_A_PLAN_TEXT, planNeedsDocument, withPlan, type BuildSource, type Handoff } from './handoff-rules.ts';
 import { fetchSessionExtras, previewPlan, requestBuild } from './handoff.ts';
 import { applyPlanExtras } from './plan-extras-apply.ts';
 import { viewerIdNow } from './workspace.ts';
@@ -8,8 +8,8 @@ import { gql } from './linear.ts';
 import { buildStateOf } from './moves.ts';
 import { ISSUE_DETAIL } from './queries.ts';
 import { getStartMoves, getStartState, setStartState } from './storage.ts';
-import type { IssueDetail, IssueDetailResult, WorkflowState } from './types.ts';
-import { updateIssue, writeErrorText } from './writes.ts';
+import type { DocumentSummary, IssueDetail, IssueDetailResult, WorkflowState } from './types.ts';
+import { addIssueDocument, updateIssue, updateIssueDocument, writeErrorText } from './writes.ts';
 
 export type BuildOptions = {
   /** Also move the issue to its team's status for work in motion. */
@@ -24,23 +24,34 @@ export type BuildOptions = {
   lastState?: string | null;
   /** `provider/model` for this build only, instead of the one in Settings. */
   model?: string;
+  /** The exact plan message chosen in the session, instead of its latest plan-like reply. */
+  planText?: string;
 };
 
-export type BuildOutcome = { sessionId: string; target: WorkflowState | null; moved: boolean; moveError: string | null; posted: boolean };
+export type BuildOutcome = { sessionId: string; target: WorkflowState | null; moved: boolean; moveError: string | null; posted: boolean; postedDocument: boolean };
+
+export type WritePlanOutcome = { document: DocumentSummary | null };
 
 /**
- * Writes the plan into the issue's description as its last section, replacing one written before. The description is
- * read again first: the copy in hand may be older than an edit made in Linear since. Throws with the reason, and then
- * nothing was written. A Linear write, only ever from a click.
+ * Writes the plan into the issue's description as its last section, replacing one written before. A plan over 6,500
+ * characters becomes a concise summary linked to an issue document with the full text. The description is read again
+ * first: the copy in hand may be older than an edit made in Linear since. Throws with the reason when it cannot finish.
+ * Linear writes, only ever from a click.
  */
-export const writePlan = async (issue: Pick<IssueDetail, 'identifier'>, source: BuildSource, force = false): Promise<void> => {
-  const { plan, isPlan } = await previewPlan({ source, identifier: issue.identifier });
+export const writePlan = async (issue: Pick<IssueDetail, 'identifier'>, source: BuildSource, force = false, planText?: string): Promise<WritePlanOutcome> => {
+  const { plan, isPlan } = await previewPlan({ source, identifier: issue.identifier, ...(planText ? { planText } : {}) });
   // Writing a chat answer over the issue's plan would lose the plan, so a reply that is not one needs a deliberate yes.
   if (!isPlan && !force) throw new Error(NOT_A_PLAN_TEXT);
   const current = (await gql<IssueDetailResult>(ISSUE_DETAIL, { id: issue.identifier })).issue;
-  const description = withPlan(current.description, plan);
+  const title = `${issue.identifier} plan: ${current.title}`.slice(0, 200);
+  const existing = current.documents?.nodes.find((document) => current.description?.includes(document.url))
+    ?? current.documents?.nodes.find((document) => document.title === title);
+  const document = planNeedsDocument(plan) ? await (existing ? updateIssueDocument(current, existing.id, { title, content: plan }) : addIssueDocument(current, { title, content: plan })) : null;
+  const posted = document ? concisePlan(plan) : plan;
+  const description = withPlan(current.description, posted, document?.url);
   if (description === null) throw new Error(`The description of ${issue.identifier} would be too long with the plan in it.`);
   await updateIssue(current, { input: { description }, patch: { description } });
+  return { document };
 };
 
 /** The planning session a Work Status row stands for, as a build source. */
@@ -51,15 +62,17 @@ export const sourceOfHandoff = (handoff: Handoff): BuildSource => ({
 /** Writes the plan to the issue if asked, then starts the build, then moves the issue. A failed write stops everything: nothing has started. */
 export const startBuildFor = async (issue: IssueDetail, source: BuildSource, options: BuildOptions): Promise<BuildOutcome> => {
   let posted = false;
+  let postedDocument = false;
   if (options.post) {
-    await writePlan(issue, source, options.force);
+    const written = await writePlan(issue, source, options.force, options.planText);
     posted = true;
+    postedDocument = Boolean(written.document);
   }
   // The plan's estimate and split-out issues are written when it finishes; a build started before any frame did it
   // writes them first. A failure is recorded for Retry in Work Status and does not stop the build.
   const extras = await fetchSessionExtras(source.sessionId).catch(() => null);
   if (extras && (extras.state === 'pending' || extras.state === 'claimed')) await applyPlanExtras(extras, viewerIdNow()).catch(() => null);
-  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force, ...(options.model ? { model: options.model } : {}) });
+  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force, ...(options.model ? { model: options.model } : {}), ...(options.planText ? { planText: options.planText } : {}) });
   const target = options.state ?? buildStateOf(issue, issue.team.states.nodes, options.lastState);
   let moved = false;
   let moveError: string | null = null;
@@ -71,7 +84,7 @@ export const startBuildFor = async (issue: IssueDetail, source: BuildSource, opt
       moveError = writeErrorText(error);
     }
   }
-  return { sessionId: started.sessionId, target, moved, moveError, posted };
+  return { sessionId: started.sessionId, target, moved, moveError, posted, postedDocument };
 };
 
 /** The row's one-click build: the issue is read for its statuses, then the folder's own defaults decide the move and the post. */

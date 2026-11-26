@@ -158,11 +158,11 @@ export const planPrompt = (input: PlanPromptInput): string => {
     'Read the code you need, then write a plan: what to change and where, in order, how to test it, and the risks.',
     '',
     input.child
-      ? 'You may ask questions first to clarify the issue; I want that. Write them as a normal message (question tools reach nobody here), and the answers come back as a message. When you are done asking, write the complete plan as a normal message.'
-      : 'You may ask me questions first to clarify the issue; I want that. When you are done asking, write the complete plan as a normal message.',
+      ? 'Interview the user before writing the plan whenever a meaningful choice is not fully settled by the issue or code. Ask about architecture, behavior, rollout, security and external setup choices, even when you have a recommendation. Present the recommendation with the question, but never treat it as the user\'s answer. Write one question or a small related set as a normal message (question tools reach nobody here), then wait for the answer to come back as a message before continuing. When the interview is done, write the complete plan as a normal message.'
+      : 'Interview me before writing the plan whenever a meaningful choice is not fully settled by the issue or code. Ask about architecture, behavior, rollout, security and external setup choices, even when you have a recommendation. Present the recommendation with the question, but never treat it as my answer. Ask one question or a small related set at a time, then wait for my answer before continuing. When the interview is done, write the complete plan as a normal message.',
     '',
     ...extrasLines(input.identifier, input.scale),
-    'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. Anything still undecided goes under "Open decisions" at the end of the plan, each with your recommendation.',
+    'This session only plans. A separate build session, started from the Linear+ extension, will build the plan. So the plan must be your last message, with no question card or form left open, and you must not end with a "go", "build it" or "switch agent" card or offer to build. Do not ask which agent to use. "Open decisions" is only for a genuine unknown that remains after the interview, not for a choice you could have asked about. Never leave a recommendation there as though the user had accepted it. Each genuine unknown needs your recommendation and why it cannot be settled now. If your draft contains an unasked choice under "Open decisions", stop and ask about it instead of sending the plan.',
     '',
     'End that final message with this block, exactly, so the Linear card with the Start build button appears under the plan (it is only a display, not a question):',
     '```openui-lang',
@@ -204,7 +204,7 @@ export const leadPlanPrompt = (input: PlanPromptInput & { choice: ChildChoice })
     '',
     'While it plans:',
     '- Its questions come to you. Always ask the user every question, as the plan session wrote it, and wait for the user\'s answer. Never answer a plan question yourself, even when the answer seems obvious from the issue or code. Send the user\'s answer back to the plan session with session.send. Keep relaying questions and answers until the plan session has no more questions.',
-    '- Check the plan it hands back: what to change and where, in order, how to test it, and the risks. Send a plan that misses one of these back to it.',
+    '- Check the plan it hands back: what to change and where, in order, how to test it, the risks, and whether the interview happened. Send a plan that misses one of these back to it. A meaningful choice under "Open decisions" that was never asked and answered is unfinished: require the question. Its recommendation is not the user\'s answer.',
     '',
     'When the plan is complete, your reply is that plan in full, word for word as the plan session wrote it, with the fenced blocks it ends with (its estimate block and the LinearIssue card). Change nothing and add nothing after the card: the Start build button in Linear+ builds from this reply.',
     '',

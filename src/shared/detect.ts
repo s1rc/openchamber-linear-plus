@@ -2,8 +2,8 @@
 // through `DetectEnv`, so tests can run it without a host.
 //
 // Order: saved mapping, `.linear.json`, repository activity (Linear issues whose merge requests point
-// at this repo), then folder, repository and group names. The branch's issue and issues linked to
-// sessions describe the user's current work, not the owner, so they only fill `work`.
+// at this repo), then folder, repository and group names. The branch's issue, the worktree name's issue
+// and issues linked to sessions describe the user's current work, not the owner, so they only fill `work`.
 import type { GuestProjectsSnapshot, GuestSessionsSnapshot, GuestWorktreesSnapshot } from '@openchamber/sdk';
 import type { Mapping } from './storage.ts';
 import type { IssueRow, ProjectSummary, RepoAttachmentsResult } from './types.ts';
@@ -42,8 +42,8 @@ export type Place = {
 
 export type DetectionSource = 'mapping' | 'config' | 'repo' | 'name' | 'none';
 
-/** The issue the user is working on here, from the branch or the latest linked session. */
-export type Work = { identifier: string; title: string; url: string; teamKey: string; projectName: string | null; from: 'branch' | 'session' };
+/** The issue the user is working on here, from the branch, worktree name or latest linked session. */
+export type Work = { identifier: string; title: string; url: string; teamKey: string; projectName: string | null; from: 'branch' | 'worktree' | 'session' };
 
 export type Detection = {
   source: DetectionSource;
@@ -243,10 +243,21 @@ const isActive = (p: ProjectSummary) => p.status.type !== 'completed' && p.statu
 /** Fewer issues than this with merge requests in the repo is not enough to name an owner. */
 export const REPO_ISSUES_MIN = 3;
 
+/** A worktree made for an issue starts with its key, sometimes after the main checkout's name. */
+const worktreeIssue = (place: Place, teamKeys: ReadonlySet<string>): string | null => {
+  if (place.directory === place.projectDirectory) return null;
+  const folder = basename(place.directory);
+  const main = basename(place.projectDirectory);
+  const name = main && folder.toLowerCase().startsWith(`${main.toLowerCase()}-`) ? folder.slice(main.length + 1) : folder;
+  const id = findIdentifiers(name, teamKeys)[0];
+  return id && name.toUpperCase().startsWith(id) ? id : null;
+};
+
 const findWork = async (env: DetectEnv, place: Place, teamKeys: ReadonlySet<string>): Promise<Work | null> => {
   const fromBranch = place.branch ? findIdentifiers(place.branch, teamKeys).slice(0, 3) : [];
+  const fromWorktree = worktreeIssue(place, teamKeys);
   const fromSessions = place.linkedIssues.slice(0, 1);
-  const ids = [...fromBranch, ...fromSessions.filter((id) => !fromBranch.includes(id))];
+  const ids = [...new Set([...fromBranch, ...(fromWorktree ? [fromWorktree] : []), ...fromSessions])];
   if (!ids.length) return null;
   const issues = await env.issuesByIdentifier(ids).catch(() => []);
   for (const id of ids) {
@@ -254,7 +265,7 @@ const findWork = async (env: DetectEnv, place: Place, teamKeys: ReadonlySet<stri
     if (issue) {
       return {
         identifier: issue.identifier, title: issue.title, url: issue.url, teamKey: issue.team.key,
-        projectName: issue.project?.name ?? null, from: fromBranch.includes(id) ? 'branch' : 'session',
+        projectName: issue.project?.name ?? null, from: fromBranch.includes(id) ? 'branch' : id === fromWorktree ? 'worktree' : 'session',
       };
     }
   }

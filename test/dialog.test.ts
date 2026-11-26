@@ -116,8 +116,9 @@ describe('jobFor', () => {
     expect(built.prompt).toBeNull();
     expect(built.note).toBeTruthy();
   });
-  test('the comment action is not a create job', () => {
+  test('the comment and chosen-plan actions are not create jobs', () => {
     expect(jobFor({ ...message, action: 'comment-on-issue' }, deps)).toBeNull();
+    expect(jobFor({ ...message, action: 'build-from-plan-message' }, deps)).toBeNull();
   });
   test('a selection uses the open session title', async () => {
     const job = jobFor({ kind: 'selection', action: 'issue-from-selection', sessionId: 's', directory: null, messageId: 'm', text: 'a stack trace' }, deps)!;

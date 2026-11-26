@@ -1,7 +1,7 @@
 // Start build from this plan: the session menu entry on a planning session. It finds the issue the session is for
 // (a link on the session, or a plan session the service started), then shows the same options as the card's
 // Start build. Nothing is written until the button in it is clicked.
-import type { GuestSessionItem } from '@openchamber/sdk';
+import type { GuestMessageItem, GuestSessionItem } from '@openchamber/sdk';
 import { api } from '@openchamber-ext/shared-ui';
 import { useEffect, useState } from 'preact/hooks';
 import { BuildPanel } from '../shared/build-panel.tsx';
@@ -10,12 +10,14 @@ import { sourceOf, type BuildSource } from '../shared/handoff-rules.ts';
 import { host } from '../shared/host.ts';
 import { Empty, Select, Spinner } from '../shared/kit.tsx';
 import { linkedIdentifiers } from '../shared/linked.ts';
+import { looksLikePlan } from '../service/events.ts';
 import { hostEnv } from '../shared/use-detection.ts';
 
 type Found = { source: BuildSource; identifiers: string[] };
+type PlanItem = GuestSessionItem | GuestMessageItem;
 
 /** The issues the session is for, newest link first, and the session as a build source. */
-const find = async (item: GuestSessionItem, directory: string | null): Promise<Found> => {
+const find = async (item: PlanItem, directory: string | null): Promise<Found> => {
   const dir = item.directory ?? directory;
   const fallback: BuildSource = { sessionId: item.sessionId, directory: dir ?? '', title: item.sessionTitle, agent: null, inWorktree: false, updatedAt: 0 };
   const identifiers: string[] = [];
@@ -39,9 +41,12 @@ const find = async (item: GuestSessionItem, directory: string | null): Promise<F
   return { source: source.directory ? source : { ...source, directory: dir ?? '' }, identifiers: [...known, ...identifiers.filter((id) => !known.includes(id))] };
 };
 
-export const BuildView = ({ item, directory }: { item: GuestSessionItem; directory: string | null }) => {
+export const BuildView = ({ item, directory }: { item: PlanItem; directory: string | null }) => {
   const [found, setFound] = useState<Found | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const plans = item.kind === 'session' ? (item.messages ?? []).filter((message) => message.role === 'assistant' && looksLikePlan(message.text)) : [];
+  const [planId, setPlanId] = useState(() => plans.at(-1)?.id ?? '');
+  const planText = item.kind === 'message' ? item.text : plans.find((message) => message.id === planId)?.text;
   useEffect(() => {
     let live = true;
     void find(item, directory).then((result) => { if (live) { setFound(result); setPicked(result.identifiers[0] ?? null); } }, () => { if (live) setFound({ source: { sessionId: item.sessionId, directory: '', title: item.sessionTitle, agent: null, inWorktree: false, updatedAt: 0 }, identifiers: [] }); });
@@ -64,7 +69,15 @@ export const BuildView = ({ item, directory }: { item: GuestSessionItem; directo
       {found.identifiers.length > 1 && (
         <Select value={picked} options={found.identifiers.map((id) => ({ id, label: id }))} onChange={setPicked} label="Issue" />
       )}
-      <BuildPanel fill key={picked} identifier={picked} source={found.source} onClose={() => { void host.close(); }} onDone={() => { void host.close(); }} />
+      {plans.length > 1 && (
+        <Select
+          value={planId}
+          options={plans.map((message, index) => ({ id: message.id, label: `Plan ${index + 1}: ${message.text.match(/^#\s+(.+)$/m)?.[1]?.slice(0, 80) ?? 'Untitled'}` }))}
+          onChange={setPlanId}
+          label="Plan message"
+        />
+      )}
+      <BuildPanel fill key={`${picked}:${planId}`} identifier={picked} source={found.source} planText={planText} onClose={() => { void host.close(); }} onDone={() => { void host.close(); }} />
     </div>
   );
 };

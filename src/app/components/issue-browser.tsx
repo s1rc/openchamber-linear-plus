@@ -27,7 +27,7 @@ import { IssueActionDialog } from './issue-action-dialogs.tsx';
 import { IssueRelationDialog } from './issue-relation-dialog.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import {
-  issueOwnerKey, openIssueFor, PlaceKey, saveOptions, saveTab, saveUserDefaults, savedOptionsFor, tabFor, userDefaults, WorktreeKey,
+  issueOwnerKey, openIssueFor, PlaceKey, saveFilters, saveOptions, saveTab, saveUserDefaults, savedFiltersFor, savedOptionsFor, tabFor, userDefaults, WorktreeKey,
 } from '../view-state.ts';
 import { Board } from './board.tsx';
 import { GroupIcon } from './group-icon.tsx';
@@ -109,12 +109,29 @@ export const IssueBrowser = ({ ctx, listKey, scope: baseScope, subTeamScope = nu
   };
   const setDefault = () => saveUserDefaults(mode, changedOptions(resolveOptions(mode), options));
 
-  const [search, setSearch] = useState('');
-  const [assignee, setAssignee] = useState('any');
-  const [priority, setPriority] = useState('any');
-  const [label, setLabel] = useState('any');
-  const [status, setStatus] = useState<'any' | StateType>('any');
-  const [showClosed, setShowClosed] = useState(false);
+  const [filters, setFilters] = useState(() => {
+    const saved = savedFiltersFor(placeKey, listKey);
+    return {
+      search: saved?.search ?? '',
+      assignee: saved?.assignee ?? 'any',
+      priority: saved?.priority ?? 'any',
+      label: saved?.label ?? 'any',
+      status: saved?.status ?? 'any' as 'any' | StateType,
+      showClosed: saved?.showClosed ?? false,
+    };
+  });
+  const { search, assignee, priority, label, status, showClosed } = filters;
+  const changeFilters = (patch: Partial<typeof filters>) => {
+    const next = { ...filters, ...patch };
+    setFilters(next);
+    saveFilters(placeKey, listKey, next);
+  };
+  const setSearch = (value: string) => changeFilters({ search: value });
+  const setAssignee = (value: string) => changeFilters({ assignee: value });
+  const setPriority = (value: string) => changeFilters({ priority: value });
+  const setLabel = (value: string) => changeFilters({ label: value });
+  const setStatus = (value: 'any' | StateType) => changeFilters({ status: value });
+  const setShowClosed = (value: boolean) => changeFilters({ showClosed: value });
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);

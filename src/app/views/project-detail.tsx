@@ -3,12 +3,13 @@
 import type { HostReadyContext } from '@openchamber/sdk';
 import { Cards, Dot, Section, StatCard } from '@openchamber-ext/shared-ui/preact';
 import { useContext, useEffect, useMemo, useState } from 'preact/hooks';
-import { PlaceKey, saveTab, tabFor } from '../view-state.ts';
+import { PlaceKey, saveFilters, saveTab, savedFiltersFor, tabFor } from '../view-state.ts';
 import { useQuery } from '../../shared/cache.ts';
 import { all, OPEN, scopeFilter } from '../../shared/filters.ts';
 import { daysUntil, HEALTH_LABEL, HEALTH_TONE, percent, relativeTime, shortDate } from '../../shared/format.ts';
 import { Avatar, MilestoneGlyph } from '../../shared/glyphs.tsx';
 import { host } from '../../shared/host.ts';
+import { copyText, IconButton, LinkIcon } from '../../shared/icon-buttons.tsx';
 import { useIssueList } from '../../shared/issues.ts';
 import { toast } from '@openchamber-ext/shared-ui';
 import { Badge, Banner, Button, Progress, Select, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
@@ -269,21 +270,29 @@ const Overview = ({ project, onMilestone }: { project: Detail; onMilestone?: (id
   );
 };
 
-type Props = { ctx: HostReadyContext; id: string; viewerId: string; withIssues: boolean };
+type Props = { ctx: HostReadyContext; id: string; viewerId: string; withIssues: boolean; onUnavailable?: () => void };
 
-export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
+export const ProjectDetail = ({ ctx, id, viewerId, withIssues, onUnavailable }: Props) => {
   const detail = useProjectDetail(id);
   const placeKey = useContext(PlaceKey);
   const tabKey = `project-detail:${id}`;
+  const listKey = `project:${id}`;
   const [tab, setTabState] = useState<'overview' | 'issues'>(() => (tabFor(placeKey, tabKey) === 'issues' && withIssues ? 'issues' : 'overview'));
   // A milestone picked on the overview (its name or its issue count): the Issues tab shows only its issues.
-  const [milestone, setMilestone] = useState<string | null>(null);
+  const [milestone, setMilestoneState] = useState<string | null>(() => savedFiltersFor(placeKey, listKey)?.milestone ?? null);
+  const setMilestone = (next: string | null) => {
+    setMilestoneState(next);
+    saveFilters(placeKey, listKey, { milestone: next });
+  };
   const setTab = (next: 'overview' | 'issues') => { setTabState(next); saveTab(placeKey, tabKey, next); };
   const project = detail.data;
   // The service keeps this overview and the project's documents for the `@` menu when no API key is set.
   useEffect(() => {
     if (project && ctx.directory) void pushSnapshot(projectPush(ctx.directory, project));
   }, [project, ctx.directory]);
+  useEffect(() => {
+    if (!project && detail.error) onUnavailable?.();
+  }, [detail.error]);
   if (!project) {
     return detail.error ? (
       <Banner tone="error" title="Could not load the project" body={detail.error instanceof Error ? detail.error.message : String(detail.error)} action={{ label: 'Retry', onClick: () => detail.refresh() }} />
@@ -296,12 +305,15 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues }: Props) => {
       <div class="sui-row">
         {withIssues && <Tabs items={[{ id: 'overview', label: 'Overview' }, { id: 'issues', label: 'Issues' }]} activeId={tab} onChange={(t) => setTab(t as typeof tab)} />}
         <span class="sui-grow" />
+        <span class="lin-icon-row lin-icon-row--plain">
+          <IconButton label="Copy project link" onClick={() => { void copyText(project.url, 'the project link'); }}><LinkIcon /></IconButton>
+        </span>
         <Button label="Open in Linear" variant="ghost" size="xs" onClick={() => { void host.openUrl(project.url); }} />
       </div>
       {tab === 'issues' && withIssues ? (
         <IssueBrowser
           ctx={ctx}
-          listKey={`project:${project.id}`}
+          listKey={listKey}
           origin={project.name}
           scope={scopeFilter([], [project.id])}
           viewerId={viewerId}

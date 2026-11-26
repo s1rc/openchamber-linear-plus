@@ -236,6 +236,14 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-side-link { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 4px; border-radius: var(--oc-radius, 6px); cursor: pointer; min-width: 0; }
 .lin-side-link:hover { background: var(--oc-hover); }
 .lin-side-link:focus-visible { outline: 2px solid var(--oc-focus); }
+.lin-relation { position: relative; display: flex; align-items: center; width: 100%; min-width: 0; }
+.lin-relation-open { flex: 1 1 auto; width: 100%; }
+.lin-relation-open .lin-ellipsis { flex: 1 1 auto; min-width: 0; }
+.lin-relation-remove { all: unset; position: absolute; z-index: 1; right: 0; box-sizing: border-box; width: 24px; height: 24px; border-radius: var(--oc-radius, 6px); color: var(--oc-muted); background: var(--oc-elevated); text-align: center; cursor: pointer; opacity: 0; }
+.lin-relation:hover .lin-relation-remove, .lin-relation-remove:focus-visible { opacity: 1; }
+.lin-relation-remove:hover { color: var(--oc-fg); background: var(--oc-hover); }
+.lin-relation-remove:focus-visible { outline: 2px solid var(--oc-focus); }
+@media (hover: none) { .lin-relation-remove { opacity: 1; } }
 .lin-side-foot { padding: 0 4px; }
 .lin-team-dot { width: 12px; height: 12px; border-radius: 3px; background: var(--oc-primary); flex: none; }
 .lin-due-dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--oc-muted); flex: none; }
@@ -246,6 +254,13 @@ body { font-family: var(--oc-font, system-ui, sans-serif); font-size: 13px; }
 .lin-subissues-list { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); overflow: hidden; }
 .lin-subissues-list .lin-issue-row { padding: 4px 12px; }
 .lin-subissues-list .lin-issue-row:last-child { border-bottom: 0; }
+.lin-documents { display: flex; flex-direction: column; gap: 6px; }
+.lin-documents-list { display: flex; flex-direction: column; border: 1px solid var(--oc-border); border-radius: var(--oc-radius, 8px); background: var(--oc-elevated); color: var(--oc-elevated-fg, var(--oc-fg)); overflow: hidden; }
+.lin-document + .lin-document { border-top: 1px solid var(--oc-border); }
+.lin-document-toggle { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 6px 12px; cursor: pointer; }
+.lin-document-toggle:hover { background: var(--oc-hover); }
+.lin-document-toggle:focus-visible { outline: 2px solid var(--oc-focus); outline-offset: -2px; }
+.lin-document-content { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-top: 1px solid var(--oc-border); }
 .lin-activity { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--oc-border); }
 .lin-activity-title { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .lin-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

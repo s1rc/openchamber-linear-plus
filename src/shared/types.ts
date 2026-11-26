@@ -83,12 +83,12 @@ export type IssueRow = {
   project: { id: string; name: string; color: string; icon: string | null } | null;
   projectMilestone: { id: string; name: string } | null;
   cycle: { id: string; number: number; name: string | null } | null;
-  parent: { id: string; identifier: string } | null;
+  parent: { id: string; identifier: string; title?: string } | null;
   attachments: Connection<Attachment>;
   /** Relations from this issue: `blocks` means it blocks another. State decides whether the badge still matters. */
-  outRelations: Connection<{ type: string; relatedIssue: { state: { type: StateType } } }>;
+  outRelations: Connection<{ id: string; type: string; relatedIssue: RelatedIssue }>;
   /** Relations to this issue: `blocks` means another blocks it. */
-  inRelations: Connection<{ type: string; issue: { state: { type: StateType } } }>;
+  inRelations: Connection<{ id: string; type: string; issue: RelatedIssue }>;
 };
 
 export type HistoryEvent = {
@@ -144,6 +144,8 @@ export type IssueDetail = Omit<IssueRow, 'team'> & {
   children: Connection<IssueRow>;
   comments: Connection<Comment>;
   links: Connection<Attachment & { subtitle: string | null; createdAt: string }>;
+  /** Documents attached to the issue, including a long plan's full text. Optional for older cached replies. */
+  documents?: Connection<DocumentSummary>;
   relations: Connection<{ id: string; type: string; relatedIssue: RelatedIssue }>;
   inverseRelations: Connection<{ id: string; type: string; issue: RelatedIssue }>;
   subscribers: Connection<User>;
@@ -320,5 +322,6 @@ export type IssueCreateResult = { issueCreate: { success: boolean; issue: IssueR
 export type CommentCreateResult = { commentCreate: { success: boolean; comment: Comment | null } };
 export type ProjectUpdateCreateResult = { projectUpdateCreate: { success: boolean; projectUpdate: ProjectUpdate | null } };
 export type DocumentCreateResult = { documentCreate: { success: boolean; document: DocumentSummary } };
+export type DocumentUpdateResult = { documentUpdate: { success: boolean; document: DocumentSummary } };
 export type ProjectCreateResult = { projectCreate: { success: boolean; project: { id: string; name: string; url: string } | null } };
 export type SuccessResult = Record<string, { success: boolean }>;

@@ -73,19 +73,38 @@ export const DESCRIPTION_MAX = 100_000;
 const withoutTitle = (plan: string): string => plan.replace(/^\s*#[ \t]+[^\n]*\n+/, '');
 
 /**
- * The issue's description with the plan as its last section: a rule, a "Plan" heading, then the plan (cut at 20,000
- * characters). A plan section written before is replaced, so adding again never piles them up; everything above it
- * is kept as it is. A rule followed by a "Plan" heading of your own at the end of the description is taken for it.
- * Null when the result would be too long.
+ * The issue's description with the plan as its last section: a rule, a "Plan" heading, then the plan or its concise
+ * summary. `documentUrl` links the full plan. A plan section written before is replaced, so adding again never piles
+ * them up; everything above it is kept as it is. A rule followed by a "Plan" heading of your own at the end of the
+ * description is taken for it. Null when the result would be too long.
  */
-export const withPlan = (description: string | null | undefined, plan: string): string | null => {
+export const withPlan = (description: string | null | undefined, plan: string, documentUrl?: string): string | null => {
   const text = withoutTitle(plan.trim()).trim();
-  const body = text.length > 20_000 ? `${text.slice(0, 20_000).trimEnd()}\n\n[cut]` : text;
+  const body = documentUrl ? `${text}\n\n**Full plan:** [Read the full plan document](${documentUrl})` : text;
   const base = (description ?? '').replace(SECTION, '').trimEnd();
   const section = `---\n## Plan\n\n${body}`;
   const next = base ? `${base}\n\n${section}` : section;
   return next.length > DESCRIPTION_MAX ? null : next;
 };
+
+/** A concise plan still gives the implementation and checks enough room. The document keeps every detail. */
+export const PLAN_SUMMARY_MIN = 2_500;
+export const PLAN_SUMMARY_MAX = 6_500;
+
+/** Above the human-reading limit, the issue gets a summary and the document gets the full plan. */
+export const planNeedsDocument = (plan: string): boolean => plan.length > PLAN_SUMMARY_MAX;
+
+const clipSummary = (text: string): string => {
+  if (text.length <= PLAN_SUMMARY_MAX) return text;
+  const cut = text.slice(0, PLAN_SUMMARY_MAX - 1);
+  const paragraph = cut.lastIndexOf('\n\n');
+  const space = cut.lastIndexOf(' ');
+  const at = paragraph > PLAN_SUMMARY_MAX / 2 ? paragraph : space;
+  return `${cut.slice(0, at > 0 ? at : cut.length).trimEnd()}…`;
+};
+
+/** A bounded source excerpt, with no model call to stall a write and no mid-word truncation. */
+export const concisePlan = (plan: string): string => clipSummary(withoutTitle(plan.trim()).trim());
 
 /** The first lines of a plan, for the options panel: what Start build will build. */
 export const planExcerpt = (plan: string, lines = 6, chars = 420): string => {

@@ -11,14 +11,17 @@ import { changeOf, estimateLabel, relativeTime, shortDate } from '../../shared/f
 import { Avatar, BlockedGlyph, BlockingGlyph, ChangeGlyph, ProgressRing, StatusGlyph } from '../../shared/glyphs.tsx';
 import { host, useReady } from '../../shared/host.ts';
 import { useIssueDetail } from '../../shared/issues.ts';
+import { useQuery } from '../../shared/cache.ts';
+import { fetchDocument } from '../../shared/search.ts';
 import { Banner, Button, Menu, Spinner, TextField } from '../../shared/kit.tsx';
-import { acceptStateOf, declineStateOf } from '../../shared/moves.ts';
-import { addComment, writeErrorText } from '../../shared/writes.ts';
+import { acceptStateOf, declineStateOf, type IssueInput, type TeamChoice } from '../../shared/moves.ts';
+import { addComment, deleteIssueRelation, updateIssueRelation, writeErrorText } from '../../shared/writes.ts';
 import { useWorkspace } from '../../shared/workspace.ts';
 import { Markdown } from '../../shared/markdown.tsx';
 import { openedIssuePush, pushSnapshot } from '../../shared/snapshot.ts';
 import { dependencyGroup } from '../../shared/relations.ts';
-import type { Comment, HistoryEvent, IssueDetail as Detail, RelatedIssue } from '../../shared/types.ts';
+import type { Comment, DocumentSummary, HistoryEvent, IssueDetail as Detail, IssueRow as IssueRowData, RelatedIssue } from '../../shared/types.ts';
+import type { IssuePrompt, MenuAction, RelationChoice } from '../../shared/issue-menu.ts';
 import { teamEstimateType } from '../../shared/workspace.ts';
 import { IssueRow } from './issue-row.tsx';
 import {
@@ -28,22 +31,29 @@ import { BuildPanel, PlanActions, useBuildSource } from '../../shared/build-pane
 import { Modal } from './modal.tsx';
 import { keepKeys, MarkdownField } from './markdown-field.tsx';
 import { StartSessionDialog } from './start-session.tsx';
-import { CopyButtons } from '../../shared/icon-buttons.tsx';
+import { copyText, CopyButtons } from '../../shared/icon-buttons.tsx';
+import { IssueMenu } from './issue-menu.tsx';
+import { IssueActionDialog } from './issue-action-dialogs.tsx';
+import { IssueRelationDialog } from './issue-relation-dialog.tsx';
+import { CreateIssueDialog } from './create-issue.tsx';
+import { DeleteIssueDialog } from './delete-issue.tsx';
+import { TeamMoveDialog } from './team-move.tsx';
+import { createIssueRelation } from '../../shared/writes.ts';
 
 const PRIORITY_NAME = ['No priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
 
-type Relation = { key: string; issue: RelatedIssue };
+type Relation = { key: string; id: string; type: string; inverse: boolean; issue: RelatedIssue };
 
 /** Relations grouped as Linear's side column shows them. */
 const relationGroups = (issue: Detail): [string, Relation[]][] => {
   const groups: Record<string, Relation[]> = { 'Blocked by': [], Blocking: [], Related: [], 'Duplicate of': [], 'Duplicated by': [], Similar: [] };
   for (const r of issue.relations.nodes) {
     const name = r.type === 'blocks' ? dependencyGroup(issue, r.relatedIssue, false) : r.type === 'duplicate' ? 'Duplicate of' : r.type === 'similar' ? 'Similar' : 'Related';
-    groups[name]!.push({ key: r.id, issue: r.relatedIssue });
+    groups[name]!.push({ key: r.id, id: r.id, type: r.type, inverse: false, issue: r.relatedIssue });
   }
   for (const r of issue.inverseRelations.nodes) {
     const name = r.type === 'blocks' ? dependencyGroup(issue, r.issue, true) : r.type === 'duplicate' ? 'Duplicated by' : r.type === 'similar' ? 'Similar' : 'Related';
-    groups[name]!.push({ key: `i${r.id}`, issue: r.issue });
+    groups[name]!.push({ key: `i${r.id}`, id: r.id, type: r.type, inverse: true, issue: r.issue });
   }
   return Object.entries(groups).filter(([, list]) => list.length > 0);
 };
@@ -79,6 +89,94 @@ const SideSection = ({ title, children }: { title: string; children: preact.Comp
   </section>
 );
 
+const contextPoint = (event: MouseEvent): { x: number; y: number } => {
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  return { x: event.clientX || box.left + box.width / 2, y: event.clientY || box.top + box.height / 2 };
+};
+
+const RELATION_CHANGES: { label: string; choice: RelationChoice }[] = [
+  { label: 'Blocking', choice: { id: 'blocking', type: 'blocks', inverse: false } },
+  { label: 'Blocked by', choice: { id: 'blocked', type: 'blocks', inverse: true } },
+  { label: 'Duplicate of', choice: { id: 'duplicate', type: 'duplicate', inverse: false } },
+  { label: 'Duplicated by', choice: { id: 'duplicate', type: 'duplicate', inverse: true } },
+];
+
+/** One related issue: open on click, change or remove on right click, and a quick Remove on hover. */
+const RelationLink = ({ issue, relation, group, onOpenIssue }: { issue: Detail; relation: Relation; group: string; onOpenIssue: (id: string) => void }) => {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [changing, setChanging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!menu) return undefined;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.stopPropagation(); setMenu(null); } };
+    document.addEventListener('keydown', close);
+    return () => document.removeEventListener('keydown', close);
+  }, [menu]);
+
+  const remove = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await deleteIssueRelation(issue, relation.issue, relation.id);
+      await toast(host, 'success', `Removed relation with ${relation.issue.identifier}`);
+      setMenu(null);
+    } catch (error) {
+      await toast(host, 'error', writeErrorText(error));
+      setBusy(false);
+    }
+  };
+  const change = async (label: string, choice: RelationChoice) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await updateIssueRelation(issue, relation.issue, relation.id, choice);
+      await toast(host, 'success', `Changed relation with ${relation.issue.identifier} to ${label}`);
+      setMenu(null);
+    } catch (error) {
+      await toast(host, 'error', writeErrorText(error));
+      setBusy(false);
+    }
+  };
+  const subLeft = menu && menu.x + 236 + 240 > window.innerWidth ? Math.max(6, menu.x - 236) : (menu?.x ?? 0) + 236;
+  return (
+    <div
+      class="lin-relation"
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const point = contextPoint(event);
+        setChanging(false);
+        setMenu({ x: Math.max(6, Math.min(point.x, window.innerWidth - 242)), y: Math.max(6, Math.min(point.y, window.innerHeight - 220)) });
+      }}
+    >
+      <button type="button" class="lin-side-link lin-relation-open" title={`${relation.issue.identifier} ${relation.issue.title}`} onClick={() => onOpenIssue(relation.issue.identifier)}>
+        {group === 'Blocked by' ? <BlockedGlyph /> : group === 'Blocking' ? <BlockingGlyph /> : <StatusGlyph type={relation.issue.state.type} color={relation.issue.state.color} stateId={relation.issue.state.id} teamId={issue.team.id} />}
+        <span class="lin-ellipsis">{relation.issue.title}</span>
+      </button>
+      <button type="button" class="lin-relation-remove" aria-label={`Remove relation with ${relation.issue.identifier}`} title="Remove relation" disabled={busy} onClick={() => { void remove(); }}>×</button>
+      {menu && (
+        <div class="lin-menu-layer" onClick={() => setMenu(null)} onContextMenu={(event) => { event.preventDefault(); setMenu(null); }}>
+          <div class="lin-menu" role="menu" aria-label={`Relation with ${relation.issue.identifier}`} style={{ left: `${menu.x}px`, top: `${menu.y}px` }} onClick={(event) => event.stopPropagation()}>
+            <button type="button" class="lin-menu-item" role="menuitem" onMouseEnter={() => setChanging(true)} onClick={() => setChanging(true)}>
+              <span class="lin-menu-label">Change to</span><span class="lin-menu-more">›</span>
+            </button>
+            <button type="button" class="lin-menu-item" role="menuitem" data-danger="true" disabled={busy} onMouseEnter={() => setChanging(false)} onClick={() => { void remove(); }}>Remove relation</button>
+            <button type="button" class="lin-menu-item" role="menuitem" onMouseEnter={() => setChanging(false)} onClick={() => { void copyText(relation.issue.url, 'the issue link'); setMenu(null); }}>Copy link</button>
+            <button type="button" class="lin-menu-item" role="menuitem" onMouseEnter={() => setChanging(false)} onClick={() => { void host.openUrl(relation.issue.url); setMenu(null); }}>Open in new tab</button>
+          </div>
+          {changing && (
+            <div class="lin-menu lin-menu--sub" role="menu" aria-label="Change relation to" style={{ left: `${subLeft}px`, top: `${menu.y}px` }} onClick={(event) => event.stopPropagation()}>
+              {RELATION_CHANGES.map(({ label, choice }) => (
+                <button type="button" class="lin-menu-item" role="menuitem" key={label} disabled={busy} onClick={() => { void change(label, choice); }}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Property = ({ icon, value, empty }: { icon: preact.ComponentChildren; value: preact.ComponentChildren | null | undefined; empty: string }) => (
   <div class={value ? 'lin-prop' : 'lin-prop lin-prop--empty'}>{icon}<span class="lin-ellipsis">{value || empty}</span></div>
 );
@@ -110,6 +208,47 @@ const DescriptionEdit = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (
     onOpenIssue={onOpenIssue}
     onSave={(description) => save(issue, { input: { description }, patch: { description } })}
   />
+);
+
+const IssueDocument = ({ document, onOpenIssue }: { document: DocumentSummary; onOpenIssue: (id: string) => void }) => {
+  const [open, setOpen] = useState(false);
+  const detail = useQuery(open ? `document:${document.id}` : null, () => fetchDocument(document.id));
+  return (
+    <section class="lin-document">
+      <button type="button" class="lin-document-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <span class="lin-chevron" aria-hidden="true">{open ? '⌄' : '›'}</span>
+        <Chip>document</Chip>
+        <span class="lin-ellipsis">{document.title}</span>
+      </button>
+      {open && (
+        <div class="lin-document-content">
+          {detail.error ? (
+            <Banner tone="error" title="Could not load the document" body={detail.error instanceof Error ? detail.error.message : String(detail.error)} action={{ label: 'Retry', onClick: () => detail.refresh() }} />
+          ) : !detail.data ? (
+            <Spinner label="Loading document" />
+          ) : (
+            <>
+              <div class="sui-row sui-small sui-muted">
+                <span>Updated {relativeTime(detail.data.updatedAt)}</span>
+                <span class="sui-grow" />
+                <Button label="Open in Linear" variant="ghost" size="xs" onClick={() => { void host.openUrl(document.url); }} />
+              </div>
+              <Markdown source={detail.data.content} empty="This document is empty." onOpenIssue={onOpenIssue} />
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const IssueDocuments = ({ documents, onOpenIssue }: { documents: DocumentSummary[]; onOpenIssue: (id: string) => void }) => (
+  <section class="lin-documents">
+    <h2 class="lin-activity-title">Documents</h2>
+    <div class="lin-documents-list">
+      {documents.map((document) => <IssueDocument key={document.id} document={document} onOpenIssue={onOpenIssue} />)}
+    </div>
+  </section>
 );
 
 const CommentComposer = ({ issue }: { issue: Detail }) => {
@@ -220,13 +359,18 @@ const Activity = ({ issue, onOpenIssue }: { issue: Detail; onOpenIssue: (id: str
  * `stacked`: one column, properties above the description (the rail panel and the page's side pane).
  * `origin`: where it was opened from, the first crumb. `pane`: it sits beside the view, so the first button closes it.
  */
-type Props = { id: string; stacked?: boolean; origin?: string; pane?: boolean; onClose: () => void; onOpenIssue: (identifier: string) => void };
+type Props = { id: string; stacked?: boolean; origin?: string; pane?: boolean; onClose: () => void; onOpenIssue: (identifier: string) => void; onUnavailable?: () => void };
 
-export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }: Props) => {
+export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue, onUnavailable }: Props) => {
   const detail = useIssueDetail(id);
   const workspace = useWorkspace();
   const [starting, setStarting] = useState<'session' | 'plan' | null>(null);
   const [building, setBuilding] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [prompt, setPrompt] = useState<{ issue: IssueRowData; prompt: IssuePrompt } | null>(null);
+  const [relation, setRelation] = useState<{ issue: IssueRowData; relation: RelationChoice; create: boolean } | null>(null);
+  const [moving, setMoving] = useState<{ issue: IssueRowData; choices: TeamChoice[]; extra: IssueInput; manual?: boolean } | null>(null);
+  const [deleting, setDeleting] = useState<IssueRowData | null>(null);
   const directory = useReady()?.directory ?? null;
   const buildSource = useBuildSource(directory, id);
   const [triaging, setTriaging] = useState(false);
@@ -236,6 +380,9 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
   useEffect(() => {
     if (issue) void pushSnapshot(openedIssuePush(directory, issue, orgKey));
   }, [issue?.identifier, issue?.updatedAt, directory, orgKey]);
+  useEffect(() => {
+    if (!issue && detail.error) onUnavailable?.();
+  }, [detail.error]);
 
   if (!issue) {
     return (
@@ -285,9 +432,23 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
   const changes = issue.links.nodes.map((a) => ({ a, change: changeOf(a) }));
   const diffs = changes.filter((c) => c.change);
   const otherLinks = changes.filter((c) => !c.change);
+  const documents = issue.documents?.nodes ?? [];
   const done = issue.children.nodes.filter((c) => ['completed', 'canceled', 'duplicate'].includes(c.state.type)).length;
   const relations = relationGroups(issue);
   const editorProps = { issue, team };
+  const menuAction = (action: MenuAction) => {
+    if (action.kind === 'prompt') {
+      if (action.prompt !== 'team') { setPrompt({ issue, prompt: action.prompt }); return; }
+      const choices = (workspace.data?.teams ?? []).filter((other) => other.id !== issue.team.id).flatMap((other) => {
+        const state = acceptStateOf(other, workspace.data?.statesByTeam.get(other.id) ?? []);
+        return state ? [{ teamId: other.id, state }] : [];
+      });
+      if (choices.length) setMoving({ issue, choices, extra: {}, manual: true });
+      else void toast(host, 'info', 'No other team has an available default status.');
+      return;
+    }
+    if (action.kind === 'relation') setRelation({ issue, relation: action.relation, create: action.create });
+  };
 
   return (
     <article class="lin-issue-view">
@@ -327,7 +488,14 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
         />
       </header>
 
-      <div class="lin-issue-grid">
+      <div
+        class="lin-issue-grid"
+        onContextMenu={(event) => {
+          event.preventDefault();
+          const point = contextPoint(event);
+          setContextMenu({ x: point.x, y: point.y });
+        }}
+      >
         <div class="lin-issue-head">
           {issue.parent && (
             <button type="button" class="lin-link sui-small" onClick={() => onOpenIssue(issue.parent!.identifier)}>Sub-issue of {issue.parent.identifier}</button>
@@ -363,12 +531,7 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
           </SideSection>
           {relations.map(([name, list]) => (
             <SideSection title={name} key={name}>
-              {list.map((r) => (
-                <button type="button" class="lin-side-link" key={r.key} title={`${r.issue.identifier} ${r.issue.title}`} onClick={() => onOpenIssue(r.issue.identifier)}>
-                  {name === 'Blocked by' ? <BlockedGlyph /> : name === 'Blocking' ? <BlockingGlyph /> : <StatusGlyph type={r.issue.state.type} color={r.issue.state.color} stateId={r.issue.state.id} teamId={issue.team.id} />}
-                  <span class="lin-ellipsis">{r.issue.title}</span>
-                </button>
-              ))}
+              {list.map((r) => <RelationLink key={r.key} issue={issue} relation={r} group={name} onOpenIssue={onOpenIssue} />)}
             </SideSection>
           ))}
           {otherLinks.length > 0 && (
@@ -398,9 +561,51 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue }:
               </div>
             </section>
           )}
+          {documents.length > 0 && <IssueDocuments documents={documents} onOpenIssue={onOpenIssue} />}
           <Activity issue={issue} onOpenIssue={onOpenIssue} />
         </div>
       </div>
+      {contextMenu && (
+        <IssueMenu
+          issue={issue}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onOpen={(opened) => onOpenIssue(opened.identifier)}
+          onDelete={setDeleting}
+          onAction={(_issue, action) => menuAction(action)}
+        />
+      )}
+      {prompt && <IssueActionDialog issue={prompt.issue} prompt={prompt.prompt} onClose={() => setPrompt(null)} onOpen={(opened) => { setPrompt(null); onOpenIssue(opened.identifier); }} />}
+      {relation && !relation.create && <IssueRelationDialog issue={relation.issue} relation={relation.relation} onClose={() => setRelation(null)} />}
+      {relation?.create && (
+        <CreateIssueDialog
+          teamIds={[relation.issue.team.id]}
+          projectId={relation.issue.project?.id ?? null}
+          onClose={() => setRelation(null)}
+          onCreated={(created) => {
+            const source = relation.issue;
+            const choice = relation.relation;
+            void createIssueRelation(source, created, choice)
+              .then(() => toast(host, 'success', `Linked ${source.identifier} and ${created.identifier}`))
+              .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
+            setRelation(null);
+            onOpenIssue(created.identifier);
+          }}
+        />
+      )}
+      {deleting && <DeleteIssueDialog issue={deleting} onClose={() => setDeleting(null)} onDeleted={onClose} />}
+      {moving && (
+        <TeamMoveDialog
+          issue={moving.issue}
+          choices={moving.choices}
+          extra={moving.extra}
+          manual={moving.manual}
+          subIssues={issue.children.nodes.length}
+          onClose={() => setMoving(null)}
+          onMoved={(moved) => { setMoving(null); onOpenIssue(moved.identifier); }}
+        />
+      )}
       {starting && <StartSessionDialog issue={issue} plan={starting === 'plan'} onClose={() => setStarting(null)} />}
       {building && buildSource && (
         <Modal title={`Start a build for ${issue.identifier}`} onClose={() => setBuilding(false)}>

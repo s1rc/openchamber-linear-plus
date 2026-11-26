@@ -5,13 +5,13 @@ import type { IssueList } from './issues.ts';
 import { gql, LinearError } from './linear.ts';
 import type { Change, IssueInput, IssuePatch } from './moves.ts';
 import {
-  ATTACHMENT_CREATE, COMMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_CREATE, ISSUE_DELETE,
-  ISSUE_FAVORITE, ISSUE_RELATION_CREATE, ISSUE_REMINDER, ISSUE_UPDATE, markReadMany, MILESTONE_CREATE, MILESTONE_DELETE, MILESTONE_EDIT,
+  ATTACHMENT_CREATE, COMMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, DOCUMENT_UPDATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_CREATE, ISSUE_DELETE,
+  ISSUE_FAVORITE, ISSUE_RELATION_CREATE, ISSUE_RELATION_DELETE, ISSUE_RELATION_UPDATE, ISSUE_REMINDER, ISSUE_UPDATE, markReadMany, MILESTONE_CREATE, MILESTONE_DELETE, MILESTONE_EDIT,
   NOTIFICATION_MARK_READ, PROJECT_CREATE, PROJECT_EDIT, PROJECT_UPDATE_CREATE,
 } from './queries.ts';
 import type { RelationChoice } from './issue-menu.ts';
 import type {
-  CommentCreateResult, DocumentCreateResult, IssueCreateResult, IssueFavoriteResult, IssueRow, IssueUpdateResult, Notification, Page,
+  CommentCreateResult, DocumentCreateResult, DocumentSummary, DocumentUpdateResult, IssueCreateResult, IssueFavoriteResult, IssueRow, IssueUpdateResult, Notification, Page,
   ProjectCreateResult, ProjectDetail, ProjectUpdateCreateResult, SuccessResult,
 } from './types.ts';
 
@@ -127,10 +127,20 @@ export const addCustomerRequest = async (issue: Pick<IssueRow, 'id' | 'identifie
   invalidate('extras:');
 };
 
-export const addIssueDocument = async (issue: Pick<IssueRow, 'id' | 'identifier'>, input: { title: string; content: string }): Promise<void> => {
+export const addIssueDocument = async (issue: Pick<IssueRow, 'id' | 'identifier'>, input: { title: string; content: string }): Promise<DocumentSummary> => {
   const data = await gql<DocumentCreateResult>(DOCUMENT_CREATE, { input: { issueId: issue.id, ...input } });
   if (!data.documentCreate.success) throw new LinearError('graphql', 'Linear did not create the document.');
   refreshKey(`issue:${issue.identifier}`);
+  return data.documentCreate.document;
+};
+
+/** Replaces an existing plan document instead of adding another one on every Write Plan click. */
+export const updateIssueDocument = async (issue: Pick<IssueRow, 'id' | 'identifier'>, id: string, input: { title: string; content: string }): Promise<DocumentSummary> => {
+  const data = await gql<DocumentUpdateResult>(DOCUMENT_UPDATE, { id, input });
+  if (!data.documentUpdate.success) throw new LinearError('graphql', 'Linear did not update the document.');
+  refreshKey(`issue:${issue.identifier}`);
+  refreshKey(`document:${id}`);
+  return data.documentUpdate.document;
 };
 
 export const createIssueRelation = async (issue: Pick<IssueRow, 'id' | 'identifier'>, other: Pick<IssueRow, 'id' | 'identifier'>, relation: RelationChoice): Promise<void> => {
@@ -142,6 +152,28 @@ export const createIssueRelation = async (issue: Pick<IssueRow, 'id' | 'identifi
   refreshKey(`issue:${other.identifier}`);
   invalidate('issues:');
   invalidate('view-issues:');
+};
+
+const refreshRelations = (issue: Pick<IssueRow, 'identifier'>, other: Pick<IssueRow, 'identifier'>) => {
+  refreshKey(`issue:${issue.identifier}`);
+  refreshKey(`issue:${other.identifier}`);
+  invalidate('issues:');
+  invalidate('view-issues:');
+};
+
+/** Changes a relation's type or direction. Swapping the ends turns Blocking into Blocked by, and back. */
+export const updateIssueRelation = async (issue: Pick<IssueRow, 'id' | 'identifier'>, other: Pick<IssueRow, 'id' | 'identifier'>, id: string, relation: RelationChoice): Promise<void> => {
+  const input = relation.inverse
+    ? { issueId: other.id, relatedIssueId: issue.id, type: relation.type }
+    : { issueId: issue.id, relatedIssueId: other.id, type: relation.type };
+  requireSuccess(await gql<SuccessResult>(ISSUE_RELATION_UPDATE, { id, input }), 'Linear did not change the relation.');
+  refreshRelations(issue, other);
+};
+
+/** Removes the relation only, never either issue. Duplicate relations also unmerge in Linear, as its own remove does. */
+export const deleteIssueRelation = async (issue: Pick<IssueRow, 'identifier'>, other: Pick<IssueRow, 'identifier'>, id: string): Promise<void> => {
+  requireSuccess(await gql<SuccessResult>(ISSUE_RELATION_DELETE, { id }), 'Linear did not remove the relation.');
+  refreshRelations(issue, other);
 };
 
 /** Returns true when the issue is now favorited, false when an existing favorite was removed. */

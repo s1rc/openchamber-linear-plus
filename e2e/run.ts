@@ -167,6 +167,59 @@ const tests: Test[] = [
       expect((await section('Blocking').innerText()).includes('Show saved cards'), 'Blocking keeps the open dependent');
       expect(!(await section('Blocking').innerText()).includes('Done dependent'), 'Blocking drops the completed dependent');
       expect((await section('Related').innerText()).includes('Done prerequisite') && (await section('Related').innerText()).includes('Done dependent'), 'completed dependencies read as Related');
+      const related = section('Related').locator('.lin-relation', { hasText: 'Done prerequisite' });
+      const widths = await related.evaluate((el) => ({
+        row: el.getBoundingClientRect().width,
+        link: el.querySelector('.lin-relation-open')!.getBoundingClientRect().width,
+        section: el.closest('.lin-side-section')!.getBoundingClientRect().width,
+      }));
+      expect(Math.abs(widths.row - widths.section) < 1 && Math.abs(widths.link - widths.row) < 1, `the relation title and status use the full column (${JSON.stringify(widths)})`);
+      await related.click({ button: 'right' });
+      const menu = pane.locator('.lin-menu').first();
+      const menuBox = await menu.boundingBox();
+      expect(Boolean(menuBox && menuBox.x > 20 && menuBox.y > 20), 'the relation menu opens beside the pointer, not at the pane origin');
+      await menu.locator('button', { hasText: 'Change to' }).click();
+      await pane.locator('.lin-menu--sub button', { hasText: /^Blocking$/ }).click();
+      await until(async () => calls.some((c) => c.key.includes('mutation IssueRelationUpdate') && c.key.includes('"id":"r-done-in"') && c.key.includes('"type":"blocks"') && c.hit), 'right click changes the relation type');
+      const blocking = section('Blocked by').locator('.lin-relation', { hasText: 'Retry webhook deliveries' });
+      await blocking.hover();
+      await blocking.locator('button[aria-label="Remove relation with ENG-14"]').click();
+      await until(async () => calls.some((c) => c.key.includes('mutation IssueRelationDelete') && c.key.includes('"id":"r-active-in"') && c.hit), 'the hover X removes the relation');
+      const grid = pane.locator('.lin-issue-grid');
+      const gridBox = await grid.boundingBox();
+      if (!gridBox) throw new Error('The issue grid has no box');
+      await grid.click({ button: 'right', position: { x: gridBox.width - 12, y: gridBox.height - 6 } });
+      const issueMenu = pane.locator('.lin-menu').first();
+      await issueMenu.waitFor();
+      const menuText = await issueMenu.innerText();
+      expect(['Status', 'Priority', 'Create related', 'Mark as', 'Remove', 'Copy', 'Convert to', 'Delete'].every((label) => menuText.includes(label)), 'the properties column opens the full issue menu');
+      await ctx.page.keyboard.press('Escape');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-documents',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' });
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click();
+      const pane = ctx.frame.locator('.lin-pane');
+      const body = pane.locator('.lin-issue-body');
+      await body.locator('.lin-subissues').waitFor();
+      const documents = body.locator('.lin-documents');
+      await documents.waitFor();
+      expect((await documents.innerText()).includes('ENG-13 full plan'), 'the issue lists its attached plan document');
+      const afterSubissues = await body.evaluate((el) => {
+        const subissues = el.querySelector('.lin-subissues');
+        const docs = el.querySelector('.lin-documents');
+        return Boolean(subissues && docs && (subissues.compareDocumentPosition(docs) & Node.DOCUMENT_POSITION_FOLLOWING));
+      });
+      expect(afterSubissues, 'Documents sits under the sub-issue list');
+      await documents.locator('.lin-document-toggle').click();
+      const content = documents.locator('.lin-document-content');
+      await content.locator('.lin-md').waitFor();
+      expect((await content.innerText()).includes('The complete implementation, verification steps, risks, and estimates stay inline in Linear+.'), 'the full document opens inline');
+      expect(!(await ctx.log()).some((m) => m.type === 'open-url'), 'expanding the document does not open an external link');
       await ctx.page.context().close();
     },
   },
@@ -184,6 +237,28 @@ const tests: Test[] = [
       await ctx.frame.locator('[data-issue="ENG-11"]').waitFor();
       expect(await ctx.frame.locator('.lin-issue-view').count() === 0, 'Back returns to the list');
       await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'worktree-fallback',
+    run: async (browser) => {
+      const directory = `${DIR}-eng-11-batch-tax-lookups`;
+      const saved = [
+        { route: { view: 'team-issues', teamId: 'missing' } },
+        { route: { view: 'my-issues' }, openIssue: { [`${directory}::my-issues:assigned`]: 'ENG-999' } },
+        { route: { view: 'project-detail', projectId: 'missing' } },
+      ];
+      for (const viewState of saved) {
+        const ctx = await open(browser, {
+          page: 'panel/index.html', surface: 'panel', dir: directory, projects: PROJECTS,
+          worktrees: JSON.stringify([{ projectId: 'ocp1', directory, name: 'eng-11-batch-tax-lookups', branch: '', status: 'ready' }]),
+          storage: JSON.stringify({ 'ui:p:ocp1': viewState }),
+        }, 360, 800);
+        await ctx.frame.locator('.lin-issue-view').waitFor();
+        expect(await ctx.frame.locator('.lin-issue-heading').innerText() === 'Checkout times out when the cart has more than 50 items', 'an unusable saved route, issue or project opens the issue named by the worktree');
+        expect((await ctx.frame.locator('.lin-issue-trail').innerText()).includes('ENG-11'), 'the fallback opens ENG-11');
+        await ctx.page.context().close();
+      }
     },
   },
   {
@@ -220,9 +295,27 @@ const tests: Test[] = [
       const half = await ctx.frame.locator('.lin-milestone-row', { hasText: 'Idempotent payments' }).innerText();
       expect(half.includes('50%') && !half.includes('100%'), `a half-done milestone shows 50% (got ${half.replace(/\s+/g, ' ')})`);
       expect((await ctx.frame.locator('.sui-card', { hasText: 'Milestones' }).first().innerText()).includes('1 of 2'), 'and only the finished one counts as done');
+      const copyProject = ctx.frame.locator('.lin-icon-btn[aria-label="Copy project link"]');
+      await copyProject.click();
+      await until(async () => (await ctx.log()).some((m) => m.type === 'clipboard-write' && JSON.stringify(m.payload).includes('https://linear.app/acme/project/checkout')), 'the project icon copies its Linear link');
+      const copyBox = await copyProject.boundingBox();
+      const openBox = await ctx.frame.locator('button', { hasText: 'Open in Linear' }).boundingBox();
+      expect(Boolean(copyBox && openBox && copyBox.x < openBox.x), 'the project link icon sits left of Open in Linear');
       await count.click();
       await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
       await until(async () => (await ctx.frame.locator('[data-issue]').count()) === 3, 'the milestone shows its three issues');
+      await ctx.frame.locator('[data-issue="ENG-13"]').click();
+      await ctx.frame.locator('.lin-pane .lin-issue-heading').waitFor();
+      await ctx.frame.locator('.lin-issue-bar button', { hasText: 'Close' }).click();
+      await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
+      expect(await ctx.frame.locator('[data-issue]').count() === 3, 'Back keeps the milestone filter and its three issues');
+      await ctx.frame.locator('.lin-toolbar-search input').fill('ENG-13');
+      await until(async () => (await ctx.frame.locator('[data-issue]').count()) === 1, 'the text filter narrows the milestone');
+      await navItem(ctx, 'Projects').click();
+      await ctx.frame.locator('.lin-table-row:not(.lin-table-head)', { hasText: 'Checkout' }).click();
+      await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
+      expect(await ctx.frame.locator('.lin-toolbar-search input').inputValue() === 'ENG-13', 'a remounted list restores its text filter');
+      expect(await ctx.frame.locator('[data-issue]').count() === 1, 'and keeps the milestone and text filters together');
       await ctx.page.context().close();
     },
   },
@@ -419,6 +512,9 @@ const tests: Test[] = [
       await menu.locator('[data-menu-item="status"]').hover();
       const sub = ctx.frame.locator('.lin-menu--sub');
       await sub.locator('[data-menu-item="status:t-eng-review"]').waitFor();
+      const anchorBox = await menu.locator('[data-menu-item="status"]').boundingBox();
+      const subBox = await sub.boundingBox();
+      expect(Boolean(anchorBox && subBox && Math.abs(subBox.y - (anchorBox.y - 5)) < 1), 'the submenu stays beside its anchor');
       expect(await sub.locator('[aria-checked="true"]').innerText().then((t) => t.includes('In Progress')), 'the current status is ticked');
       const before = calls.length;
       await sub.locator('[data-menu-item="status:t-eng-review"]').click();
@@ -441,6 +537,29 @@ const tests: Test[] = [
       await ctx.page.keyboard.press('Escape');
       await until(async () => (await menu.count()) === 0, 'then the menu');
       expect(await ctx.frame.locator('[data-issue="ENG-13"]').count() === 1, 'and the list is still there');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'issue-menu-position',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'panel/index.html', surface: 'page' }, 1000, 600);
+      await navItem(ctx, 'Issues').click();
+      await ctx.frame.locator('[data-issue="ENG-11"]').click({ button: 'right' });
+      const menu = ctx.frame.locator('.lin-menu:not(.lin-menu--sub)');
+      const anchor = menu.locator('[data-menu-item="convert"]');
+      await anchor.scrollIntoViewIfNeeded();
+      await anchor.hover();
+      const sub = ctx.frame.locator('.lin-menu--sub');
+      await sub.waitFor();
+      const anchorBox = await anchor.boundingBox();
+      const subBox = await sub.boundingBox();
+      const height = await ctx.frame.locator('html').evaluate((el) => el.clientHeight);
+      expect(Boolean(anchorBox && subBox), 'the submenu and its anchor have boxes');
+      if (anchorBox && subBox) {
+        const expected = Math.max(6, Math.min(anchorBox.y - 5, height - subBox.height - 6));
+        expect(Math.abs(subBox.y - expected) < 1, `the short submenu fits beside Convert to, not its 320 px maximum (got ${subBox.y}, expected ${expected})`);
+      }
       await ctx.page.context().close();
     },
   },
@@ -659,9 +778,11 @@ const tests: Test[] = [
   {
     name: 'status-plan-row',
     run: async (browser) => {
-      const ctx = await open(browser, { page: 'status/index.html', surface: 'status' }, 280, 700);
+      const ctx = await open(browser, { page: 'status/index.html', surface: 'status', session: JSON.stringify({ id: 'ses_plan', title: 'ENG-13 plan', busy: false }) }, 280, 700);
       const row = ctx.frame.locator('[data-handoff="ses_plan:ENG-13"]');
       await row.waitFor();
+      expect(await ctx.frame.locator('[data-handoff]').count() === 1, 'a session sees only its own plan, not another session\'s plan for the folder');
+      expect(await ctx.frame.locator('[data-handoff="ses_other:ENG-11"]').count() === 0, 'the unrelated plan is hidden');
       await row.getByRole('button', { name: 'Start Build' }).waitFor();
       const labels = (await row.locator('button').allInnerTexts()).map((t) => t.trim());
       expect(['Start Build', 'Write Plan', 'Dismiss'].every((l) => labels.includes(l)), `the buttons are in title case (got ${labels.join(', ')})`);
@@ -677,6 +798,45 @@ const tests: Test[] = [
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('## Plan') && c.hit), 'Write Plan writes the plan into the description');
       await until(async () => (await row.innerText()).includes('Plan Written'), 'and says so');
       expect(!calls.slice(before).some((c) => c.key.startsWith('POST /handoff {"sessionId"')), 'and starts no build');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'long-plan',
+    run: async (browser) => {
+      const ctx = await open(browser, { page: 'status/index.html', surface: 'status', session: JSON.stringify({ id: 'ses_long', title: 'ENG-13 long plan', busy: false }) }, 360, 800);
+      const row = ctx.frame.locator('[data-handoff="ses_long:ENG-13"]');
+      await row.waitFor();
+      expect(await ctx.frame.locator('[data-handoff]').count() === 1, 'the long-plan session sees only its own row');
+      const before = calls.length;
+      await row.locator('button', { hasText: 'Write Plan' }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation DocumentCreate') && c.hit), 'the full plan is created as an issue document');
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('https://linear.app/acme/document/eng-13-full-plan') && c.hit), 'the concise issue plan links the document');
+      const written = calls.slice(before).find((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('eng-13-full-plan'))!;
+      expect(written.key.includes('save the card order without changing the payment API'), 'the issue keeps the short summary');
+      expect(!written.key.includes('[cut]'), 'nothing is marked as cut');
+      expect(!(await ctx.log()).some((m) => m.type === 'generate'), 'writing the plan makes no model call');
+      await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'plan-message',
+    run: async (browser) => {
+      const directory = '/work/engineering-api-wt';
+      const plan = '## Plan\n\n1. Read `PaymentStep` and find where cards are listed\n2. Sort the saved cards by last use\n3. Add a test for the order\n4. Run the checkout suite\n\nRisk: the mobile app reads the same list.';
+      const sessions = JSON.stringify([{
+        id: 'ses_plan', title: 'Plan: saved cards first', projectId: 'ocp1', directory, agent: 'plan', parentId: null, createdAt: 1, updatedAt: 5, archivedAt: null,
+        worktree: { directory, name: 'eng-13', branch: 'matt/eng-13-saved-cards', status: 'ready' }, activity: 'idle', outcome: null,
+        items: [{ id: 'linear-dashboard:ENG-13', data: { identifier: 'ENG-13', issueId: 'i-eng-13' } }], links: [],
+      }]);
+      const worktrees = JSON.stringify([{ projectId: 'ocp1', directory, name: 'eng-13', branch: 'matt/eng-13-saved-cards', status: 'ready' }]);
+      const item = JSON.stringify({ kind: 'message', action: 'build-from-plan-message', sessionId: 'ses_plan', sessionTitle: 'Plan: saved cards first', directory, messageId: 'msg_plan', role: 'assistant', text: plan });
+      const ctx = await open(browser, { page: 'dialog/index.html', surface: 'dialog', item, projects: PROJECTS, worktrees, sessions }, 672, 800);
+      await ctx.frame.locator('.lin-build-plan').waitFor();
+      expect((await ctx.frame.locator('.lin-build-plan').innerText()).includes('Sort the saved cards by last use'), 'the message action previews that exact plan');
+      const before = calls.length;
+      await ctx.frame.locator('button', { hasText: /^Write Plan$/ }).click();
+      await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('Sort the saved cards by last use') && c.hit), 'Write Plan uses the chosen message');
       await ctx.page.context().close();
     },
   },

@@ -68,9 +68,9 @@ export const dismissHandoff = async (id: string): Promise<boolean> =>
 export type BuildStarted = { sessionId: string; directory: string };
 
 /** Asks the service to start the build. Throws with the service's own words when it cannot. */
-export const requestBuild = async (input: { source: Pick<BuildSource, 'sessionId' | 'directory' | 'title'>; identifier: string; issueTitle: string; force?: boolean; model?: string }): Promise<BuildStarted> => {
+export const requestBuild = async (input: { source: Pick<BuildSource, 'sessionId' | 'directory' | 'title'>; identifier: string; issueTitle: string; force?: boolean; model?: string; planText?: string }): Promise<BuildStarted> => {
   const reply = await api(host, 'POST', '/handoff', {
-    body: { sessionId: input.source.sessionId, sessionDirectory: input.source.directory, sessionTitle: input.source.title, identifier: input.identifier, issueTitle: input.issueTitle, ...(input.force ? { force: true } : {}), ...(input.model ? { model: input.model } : {}) },
+    body: { sessionId: input.source.sessionId, sessionDirectory: input.source.directory, sessionTitle: input.source.title, identifier: input.identifier, issueTitle: input.issueTitle, ...(input.force ? { force: true } : {}), ...(input.model ? { model: input.model } : {}), ...(input.planText ? { planText: input.planText } : {}) },
     name: 'Linear+',
   });
   if (reply.ok === false || typeof reply.sessionId !== 'string') throw new Error(reply.error ?? 'The Linear+ service did not start the build.');
@@ -85,9 +85,9 @@ export type PlanPreview = { plan: string; postPlan: boolean; /** The last reply 
 };
 
 /** Reads the plan a build would start from, and the folder's post-the-plan setting. Throws with the service's own words. */
-export const previewPlan = async (input: { source: Pick<BuildSource, 'sessionId' | 'directory'>; identifier: string }): Promise<PlanPreview> => {
+export const previewPlan = async (input: { source: Pick<BuildSource, 'sessionId' | 'directory'>; identifier: string; planText?: string }): Promise<PlanPreview> => {
   const reply = await api(host, 'POST', '/handoff', {
-    body: { mode: 'preview', sessionId: input.source.sessionId, sessionDirectory: input.source.directory, identifier: input.identifier },
+    body: { mode: 'preview', sessionId: input.source.sessionId, sessionDirectory: input.source.directory, identifier: input.identifier, ...(input.planText ? { planText: input.planText } : {}) },
     name: 'Linear+',
   });
   if (reply.ok === false || typeof reply.plan !== 'string') throw new Error(reply.error ?? 'The Linear+ service could not read the plan.');

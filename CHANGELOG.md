@@ -2,6 +2,29 @@
 
 What changed in each Linear+ release. The newest is first. The release workflow uses a version's section as the notes of its GitHub release.
 
+## 1.3.4 (2026-11-25)
+
+### Added
+
+- Issue lists remember search, assignee, status, priority, label, closed-issue and project milestone filters after closing an issue, remounting or reloading. Projects also have a copy-link icon beside Open in Linear.
+- When a saved view, issue, project or team cannot be restored, Linear+ can open the issue named by the worktree prefix. Branch names and linked sessions remain fallbacks too.
+- Plans over 6,500 characters are kept in full in an issue-linked Linear document. The issue gets a concise plan of 2,500 to 6,500 characters, aiming for 3,000 to 5,000, with a link to the document. Attached documents expand inline under the sub-issue list.
+- Sessions with several plan replies get a Plan message picker. Start build from this plan on a message uses exactly that message for Write Plan and Start build.
+- Related and dependency issues can be changed or removed in the issue view. Right click offers Change to, Remove relation, Copy link and Open in new tab, and a hover X removes the relation. The properties column opens the full issue menu, including its empty space below the footer.
+
+### Changed
+
+- Planning sessions interview you about meaningful unsettled choices. Recommendations are not treated as answers, and lead sessions reject plans that leave those choices unasked under Open decisions.
+- Work Status beside a session shows only that session's plan, not every pending plan for the folder.
+- Remove in the issue menu lists the actual parent issue and each blocked or blocking issue, rather than unrelated property shortcuts.
+- Relation titles and status icons use the full column width. The remove X overlays the row only on hover or focus instead of compressing the title.
+
+### Fixed
+
+- Long-plan writes no longer wait for a model call or append `[cut]`. Writing again updates the existing plan document instead of adding duplicates.
+- A revised plan can add split-out issues after the first plan was written. Only newly named issues are created, and Work Status recognizes the revision as new work.
+- Relation menus open beside the pointer, including when the host reports zero coordinates. Submenus re-anchor after the main menu moves and clamp to the viewport using their real height.
+
 ## 1.3.3 (2026-11-25)
 
 ### Added

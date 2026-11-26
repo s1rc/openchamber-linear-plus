@@ -28,10 +28,12 @@ export const PlanExtrasRunner = ({ directory, viewerId }: { directory: string; v
   useEffect(() => {
     const now = Date.now();
     for (const state of extras.data ?? []) {
-      if (!due(state, now) || handled.get(state.sessionId) === 'done') continue;
+      // A revised plan has a new `at`, so issues added after an earlier write are not skipped as already handled.
+      const handledKey = `${state.sessionId}:${state.at}`;
+      if (!due(state, now) || handled.get(handledKey) === 'done') continue;
       void applyPlanExtras(state, viewerId).then(async (outcome) => {
         if (!outcome) return;
-        handled.set(state.sessionId, outcome.state.state === 'done' ? 'done' : 'failed');
+        handled.set(handledKey, outcome.state.state === 'done' ? 'done' : 'failed');
         const text = extrasSummary(outcome.state, outcome.label);
         if (outcome.state.state === 'done') await toast(host, 'success', `Plan for ${state.identifier}: ${text}.`);
         else await toast(host, 'error', `Plan for ${state.identifier}: ${outcome.state.error ?? 'a write failed'}. ${outcome.state.created?.length || (outcome.state.estimateSet ?? null) !== null ? `Done so far: ${text}. ` : ''}Retry is in Work Status.`);

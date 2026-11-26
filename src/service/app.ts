@@ -393,9 +393,13 @@ export const createApp = (deps: Deps) => {
     if (!sessionDirectory.startsWith('/')) return fail('The planning session has no folder the service can start a build in.');
     const folder = mappedFor(sessionDirectory);
     const mapping = folder ? config.directories[folder] : undefined;
+    // A message action or the session's plan picker supplies the exact reply, not whichever reply came last.
+    const selected = typeof body.planText === 'string' && body.planText.trim() ? withoutBlocks(body.planText).slice(0, PLAN_LIMIT) : null;
+    const choose = (got: Awaited<ReturnType<typeof readPlan>>): Awaited<ReturnType<typeof readPlan>> =>
+      selected && !('error' in got) ? { plan: selected, earlier: true, isPlan: looksLikePlan(selected) } : got;
     if (body.mode === 'preview') {
       try {
-        const got = await readPlan(sessionId);
+        const got = choose(await readPlan(sessionId));
         return { body: 'error' in got ? { ok: false, error: got.error } : { ok: true, plan: got.plan.slice(0, PLAN_LIMIT), postPlan: postPlanChoice(mapping, config.defaults), earlier: got.earlier, isPlan: got.isPlan, lead: handoffs.builds[sessionId]?.role === 'lead' } };
       } catch (error) {
         log(`plan preview failed: ${message(error)}`);
@@ -405,7 +409,7 @@ export const createApp = (deps: Deps) => {
     if (starting.has(sessionId)) return fail('A build is already starting from that session.');
     starting.add(sessionId);
     try {
-      const got = await readPlan(sessionId);
+      const got = choose(await readPlan(sessionId));
       if ('error' in got) return fail(got.error);
       // A chat answer is not a plan: building from it starts the wrong work. The frame can say "use it anyway".
       if (!got.isPlan && body.force !== true) return fail(NOT_A_PLAN);
@@ -633,7 +637,8 @@ export const createApp = (deps: Deps) => {
     }
 
     // The first estimate and split-out list of a planning session is kept for a frame to write. A later turn replaces
-    // it only while nobody has started writing it, so a revised plan never creates the issues twice.
+    // it only while nobody has started writing it. Once that write is done, only newly named split-outs go back to
+    // pending: the first plan's estimate or issues are never written twice, but a revision can add work.
     const raw = content?.type === 'turn-finished' ? content.reply : '';
     const extras = role !== 'build' && raw ? parsePlanExtras(raw) : null;
     if (extras && (role === 'plan' || looksLikePlan(reply))) {
@@ -648,6 +653,19 @@ export const createApp = (deps: Deps) => {
           state: 'pending',
           at: now(),
         });
+      } else if (before.state === 'done') {
+        const known = new Set(before.extras.issues.map((issue) => issue.title.replace(/\s+/g, ' ').trim().toLowerCase()));
+        const added = extras.issues.filter((issue) => !known.has(issue.title.replace(/\s+/g, ' ').trim().toLowerCase()));
+        if (added.length) {
+          keepExtras({
+            ...before,
+            sessionTitle: title?.trim() || before.sessionTitle,
+            extras: { ...extras, issues: added },
+            state: 'pending',
+            created: [],
+            at: now(),
+          });
+        }
       }
     }
 

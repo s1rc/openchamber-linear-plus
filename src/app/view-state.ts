@@ -1,19 +1,33 @@
-// Where the dashboard was, per folder: the view, the chosen tabs and the list options. The issue open
+// Where the dashboard was, per folder: the view, the chosen tabs, list options and filters. The issue open
 // in each list is per worktree (see WorktreeKey), so two worktrees of one project restore their own.
 // Kept in memory so switching folders and back is instant, and in extension storage so a reload of
 // the panel (OpenChamber reloads it when you switch projects) lands in the same place.
 import { createContext } from 'preact';
 import { host } from '../shared/host.ts';
+import type { StateType } from '../shared/types.ts';
 import type { Mode, ViewOptions } from '../shared/view-options.ts';
 import type { Route } from './routes.ts';
 
 /** A list's own settings: which mode it shows, and what was changed in each mode. */
 export type SavedOptions = { mode: Mode; list?: Partial<ViewOptions>; board?: Partial<ViewOptions> };
 
+/** The filters a list returns to after its issue closes or the frame reloads. */
+export type ListFilters = {
+  search?: string;
+  assignee?: string;
+  priority?: string;
+  label?: string;
+  status?: 'any' | StateType;
+  showClosed?: boolean;
+  milestone?: string | null;
+};
+
 export type ViewState = {
   route?: Route;
   /** Display options per list, keyed like `openIssue`. */
   options?: Record<string, SavedOptions>;
+  /** Filters per list, including a project's milestone. */
+  filters?: Record<string, ListFilters>;
   /** Open issue per list, keyed by the list's view key (`project-issues`, `my-issues:assigned`, ...). */
   openIssue?: Record<string, string | null>;
   /** Selected tab per tabbed view (`my-issues`, `project-detail:<id>`, ...). */
@@ -59,6 +73,7 @@ export const loadViewState = async (placeKey: string): Promise<ViewState> => {
         openIssue: typeof value.openIssue === 'object' && value.openIssue ? value.openIssue : {},
         tabs: typeof value.tabs === 'object' && value.tabs ? value.tabs : {},
         options: typeof value.options === 'object' && value.options ? value.options : {},
+        filters: typeof value.filters === 'object' && value.filters ? value.filters : {},
       };
     }
   } catch {
@@ -110,6 +125,14 @@ export const savedOptionsFor = (placeKey: string | null, listKey: string): Saved
 export const saveOptions = (placeKey: string | null, listKey: string, saved: SavedOptions) => {
   if (!placeKey) return;
   update(placeKey, (s) => ({ ...s, options: { ...s.options, [listKey]: saved } }));
+};
+
+export const savedFiltersFor = (placeKey: string | null, listKey: string): ListFilters | undefined =>
+  placeKey ? memory.get(placeKey)?.filters?.[listKey] : undefined;
+
+export const saveFilters = (placeKey: string | null, listKey: string, saved: ListFilters) => {
+  if (!placeKey) return;
+  update(placeKey, (s) => ({ ...s, filters: { ...s.filters, [listKey]: { ...s.filters?.[listKey], ...saved } } }));
 };
 
 export const userDefaults = (mode: Mode): Partial<ViewOptions> | undefined => defaults[mode];

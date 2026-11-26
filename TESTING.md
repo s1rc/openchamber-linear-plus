@@ -9,12 +9,12 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 502 unit and route tests in `test/` (see below) |
+| `bun test` | 521 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff and lead mode |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 23 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 28 screen tests, fake data only |
 
 Also check by grep:
 
@@ -39,10 +39,12 @@ Also check by grep:
 | `picker` | The dialog lists the folder's issues with a preview; a pasted Linear link lists only that issue; Enter attaches it and closes the dialog |
 | `dialog-escape` | Escape with the filter open closes only the filter; the next Escape closes the dialog |
 | `issue-pane` | An issue from a list opens in the right-hand pane with its trail, the list stays beside it, a milestone can be assigned, another row swaps it, Escape closes it; a cycle's issue opens in the same pane |
-| `issue-relations` | Lists count only unfinished dependencies; completed prerequisites and dependents leave Blocked by or Blocking and appear under Related in the issue pane |
+| `issue-relations` | Lists count only unfinished dependencies; completed prerequisites and dependents leave Blocked by or Blocking and appear under Related. Right click changes a relation's type or direction, and the hover X removes it |
+| `issue-documents` | Attached documents sit under the sub-issue list and expand inline with their full content, without opening an external link |
 | `issue-rail` | On the rail the issue replaces the view, with its trail; Back returns to the list |
+| `worktree-fallback` | An unusable saved route, issue or project opens the issue named by the worktree prefix, including a prefix after the main checkout's name |
 | `sidebar` | The folder's team is open with Home, Triage (count 1), Issues, Projects, Views; the sub-team sits under it and opens; a saved view opens the team's issues with it picked; open teams are remembered |
-| `milestones` | A milestone's issue count opens its three issues; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done |
+| `milestones` | A milestone's issue count opens its three issues; closing an issue and remounting the list keep the milestone and text filters; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done. The project link icon copies the project URL left of Open in Linear |
 | `project-edit` | A project's name, status and lead save from its overview, its properties include Priority, and a milestone's description saves; each sends the matching mutation. The side column draws the burn-up chart and lists the activity; the main column keeps the full milestone descriptions |
 | `copy-buttons` | Copy ID copies the key |
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
@@ -51,12 +53,15 @@ Also check by grep:
 | `rich-editor` | Edit description opens rich text with headings, bold and the checklist drawn; Cancel on untouched text saves nothing; Enter after a task adds an unticked one, the toolbar's Bold applies; the Markdown tab shows what Linear will store; Save sends it. Runs on a real clock: ProseMirror tells clicks apart by time |
 | `rail-settings` | The rail header has Settings, the view dropdown does not; a second click goes back |
 | `issue-menu` | A right click on a row opens Linear's menu without opening the issue; Status and Milestone fly out, tick the current value and save a pick; P opens Priority, Escape closes the submenu, then the menu |
+| `issue-menu-position` | A short submenu stays beside its anchor and clamps using its real height after the main menu settles |
 | `issue-menu-rail` | On the rail the menu fits and a submenu opens in place with a Back row; Copy ID copies |
 | `issue-menu-actions` | More properties lists every added action; link, customer request, document, release, SLA, semantic suggestions, favorite, reminder and rename all work against fake Linear |
 | `issue-menu-create` | Mark as related searches and links an issue; Create related creates then links; Make a copy prefills the form; Convert to project uses Linear's native conversion input |
 | `board-delete` | Board columns are one darker panel from the header down; Delete from a card's menu asks first, moves the issue to the trash and says how to get it back |
 | `inbox` | Notifications read only published fields: each says who did what (comment, assignment, new status, project update with its health); opening one opens the issue and marks it read |
-| `status-plan-row` | At 280 px the Work Status plan row's buttons are in title case, nothing scrolls sideways, Dismiss stays inside, the row draws no hover; Write Plan writes the plan and starts no build |
+| `status-plan-row` | A session sees only its own plan, not another session's plan for the folder. At 280 px the plan row's buttons are in title case, nothing scrolls sideways, Dismiss stays inside, the row draws no hover; Write Plan writes the plan and starts no build |
+| `long-plan` | A plan over 6,500 characters creates an issue-linked full-plan document with no model call; the issue keeps a concise source-only summary with the document link and no `[cut]` marker. An existing plan document updates in place |
+| `plan-message` | Start build from this plan on a message previews and writes that exact message, not the session's latest reply |
 | `add-plan-only` | The LinearIssue card and the issue view's bar share their buttons, in title case and with no orange one: Start Session, Plan, Write Plan, Build (the bar starts with Attach); the card's Write Plan writes the plan into the description and says so; an issue with no plan shows Write Plan and Build disabled with a Plan first hint |
 | `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 

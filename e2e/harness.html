@@ -12,7 +12,7 @@
     <script>
       // A mock OpenChamber host for the end-to-end tests (e2e/run.ts). It answers the SDK the way the real host does
       // for what Linear+ uses, from the query and from replayed fixtures, and records every message in window.__log.
-      // Query: page, surface, dir, mode, block, args, item, connected, fx (fixture file), projects, sessions, storage.
+      // Query: page, surface, dir, mode, block, args, item, connected, fx (fixture file), projects, worktrees, session, sessions, storage.
       const q = new URLSearchParams(location.search);
       const page = q.get('page') || 'panel/index.html';
       const surface = q.get('surface') || 'page';
@@ -24,6 +24,8 @@
       const connected = q.get('connected') !== '0';
       const store = JSON.parse(q.get('storage') || '{}');
       const projects = JSON.parse(q.get('projects') || '[]');
+      const worktrees = JSON.parse(q.get('worktrees') || '[]');
+      const session = q.get('session') ? JSON.parse(q.get('session')) : null;
       const sessions = JSON.parse(q.get('sessions') || '[]');
       window.__log = [];
       const dark = mode === 'dark';
@@ -39,7 +41,7 @@
       const f = document.getElementById('f');
       const send = (m) => f.contentWindow.postMessage({ channel: 'openchamber.sdk', v: 1, ...m }, '*');
       const ready = () => send({ type: 'ready', payload: {
-        theme: { mode, tokens }, locale: 'en', directory: dir, session: null, surface: block ? 'block' : surface,
+        theme: { mode, tokens }, locale: 'en', directory: dir, session, surface: block ? 'block' : surface,
         connection: { connected, account: connected ? 'demo' : '' }, settings: {}, item, ...(block ? { block } : {}), features: {},
       } });
       window.addEventListener('message', async (e) => {
@@ -60,7 +62,7 @@
           const k = m.payload.kind;
           if (k === 'projects') { ok({ kind: 'projects', state: 'ready', projects }); return; }
           if (k === 'sessions') { ok({ kind: 'sessions', projectId: m.payload.projectId, state: 'ready', coverage: [], sessions: sessions.filter((s) => s.projectId === m.payload.projectId) }); return; }
-          if (k === 'worktrees') { ok({ kind: 'worktrees', projectId: m.payload.projectId, state: 'ready', worktrees: [] }); return; }
+          if (k === 'worktrees') { ok({ kind: 'worktrees', projectId: m.payload.projectId, state: 'ready', worktrees: worktrees.filter((w) => w.projectId === m.payload.projectId) }); return; }
         }
         if (m.type === 'storage') {
           const p = m.payload;

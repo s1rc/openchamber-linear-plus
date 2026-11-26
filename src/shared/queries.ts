@@ -21,10 +21,10 @@ export const ISSUE_ROW = `
   project { id name color icon }
   projectMilestone { id name }
   cycle { id number name }
-  parent { id identifier }
+  parent { id identifier title }
   attachments(first: 4) { nodes { id url title sourceType metadata } }
-  outRelations: relations(first: 5) { nodes { type relatedIssue { state { type } } } }
-  inRelations: inverseRelations(first: 5) { nodes { type issue { state { type } } } }
+  outRelations: relations(first: 5) { nodes { id type relatedIssue { id identifier title url state { ${STATE} } } } }
+  inRelations: inverseRelations(first: 5) { nodes { id type issue { id identifier title url state { ${STATE} } } } }
 `;
 
 const PROJECT_SUMMARY = `
@@ -174,6 +174,7 @@ export const ISSUE_DETAIL = `
       children(first: 50) { nodes { ${ISSUE_ROW} } }
       comments(first: 100) { nodes { id body createdAt editedAt url user { ${USER} } parent { id } } }
       links: attachments(first: 50) { nodes { id title subtitle url sourceType metadata createdAt } }
+      documents(first: 50) { nodes { id title url updatedAt } }
       relations(first: 25) { nodes { id type relatedIssue { id identifier title url state { ${STATE} } } } }
       inverseRelations(first: 25) { nodes { id type issue { id identifier title url state { ${STATE} } } } }
       subscribers(first: 25) { nodes { ${USER} } }
@@ -497,6 +498,18 @@ export const ISSUE_RELATION_CREATE = `
   }
 `;
 
+export const ISSUE_RELATION_UPDATE = `
+  mutation IssueRelationUpdate($id: String!, $input: IssueRelationUpdateInput!) {
+    issueRelationUpdate(id: $id, input: $input) { success }
+  }
+`;
+
+export const ISSUE_RELATION_DELETE = `
+  mutation IssueRelationDelete($id: String!) {
+    issueRelationDelete(id: $id) { success }
+  }
+`;
+
 export const ATTACHMENT_CREATE = `
   mutation AttachmentCreate($input: AttachmentCreateInput!) {
     attachmentCreate(input: $input) { success attachment { id url title } }
@@ -512,6 +525,12 @@ export const CUSTOMER_NEED_CREATE = `
 export const DOCUMENT_CREATE = `
   mutation DocumentCreate($input: DocumentCreateInput!) {
     documentCreate(input: $input) { success document { id title url updatedAt } }
+  }
+`;
+
+export const DOCUMENT_UPDATE = `
+  mutation DocumentUpdate($id: String!, $input: DocumentUpdateInput!) {
+    documentUpdate(id: $id, input: $input) { success document { id title url updatedAt } }
   }
 `;
 
@@ -607,6 +626,6 @@ export const ALL_DOCUMENTS: Record<string, string> = {
   ISSUES_BY_IDENTIFIER: issuesByIdentifier(['ENG-1', 'ENG-2']),
   ISSUES_BY_KEYS, SLASH_BY_NUMBER, SLASH_SEARCH, MENTION_ISSUE, MENTION_SEARCH, BRANCH_ISSUE, BLOCK_STATES,
   TEAM_CYCLES, CYCLE_DETAIL, CUSTOM_VIEWS, CUSTOM_VIEW_ISSUES, NOTIFICATIONS, REPO_ATTACHMENTS, SEARCH_ISSUES, SEARCH_PROJECTS, SEARCH_DOCUMENTS, DOCUMENTS, DOCUMENT, PICKER_ISSUES, PICKER_SEARCH, MILESTONE_ISSUES, PROJECT_ACTIVITY, USERS, TRIAGE_COUNTS,
-  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, ATTACHMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_REMINDER, PROJECT_CREATE, PROJECT_EDIT, MILESTONE_CREATE, MILESTONE_EDIT, MILESTONE_DELETE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
+  ISSUE_UPDATE, ISSUE_DELETE, ISSUE_CREATE, ISSUE_RELATION_CREATE, ISSUE_RELATION_UPDATE, ISSUE_RELATION_DELETE, ATTACHMENT_CREATE, CUSTOMER_NEED_CREATE, DOCUMENT_CREATE, DOCUMENT_UPDATE, FAVORITE_CREATE, FAVORITE_DELETE, ISSUE_REMINDER, PROJECT_CREATE, PROJECT_EDIT, MILESTONE_CREATE, MILESTONE_EDIT, MILESTONE_DELETE, COMMENT_CREATE, PROJECT_UPDATE_CREATE, NOTIFICATION_MARK_READ, NOTIFICATION_MARK_ALL_READ,
   NOTIFICATIONS_MARK_READ: markReadMany(['n1', 'n2']),
 };

@@ -196,8 +196,11 @@ describe('planPrompt', () => {
     expect(text).toContain('Work in /wt/eng-5, on branch matt/eng-5-slow-login.');
     expect(text).toContain('Logins time out.');
     expect(text).toContain('write the complete plan as a normal message');
-    expect(text).toContain('I want that');
-    expect(text).not.toContain('interview');
+    expect(text).toContain('Interview me before writing the plan');
+    expect(text).toContain('never treat it as my answer');
+    expect(text).toContain('If your draft contains an unasked choice under "Open decisions", stop and ask about it');
+    expect(text).not.toContain('You may ask');
+    expect(planPrompt({ ...input, child: true })).toContain('Interview the user before writing the plan');
     expect(text).toContain('no question card or form left open');
     expect(text).toContain('"build it"');
     expect(text).toContain('Open decisions');
