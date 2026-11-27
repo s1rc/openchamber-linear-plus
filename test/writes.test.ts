@@ -25,16 +25,19 @@ describe('patchIssue', () => {
   test('changes the issue in every list and its detail, and rolls back', async () => {
     put('issues:a', { issues: [row('i1', 3), row('i2', 3)], capped: false });
     put('view-issues:v', { issues: [row('i1', 3)], capped: false });
+    put('block:I1', new Map([['I1', row('i1', 3)]]));
     put('issue:I1', { id: 'i1', identifier: 'I1', priority: 3, team: { id: 't', key: 'T', name: 'Team', states: { nodes: [] } } });
     const read = (key: string) => load(key, async () => null);
     const rollback = patchIssue('i1', { priority: 1, team: { id: 'x', key: 'X' } });
     expect(((await read('issues:a')) as { issues: IssueRow[] }).issues.map((i) => i.priority)).toEqual([1, 3]);
     expect(((await read('view-issues:v')) as { issues: IssueRow[] }).issues[0]!.priority).toBe(1);
+    expect(((await read('block:I1')) as Map<string, IssueRow>).get('I1')).toMatchObject({ priority: 1, team: { id: 'x', key: 'X' } });
     const detail = (await read('issue:I1')) as { priority: number; team: { name: string } };
     expect(detail.priority).toBe(1);
     expect(detail.team.name).toBe('Team');
     rollback();
     expect(((await read('issues:a')) as { issues: IssueRow[] }).issues[0]!.priority).toBe(3);
+    expect(((await read('block:I1')) as Map<string, IssueRow>).get('I1')?.priority).toBe(3);
   });
 });
 

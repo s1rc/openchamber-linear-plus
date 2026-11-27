@@ -1,5 +1,8 @@
-// LinearIssueList(title, ids): several issues as rows, read live. A click opens the issue in Linear.
+// LinearIssueList(title, ids): several issues as rows, read live. A click opens the issue in Linear;
+// a right click opens the same property menu as the dashboard's issue list.
 import { Section } from '@openchamber-ext/shared-ui/preact';
+import { useState } from 'preact/hooks';
+import { IssueMenu } from '../app/components/issue-menu.tsx';
 import { IssueRow } from '../app/components/issue-row.tsx';
 import { blockTitle, splitIds } from '../shared/block-args.ts';
 import { host } from '../shared/host.ts';
@@ -12,6 +15,7 @@ export const BLOCK_PROPERTIES: ReadonlySet<PropertyId> = new Set(['id', 'status'
 export const ListBlock = ({ args }: { args: Record<string, string> }) => {
   const { ids, skipped, cut } = splitIds(args.ids);
   const title = blockTitle(args.title);
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   if (ids.length === 0) {
     return (
       <Section title={title || undefined}>
@@ -24,14 +28,27 @@ export const ListBlock = ({ args }: { args: Record<string, string> }) => {
     <Section title={title || undefined}>
       <Lookup ids={ids}>
         {(found) => (
-          <div class="lin-groups lin-block-rows">
-            {ids.map((id) => {
-              const issue = found.get(id);
-              return issue
-                ? <IssueRow key={id} issue={issue} properties={BLOCK_PROPERTIES} onOpen={(row) => { void host.openUrl(row.url); }} />
-                : <MissingRow key={id} id={id} />;
-            })}
-          </div>
+          <>
+            <div
+              class="lin-groups lin-block-rows"
+              onContextMenu={(event) => {
+                const id = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-issue]')?.dataset.issue;
+                if (!id || !found.has(id)) return;
+                event.preventDefault();
+                setMenu({ id, x: event.clientX, y: event.clientY });
+              }}
+            >
+              {ids.map((id) => {
+                const issue = found.get(id);
+                return issue
+                  ? <IssueRow key={id} issue={issue} properties={BLOCK_PROPERTIES} onOpen={(row) => { void host.openUrl(row.url); }} />
+                  : <MissingRow key={id} id={id} />;
+              })}
+            </div>
+            {menu && found.has(menu.id) && (
+              <IssueMenu issue={found.get(menu.id)!} x={menu.x} y={menu.y} propertiesOnly onClose={() => setMenu(null)} />
+            )}
+          </>
         )}
       </Lookup>
       <SkippedNote skipped={skipped} cut={cut} />

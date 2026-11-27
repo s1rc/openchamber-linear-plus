@@ -35,7 +35,7 @@ import { copyText, CopyButtons } from '../../shared/icon-buttons.tsx';
 import { IssueMenu } from './issue-menu.tsx';
 import { IssueActionDialog } from './issue-action-dialogs.tsx';
 import { IssueRelationDialog } from './issue-relation-dialog.tsx';
-import { CreateIssueDialog } from './create-issue.tsx';
+import { CreateIssueDialog, SubIssueForm } from './create-issue.tsx';
 import { DeleteIssueDialog } from './delete-issue.tsx';
 import { TeamMoveDialog } from './team-move.tsx';
 import { createIssueRelation } from '../../shared/writes.ts';
@@ -242,12 +242,33 @@ const IssueDocument = ({ document, onOpenIssue }: { document: DocumentSummary; o
   );
 };
 
-const IssueDocuments = ({ documents, onOpenIssue }: { documents: DocumentSummary[]; onOpenIssue: (id: string) => void }) => (
-  <section class="lin-documents">
-    <h2 class="lin-activity-title">Documents</h2>
-    <div class="lin-documents-list">
-      {documents.map((document) => <IssueDocument key={document.id} document={document} onOpenIssue={onOpenIssue} />)}
+type ResourceLink = Detail['links']['nodes'][number];
+
+const IssueResources = ({ links, documents, onOpenIssue, onAdd }: { links: ResourceLink[]; documents: DocumentSummary[]; onOpenIssue: (id: string) => void; onAdd: (prompt: IssuePrompt) => void }) => (
+  <section class="lin-documents lin-resources">
+    <div class="sui-row lin-resources-head">
+      <h2 class="lin-activity-title">Resources</h2>
+      <span class="sui-grow" />
+      <span class="lin-resource-add" title="Add resource">
+        <Menu
+          label="+"
+          variant="outline"
+          size="xs"
+          items={[{ id: 'link', label: 'Add link...' }, { id: 'document', label: 'Add document' }, { id: 'customer', label: 'Add customer request...' }]}
+          onSelect={(prompt) => { if (prompt === 'link' || prompt === 'document' || prompt === 'customer') onAdd(prompt); }}
+        />
+      </span>
     </div>
+    {(links.length > 0 || documents.length > 0) && (
+      <div class="lin-documents-list">
+        {links.map((link) => (
+          <button type="button" class="lin-document-toggle lin-resource-link" key={link.id} title={link.url} onClick={() => { void host.openUrl(link.url); }}>
+            <Chip>{link.sourceType ?? 'link'}</Chip><span class="lin-ellipsis">{link.title}</span>
+          </button>
+        ))}
+        {documents.map((document) => <IssueDocument key={document.id} document={document} onOpenIssue={onOpenIssue} />)}
+      </div>
+    )}
   </section>
 );
 
@@ -366,6 +387,7 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue, o
   const workspace = useWorkspace();
   const [starting, setStarting] = useState<'session' | 'plan' | null>(null);
   const [building, setBuilding] = useState(false);
+  const [addingSubIssue, setAddingSubIssue] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [prompt, setPrompt] = useState<{ issue: IssueRowData; prompt: IssuePrompt } | null>(null);
   const [relation, setRelation] = useState<{ issue: IssueRowData; relation: RelationChoice; create: boolean } | null>(null);
@@ -534,15 +556,6 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue, o
               {list.map((r) => <RelationLink key={r.key} issue={issue} relation={r} group={name} onOpenIssue={onOpenIssue} />)}
             </SideSection>
           ))}
-          {otherLinks.length > 0 && (
-            <SideSection title="Links">
-              {otherLinks.map(({ a }) => (
-                <button type="button" class="lin-side-link" key={a.id} title={a.url} onClick={() => { void host.openUrl(a.url); }}>
-                  <Chip>{a.sourceType ?? 'link'}</Chip><span class="lin-ellipsis">{a.title}</span>
-                </button>
-              ))}
-            </SideSection>
-          )}
           <div class="sui-muted sui-small lin-side-foot">
             Created {shortDate(issue.createdAt)}{issue.creator ? ` by ${issue.creator.name}` : ''}. Updated {relativeTime(issue.updatedAt)}.
           </div>
@@ -550,18 +563,31 @@ export const IssueDetail = ({ id, stacked, origin, pane, onClose, onOpenIssue, o
 
         <div class="lin-issue-body">
           <DescriptionEdit issue={issue} onOpenIssue={onOpenIssue} />
-          {issue.children.nodes.length > 0 && (
-            <section class="lin-subissues">
-              <div class="sui-row lin-subissues-head">
-                <span class="lin-activity-title">Sub-issues</span>
-                <Chip><ProgressRing done={done} total={issue.children.nodes.length} />{done}/{issue.children.nodes.length}</Chip>
-              </div>
+          <section class="lin-subissues">
+            <div class="sui-row lin-subissues-head">
+              <span class="lin-activity-title">Sub-issues</span>
+              {issue.children.nodes.length > 0 && <Chip><ProgressRing done={done} total={issue.children.nodes.length} />{done}/{issue.children.nodes.length}</Chip>}
+            </div>
+            {issue.children.nodes.length > 0 && (
               <div class="lin-subissues-list">
                 {issue.children.nodes.map((child) => <IssueRow key={child.id} issue={child} compact onOpen={(c) => onOpenIssue(c.identifier)} />)}
               </div>
-            </section>
-          )}
-          {documents.length > 0 && <IssueDocuments documents={documents} onOpenIssue={onOpenIssue} />}
+            )}
+            <button type="button" class="lin-add-subissues" aria-label="Add sub-issues" disabled={addingSubIssue} onClick={() => setAddingSubIssue(true)}>+ Add sub-issues</button>
+            {addingSubIssue && (
+              <SubIssueForm
+                parent={issue}
+                onClose={() => setAddingSubIssue(false)}
+                onCreated={() => { setAddingSubIssue(false); detail.refresh(); }}
+              />
+            )}
+          </section>
+          <IssueResources
+            links={otherLinks.map(({ a }) => a)}
+            documents={documents}
+            onOpenIssue={onOpenIssue}
+            onAdd={(prompt) => setPrompt({ issue, prompt })}
+          />
           <Activity issue={issue} onOpenIssue={onOpenIssue} />
         </div>
       </div>

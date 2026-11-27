@@ -30,7 +30,7 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 - Browse team **Home**, **Triage**, **Issues**, **Projects**, **Views**, and **Cycles**. Sub-teams appear under their parent.
 - Switch issues between list and board, filter and group them, and drag cards between statuses. Blocking badges count only unfinished dependencies; completed dependencies appear under Related in the issue view.
 - Right-click an issue row or card for an expanded Linear-style menu: edit properties, move teams, link releases, set SLA day counting, add links, customer requests and documents, create or mark relations, remove parent or dependency links, convert or copy issues, favorite, set reminders, open and delete. Find suggestions uses Linear's semantic issue search. Linear's shortcut keys work while the menu is open.
-- Open an issue beside the list to edit its description and properties, including its project milestone, copy its ID, link or branch, and work with comments, relations, links, and sub-issues. Right-click a relation to change or remove it, or use its hover X to remove it. Attached documents expand inline under the sub-issue list.
+- Open an issue beside the list to edit its description and properties, including its project milestone, copy its ID, link or branch, and work with comments, relations, links, and sub-issues. Right-click a relation to change or remove it, or use its hover X to remove it. Sub-issues stay visible when empty and can be created in an inline drawer. Resources combines links and documents under the description, with add actions and inline document reading.
 - The description edits as rich text, with a toolbar and Markdown shortcuts (`# `, `- `, `[] `, `> `); a Markdown tab shows what Linear stores. Tick a checklist box right in the description without opening the editor.
 - Open a project for health, progress, updates, documents, and milestones. Select a milestone count to see its issues. Edit a project in place: its name, summary and description, status, priority, lead, members, teams and dates, and add, edit or delete milestones.
 - Pin the detected team or project when a folder should keep a particular Linear scope. If the saved view, issue, project or team cannot be restored, Linear+ opens the issue named by the worktree prefix when one exists.
@@ -44,6 +44,8 @@ You can also add `https://github.com/s1rc/openchamber-linear-plus` directly in *
 1. Open an issue and click **Start plan**. Linear+ starts a planning session with the issue context and the team's estimate scale. The session interviews you about meaningful choices before finishing; a recommendation is not treated as your answer.
 2. Review the plan. When enabled, Linear+ sets the estimate and creates split-out issues after the plan finishes.
 3. Click **Start build** to hand the finished plan to a build session. Or click **Write Plan** to put the plan in the issue's description and stop, when someone else picks the work up. A plan over 6,500 characters is stored in full in an issue-linked document; the issue gets a concise plan of 2,500 to 6,500 characters with a link, aiming for 3,000 to 5,000 when the source has enough detail.
+
+When a plan names other Linear issues, Write Plan and Start Build add a **Related repositories** section from their merge request, pull request, and project links. Repositories shared with the planned issue are left out. Split-out issues also name a different target repository in their descriptions.
 
 When a session contains several plan replies, its **Start build from this plan** action includes a **Plan message** picker. The same action on a message uses exactly that message, for both Write Plan and Start build.
 
@@ -65,6 +67,7 @@ Use the **+** menu, then **Linear+**, to attach an issue to a session or a new w
 - `/linear-issue ENG-123` shows a live issue card.
 - `/linear-list ENG-1 ENG-2 My heading` shows a live issue list.
 - `/linear-pick ENG-1 ENG-2 Which issue?` asks you to choose an issue for the agent.
+- Right-click a `LinearIssue` card or a `LinearIssueList` row to edit status, priority, assignee, project, milestone, estimate, cycle, due date, and labels without leaving chat.
 - Message, selection, chat, and diff actions can draft a new Linear issue.
 - Session actions can start a build from a plan or comment on a linked issue.
 

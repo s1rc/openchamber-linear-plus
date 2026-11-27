@@ -204,6 +204,8 @@ describe('planPrompt', () => {
     expect(text).toContain('no question card or form left open');
     expect(text).toContain('"build it"');
     expect(text).toContain('Open decisions');
+    expect(text).toContain('Linear+ verifies repositories linked from those issues');
+    expect(planPrompt({ ...input, scale: 'Estimates: S = 2.' })).toContain('name that repository in its description');
     expect(text).toContain('card = LinearIssue("ENG-5")');
     expect(text).toContain('```openui-lang\nroot = Stack([card])');
     expect(text).not.toMatch(/[\u2013\u2014\u2015]/);

@@ -350,6 +350,8 @@ workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Cache exchange
 } } });
 const relatedIssue = { ...issue('Related cache work', 'Backlog', { priority: 0, assignee: null }), id: 'i-eng-50', identifier: 'ENG-50' };
 workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Related cache work', stateId: 't-eng-backlog', priority: 0, projectId: 'p-checkout' } })] = ok({ issueCreate: { success: true, issue: relatedIssue } });
+const subIssue = { ...eng13, id: 'i-eng-51', identifier: 'ENG-51', number: 51, title: 'Add retry metrics', priority: 0, state: engStates.Backlog, assignee: null, parent: { id: 'i-eng-13', identifier: 'ENG-13' } };
+workspace[key(Q.ISSUE_CREATE, { input: { teamId: 't-eng', title: 'Add retry metrics', parentId: 'i-eng-13', stateId: 't-eng-backlog', priority: 0, projectId: 'p-checkout' } })] = ok({ issueCreate: { success: true, issue: subIssue } });
 workspace[key(Q.ISSUE_RELATION_CREATE, { input: { issueId: 'i-eng-11', relatedIssueId: 'i-eng-50', type: 'related' } })] = ok({ issueRelationCreate: { success: true } });
 workspace[key(Q.COMMENT_CREATE, { input: { issueId: 'i-eng-11', body: 'Batching shipped in !42.' } })] = ok({ commentCreate: { success: true, comment: { id: 'cm3', body: 'Batching shipped in !42.', createdAt: '2026-11-09T12:00:00Z', url: '', user: matt } } });
 const READ_AT = '2026-11-09T12:00:00.000Z';

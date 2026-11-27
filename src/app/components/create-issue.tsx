@@ -35,6 +35,8 @@ type FormProps = {
   /** Teams to offer first, such as the folder's. The team picker lists every team. */
   teamIds: readonly string[];
   projectId?: string | null;
+  /** The parent for a sub-issue created inline under that issue. */
+  parentId?: string;
   /** What the title and description start as. */
   initial?: IssueFormInitial;
   /** A draft that arrives later fills the title and description the user has not typed in yet. */
@@ -46,7 +48,7 @@ type FormProps = {
 };
 
 /** The fields of the create form and what its button does. The caller draws the footer. */
-export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCreated, onEscape, rows = 6 }: FormProps) => {
+export const useIssueForm = ({ teamIds, projectId = null, parentId, initial, draft, onCreated, onEscape, rows = 6 }: FormProps) => {
   const workspace = useWorkspace().data;
   const ordered = useMemo(() => {
     const teams = workspace?.teams ?? [];
@@ -106,6 +108,7 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
       const issue = await createIssue({
         teamId,
         title: title.trim(),
+        ...(parentId ? { parentId } : {}),
         ...(description.trim() ? { description } : {}),
         ...(stateId !== NONE ? { stateId } : {}),
         priority: Number(priority),
@@ -184,6 +187,27 @@ export const useIssueForm = ({ teamIds, projectId = null, initial, draft, onCrea
   );
 
   return { body, submit: () => { void submit(); }, canSubmit, busy };
+};
+
+/** The inline drawer under Sub-issues. It creates in the parent's team and project, with the parent already linked. */
+export const SubIssueForm = ({ parent, onClose, onCreated }: { parent: IssueRow; onClose: () => void; onCreated: (issue: IssueRow) => void }) => {
+  const form = useIssueForm({
+    teamIds: [parent.team.id],
+    projectId: parent.project?.id ?? null,
+    parentId: parent.id,
+    onCreated,
+    onEscape: onClose,
+    rows: 3,
+  });
+  return (
+    <div class="lin-subissue-form">
+      {form.body}
+      <div class="lin-form-foot">
+        <Button label="Cancel" variant="ghost" size="sm" disabled={form.busy} onClick={onClose} />
+        <Button label={form.busy ? 'Creating...' : 'Create'} size="sm" disabled={!form.canSubmit} onClick={form.submit} />
+      </div>
+    </div>
+  );
 };
 
 type Props = {

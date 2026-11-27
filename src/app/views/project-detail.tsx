@@ -12,7 +12,8 @@ import { host } from '../../shared/host.ts';
 import { copyText, IconButton, LinkIcon } from '../../shared/icon-buttons.tsx';
 import { useIssueList } from '../../shared/issues.ts';
 import { toast } from '@openchamber-ext/shared-ui';
-import { Badge, Banner, Button, Progress, Select, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
+import { Badge, Banner, Button, Menu, Progress, Select, Spinner, Tabs, TextField } from '../../shared/kit.tsx';
+import { projectContext } from '../../shared/attach-text.ts';
 import { postProjectUpdate, writeErrorText, type Health } from '../../shared/writes.ts';
 import { gql } from '../../shared/linear.ts';
 import { Markdown } from '../../shared/markdown.tsx';
@@ -298,6 +299,26 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues, onUnavailable }: 
       <Banner tone="error" title="Could not load the project" body={detail.error instanceof Error ? detail.error.message : String(detail.error)} action={{ label: 'Retry', onClick: () => detail.refresh() }} />
     ) : <Spinner label="Loading project" />;
   }
+  const chip = {
+    providerId: 'linear-dashboard', id: `project:${project.id}`, title: project.name, url: project.url, kind: 'issue' as const,
+    text: projectContext(project), data: { kind: 'project', id: project.id },
+  };
+  const attach = async () => {
+    try {
+      await host.attach(chip);
+      await toast(host, 'success', `Attached ${project.name} to your message`);
+    } catch {
+      await toast(host, 'error', 'Open a chat to attach the project.');
+    }
+  };
+  const link = async () => {
+    try {
+      await host.sessionLink(chip);
+      await toast(host, 'success', `Linked ${project.name} to this session`);
+    } catch {
+      await toast(host, 'error', 'Open a session to link the project to it.');
+    }
+  };
   return (
     <Section>
       <ProjectTitleEdit project={project} />
@@ -308,7 +329,17 @@ export const ProjectDetail = ({ ctx, id, viewerId, withIssues, onUnavailable }: 
         <span class="lin-icon-row lin-icon-row--plain">
           <IconButton label="Copy project link" onClick={() => { void copyText(project.url, 'the project link'); }}><LinkIcon /></IconButton>
         </span>
-        <Button label="Open in Linear" variant="ghost" size="xs" onClick={() => { void host.openUrl(project.url); }} />
+        <Button label="Attach" variant="outline" size="xs" onClick={() => { void attach(); }} />
+        <Menu
+          label="More"
+          variant="ghost"
+          size="xs"
+          items={[{ id: 'link', label: 'Link to this session' }, { id: 'open', label: 'Open in Linear' }]}
+          onSelect={(what) => {
+            if (what === 'link') void link();
+            if (what === 'open') void host.openUrl(project.url);
+          }}
+        />
       </div>
       {tab === 'issues' && withIssues ? (
         <IssueBrowser

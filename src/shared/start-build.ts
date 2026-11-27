@@ -3,6 +3,7 @@
 import { concisePlan, NOT_A_PLAN_TEXT, planNeedsDocument, withPlan, type BuildSource, type Handoff } from './handoff-rules.ts';
 import { fetchSessionExtras, previewPlan, requestBuild } from './handoff.ts';
 import { applyPlanExtras } from './plan-extras-apply.ts';
+import { withRelatedRepositories } from './plan-repositories.ts';
 import { viewerIdNow } from './workspace.ts';
 import { gql } from './linear.ts';
 import { buildStateOf } from './moves.ts';
@@ -43,11 +44,13 @@ export const writePlan = async (issue: Pick<IssueDetail, 'identifier'>, source: 
   // Writing a chat answer over the issue's plan would lose the plan, so a reply that is not one needs a deliberate yes.
   if (!isPlan && !force) throw new Error(NOT_A_PLAN_TEXT);
   const current = (await gql<IssueDetailResult>(ISSUE_DETAIL, { id: issue.identifier })).issue;
+  // A repository lookup is best effort: a missing link or a refused read must not stop the plan write.
+  const recorded = await withRelatedRepositories(plan, current).catch(() => plan);
   const title = `${issue.identifier} plan: ${current.title}`.slice(0, 200);
   const existing = current.documents?.nodes.find((document) => current.description?.includes(document.url))
     ?? current.documents?.nodes.find((document) => document.title === title);
-  const document = planNeedsDocument(plan) ? await (existing ? updateIssueDocument(current, existing.id, { title, content: plan }) : addIssueDocument(current, { title, content: plan })) : null;
-  const posted = document ? concisePlan(plan) : plan;
+  const document = planNeedsDocument(recorded) ? await (existing ? updateIssueDocument(current, existing.id, { title, content: recorded }) : addIssueDocument(current, { title, content: recorded })) : null;
+  const posted = document ? concisePlan(recorded) : recorded;
   const description = withPlan(current.description, posted, document?.url);
   if (description === null) throw new Error(`The description of ${issue.identifier} would be too long with the plan in it.`);
   await updateIssue(current, { input: { description }, patch: { description } });
@@ -63,8 +66,17 @@ export const sourceOfHandoff = (handoff: Handoff): BuildSource => ({
 export const startBuildFor = async (issue: IssueDetail, source: BuildSource, options: BuildOptions): Promise<BuildOutcome> => {
   let posted = false;
   let postedDocument = false;
+  // The exact enriched plan goes to both places, so the issue and the build record the same repositories.
+  let planText = options.planText;
+  try {
+    const plan = planText ?? (await previewPlan({ source, identifier: issue.identifier })).plan;
+    const recorded = await withRelatedRepositories(plan, issue);
+    if (recorded !== plan) planText = recorded;
+  } catch {
+    // The build's own read reports a real failure; a repository lookup alone never blocks the start.
+  }
   if (options.post) {
-    const written = await writePlan(issue, source, options.force, options.planText);
+    const written = await writePlan(issue, source, options.force, planText);
     posted = true;
     postedDocument = Boolean(written.document);
   }
@@ -72,7 +84,7 @@ export const startBuildFor = async (issue: IssueDetail, source: BuildSource, opt
   // writes them first. A failure is recorded for Retry in Work Status and does not stop the build.
   const extras = await fetchSessionExtras(source.sessionId).catch(() => null);
   if (extras && (extras.state === 'pending' || extras.state === 'claimed')) await applyPlanExtras(extras, viewerIdNow()).catch(() => null);
-  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force, ...(options.model ? { model: options.model } : {}), ...(options.planText ? { planText: options.planText } : {}) });
+  const started = await requestBuild({ source, identifier: issue.identifier, issueTitle: issue.title, force: options.force, ...(options.model ? { model: options.model } : {}), ...(planText ? { planText } : {}) });
   const target = options.state ?? buildStateOf(issue, issue.team.states.nodes, options.lastState);
   let moved = false;
   let moveError: string | null = null;

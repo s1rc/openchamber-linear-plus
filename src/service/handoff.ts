@@ -132,7 +132,7 @@ const extrasLines = (identifier: string, scale: string | null | undefined): stri
   return [
     `Size the work. ${text} Size by the effort for a coding agent like you (reading, changing and testing the code, and the review rounds), not by a person's days. Give one estimate for ${identifier} as planned, and one for each split-out issue.`,
     '',
-    `If part of the work is better done as a separate issue (it can ship on its own, or it belongs to another area), leave it out of the plan and list it instead. Each one becomes a separate Linear issue in the same team and project, related to ${identifier}. Do not create issues or change estimates yourself: the Linear+ extension does it when this plan finishes. Most plans split nothing.`,
+    `If part of the work is better done as a separate issue (it can ship on its own, or it belongs to another area), leave it out of the plan and list it instead. Each one becomes a separate Linear issue in the same team and project, related to ${identifier}. If split-out work belongs to another repository, name that repository in its description. Do not create issues or change estimates yourself: the Linear+ extension does it when this plan finishes. Most plans split nothing.`,
     '',
     `Put this block just before the closing card, once, with valid JSON (an empty list when nothing is split out):`,
     '```' + EXTRAS_FENCE,
@@ -156,6 +156,8 @@ export const planPrompt = (input: PlanPromptInput): string => {
     '---',
     '',
     'Read the code you need, then write a plan: what to change and where, in order, how to test it, and the risks.',
+    '',
+    'For every sub-issue, blocking issue, related issue, or other issue the plan depends on, include its Linear identifier. If its work belongs to another repository, name that repository too. Linear+ verifies repositories linked from those issues and records them in the written plan and build handoff.',
     '',
     input.child
       ? 'Interview the user before writing the plan whenever a meaningful choice is not fully settled by the issue or code. Ask about architecture, behavior, rollout, security and external setup choices, even when you have a recommendation. Present the recommendation with the question, but never treat it as the user\'s answer. Write one question or a small related set as a normal message (question tools reach nobody here), then wait for the answer to come back as a message before continuing. When the interview is done, write the complete plan as a normal message.'

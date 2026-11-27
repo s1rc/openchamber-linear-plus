@@ -2,6 +2,19 @@
 
 What changed in each Linear+ release. The newest is first. The release workflow uses a version's section as the notes of its GitHub release.
 
+## 1.3.5 (2026-11-26)
+
+### Added
+
+- Project pages have an Attach button beside Copy project link. More contains Link to this session and Open in Linear.
+- LinearIssue cards and LinearIssueList rows support the dashboard's property menu on right click: status, priority, assignee, due date, labels, project, milestone, estimate and cycle. Changes save in place and roll back when Linear refuses them.
+- The issue view's Resources section combines links and documents under the description. Its circular plus button adds links, documents and customer requests. Sub-issues stay visible when empty, and Add sub-issues opens an inline creation drawer linked to the parent.
+- Write Plan and Start Build record repositories linked from other Linear issues named by the plan. Split-out issues name a different target repository in their descriptions.
+
+### Fixed
+
+- Issue property submenus use the available viewport height instead of a fixed 320 px. Scrolling inside a submenu no longer closes it.
+
 ## 1.3.4 (2026-11-25)
 
 ### Added

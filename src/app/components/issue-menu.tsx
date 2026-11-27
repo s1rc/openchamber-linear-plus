@@ -67,20 +67,22 @@ type Props = {
   /** Where the click was, in the frame's viewport. */
   x: number;
   y: number;
+  /** Only the property submenus, for surfaces such as chat cards that have no issue action dialogs. */
+  propertiesOnly?: boolean;
   onClose: () => void;
-  onOpen: (issue: IssueRow) => void;
-  onDelete: (issue: IssueRow) => void;
-  onAction: (issue: IssueRow, action: MenuAction) => void;
+  onOpen?: (issue: IssueRow) => void;
+  onDelete?: (issue: IssueRow) => void;
+  onAction?: (issue: IssueRow, action: MenuAction) => void;
 };
 
-export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: Props) => {
+export const IssueMenu = ({ issue, x, y, propertiesOnly = false, onClose, onOpen, onDelete, onAction }: Props) => {
   const workspace = useWorkspace();
   const team = workspace.data?.teamsById.get(issue.team.id);
   const people = useTeamPeople(issue.team.id);
   const projects = useTeamProjects([issue.team.id]);
   const milestones = useProjectMilestones(issue.project?.id ?? null);
   const cycles = useOpenCycles(team?.cyclesEnabled ? issue.team.id : null, team?.activeCycle?.number);
-  const sections = issueMenu(issue, {
+  const allSections = issueMenu(issue, {
     states: workspace.data?.statesByTeam.get(issue.team.id) ?? [],
     team,
     estimates: estimateScale(team),
@@ -92,6 +94,7 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
     today: localToday(),
     now: new Date(),
   });
+  const sections = propertiesOnly ? [allSections[0]!.filter((item) => item.id !== 'more')] : allSections;
   const items = sections.flat();
 
   const menu = useRef<HTMLDivElement>(null);
@@ -139,7 +142,7 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
       if (item.keepOpen) return;
     }
     if (action.kind === 'copy') void copyText(action.text, action.what);
-    if (action.kind === 'open') onOpen(issue);
+    if (action.kind === 'open') onOpen?.(issue);
     if (action.kind === 'open-linear') void host.openUrl(issue.url);
     if (action.kind === 'favorite') {
       void toggleFavorite(issue)
@@ -151,20 +154,20 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
         .then(() => toast(host, 'success', `Reminder set for ${new Date(action.at).toLocaleString()}`))
         .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
     }
-    if (action.kind === 'prompt' || action.kind === 'relation') onAction(issue, action);
+    if (action.kind === 'prompt' || action.kind === 'relation') onAction?.(issue, action);
     if (action.kind === 'delete-relation') {
       void deleteIssueRelation(issue, action.other, action.relationId)
         .then(() => toast(host, 'success', `Removed relation with ${action.other.identifier}`))
         .catch((error: unknown) => toast(host, 'error', writeErrorText(error)));
     }
-    if (action.kind === 'delete') onDelete(issue);
+    if (action.kind === 'delete') onDelete?.(issue);
     onClose();
   };
   const choose = (item: MenuItem, row: HTMLElement | null, byKey = false) => (item.children ? openSub(item, row, byKey) : run(item));
 
   const rowOf = (id: string) => menu.current?.ownerDocument.querySelector<HTMLElement>(`[data-menu-item="${CSS.escape(id)}"]`) ?? null;
 
-  // Anchor after the main menu has settled, and fit the submenu's real height, not its 320 px maximum.
+  // Anchor after the main menu has settled, and fit the submenu's real height, not its available-height maximum.
   useLayoutEffect(() => {
     if (!openId) return;
     const anchor = rowOf(openId);
@@ -289,7 +292,7 @@ export const IssueMenu = ({ issue, x, y, onClose, onOpen, onDelete, onAction }: 
     <div
       class="lin-menu-layer"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onWheel={onClose}
+      onWheel={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onContextMenu={(event) => { event.preventDefault(); onClose(); }}
     >
       <div ref={menu} class="lin-menu" role="menu" aria-label={`${issue.identifier} actions`} style={{ left: `${pos.left}px`, top: `${pos.top}px`, width: `${MENU_W}px` }}>

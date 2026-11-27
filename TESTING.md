@@ -9,12 +9,12 @@ Run all of these before a release. Each must pass.
 | Command | What it checks |
 |---|---|
 | `bun run typecheck` | TypeScript, the whole project |
-| `bun test` | 521 unit and route tests in `test/` (see below) |
+| `bun test` | 526 unit and route tests in `test/` (see below) |
 | `bun run validate-queries` | Every GraphQL query and mutation against Linear's published schema, and its complexity score under Linear's 10,000 point limit. No call to your workspace. Run it with `--refresh` before a release: since November 2026 the published schema leaves out Linear's `[Internal]` fields, and a query that uses one fails here |
 | `bun run build` | Bundles the panel, dialog, Work Status, blocks, background and service |
 | `bun run check` | `openchamber-guest-check`: the manifest and built files are ready to install |
 | `bun run smoke` | Starts the built service against a fake host and calls every route, including the plan to build handoff and lead mode |
-| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 28 screen tests, fake data only |
+| `bun run e2e` | Builds, writes the fixtures, then drives the built frames in headless Chrome against a mock host (`e2e/`): 29 screen tests, fake data only |
 
 Also check by grep:
 
@@ -27,7 +27,7 @@ Also check by grep:
 `bun test` covers the pure rules and the service, with fakes for the host, the disk and Linear:
 
 - **Service** (`service.test.ts`, `service-app.test.ts`, `mention-issues.test.ts`): folder resolution, agent instructions, `@` rows (issues, projects, documents; cached, and live with the API key), session events, finish-comment drafts, plan to build, Start plan, lead mode (plan and build steps sent to the lead, every plan question relayed to the user, its progress lines are no plan rows), agent and model choice (folder, all folders, one-off override), plan extras (claim, done, failed, retry, never twice).
-- **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, which status to move to, the `linear-plan` block, estimate snapping.
+- **Plan and build** (`handoff.test.ts`, `plan-extras.test.ts`, `plan-repositories.test.ts`, `moves.test.ts`): which session to build from, the plan section in a description, repositories linked from other issues in the plan, which status to move to, the `linear-plan` block, estimate snapping.
 - **Dashboard rules**: the issue menu (`issue-menu.test.ts`), the Inbox's notification text (`inbox.test.ts`), task boxes in a description (`tasks.test.ts`), the rich editor's Markdown round trip and editing commands (`rich.test.ts`), grouping, board columns and drag, view options, nesting, burn-up (cycles and projects), project activity text, detection, view state, the sidebar tree (`nav.test.ts`), milestones, the dialog's picker (`picker.test.ts`), blocks and slash commands, status rows, colors, the cache.
 
 ### Screen tests (`bun run e2e`)
@@ -40,11 +40,11 @@ Also check by grep:
 | `dialog-escape` | Escape with the filter open closes only the filter; the next Escape closes the dialog |
 | `issue-pane` | An issue from a list opens in the right-hand pane with its trail, the list stays beside it, a milestone can be assigned, another row swaps it, Escape closes it; a cycle's issue opens in the same pane |
 | `issue-relations` | Lists count only unfinished dependencies; completed prerequisites and dependents leave Blocked by or Blocking and appear under Related. Right click changes a relation's type or direction, and the hover X removes it |
-| `issue-documents` | Attached documents sit under the sub-issue list and expand inline with their full content, without opening an external link |
+| `issue-documents` | Resources sits under the always-visible sub-issue list and combines links with documents; its plus menu opens the resource actions, and documents expand inline without opening an external link. An empty Sub-issues section opens a drawer that creates a linked child |
 | `issue-rail` | On the rail the issue replaces the view, with its trail; Back returns to the list |
 | `worktree-fallback` | An unusable saved route, issue or project opens the issue named by the worktree prefix, including a prefix after the main checkout's name |
 | `sidebar` | The folder's team is open with Home, Triage (count 1), Issues, Projects, Views; the sub-team sits under it and opens; a saved view opens the team's issues with it picked; open teams are remembered |
-| `milestones` | A milestone's issue count opens its three issues; closing an issue and remounting the list keep the milestone and text filters; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done. The project link icon copies the project URL left of Open in Linear |
+| `milestones` | A milestone's issue count opens its three issues; closing an issue and remounting the list keep the milestone and text filters; a half-done milestone shows 50% (Linear gives milestones a percent, projects a fraction) and only finished ones count as done. The project link icon copies the project URL left of Attach; Attach adds the project overview, and More links it to this session or opens it in Linear |
 | `project-edit` | A project's name, status and lead save from its overview, its properties include Priority, and a milestone's description saves; each sends the matching mutation. The side column draws the burn-up chart and lists the activity; the main column keeps the full milestone descriptions |
 | `copy-buttons` | Copy ID copies the key |
 | `assign-to-me` | With the Settings default on, New issue starts assigned to you and says so |
@@ -63,6 +63,7 @@ Also check by grep:
 | `long-plan` | A plan over 6,500 characters creates an issue-linked full-plan document with no model call; the issue keeps a concise source-only summary with the document link and no `[cut]` marker. An existing plan document updates in place |
 | `plan-message` | Start build from this plan on a message previews and writes that exact message, not the session's latest reply |
 | `add-plan-only` | The LinearIssue card and the issue view's bar share their buttons, in title case and with no orange one: Start Session, Plan, Write Plan, Build (the bar starts with Attach); the card's Write Plan writes the plan into the description and says so; an issue with no plan shows Write Plan and Build disabled with a Plan first hint |
+| `block-properties` | Right-click LinearIssue and LinearIssueList rows opens the dashboard's property menu without its other issue actions; status choices use the available height and stay open on wheel scroll; status and project changes save, and the card shows its saved status |
 | `list-surface` | My issues and a cycle's issues sit on the same card; a project's list uses its section's card |
 
 Run one with `bun e2e/run.ts --only <name>` after `bun run build` and `bun run fixtures`. Needs Google Chrome (`CHROME_PATH` to point elsewhere).
@@ -122,6 +123,7 @@ Things to watch:
 - [ ] Start plan and Start build: the **Plan model** or **Build model** dropdown starts on "From Settings: <model>"; a pick is used for that start only and Settings stay as they were.
 - [ ] Lead on (Settings, Plan and build): Start plan makes one session in the worktree, and it starts "<KEY> plan" nested under it on the plan agent and model. Every question from the plan session is shown to you, and your answer goes back to it; the lead never answers one itself. When the plan is done, the lead repeats it with the card, and the Work Status row offers Start build. Start build opens the lead, which starts "<KEY> build" under it on the build agent and model. No empty session is left.
 - [ ] Lead off: Start plan makes the worktree, an empty first session and "<KEY> plan"; Start build makes "<KEY> build".
+- [ ] A plan naming an issue linked to another repository: Write Plan and Start Build both include a Related repositories entry for it, while an issue in the planned issue's own repository adds none.
 - [ ] After the build: the **All folders** choice and AI reviewers reach the build in a folder left on "All folders"; **This folder** (Off included) overrides it in a pinned folder. Saving All folders with an empty reviewer field stores CodeRabbit explicitly, and it still shows after switching projects.
 - [ ] After the build: a silent AI reviewer produces Request Review and Request Full Review cards, and no comment is posted without a click. Outstanding required approvals keep the MR watch active; optional approvals do not. A mergeable MR with all required approvals gets Merge and Cancel, and only Merge merges it.
 - [ ] Finish comments and Add the plan: the **All folders** choice applies in a pinned folder left on "All folders" (an existing folder that was Off follows it); **This folder** (Off included) overrides it.

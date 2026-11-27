@@ -208,18 +208,40 @@ const tests: Test[] = [
       await body.locator('.lin-subissues').waitFor();
       const documents = body.locator('.lin-documents');
       await documents.waitFor();
+      expect((await documents.innerText()).includes('Resources'), 'Documents is named Resources');
       expect((await documents.innerText()).includes('ENG-13 full plan'), 'the issue lists its attached plan document');
+      expect((await documents.innerText()).includes('Datadog: checkout p99 latency'), 'Resources also lists the issue links');
+      expect(!(await pane.locator('.lin-issue-side').innerText()).includes('Datadog: checkout p99 latency'), 'the link no longer sits in the side column');
+      await documents.locator('.lin-resource-add button').click();
+      expect((await ctx.frame.getByRole('menuitem').allInnerTexts()).join(',') === 'Add link...,Add document,Add customer request...', 'the Resources plus button offers the three resource actions');
+      await ctx.frame.getByRole('menuitem', { name: 'Add link...' }).click();
+      expect((await ctx.frame.locator('.lin-modal-title').innerText()).includes('Add a link to ENG-11'), 'Add link opens the existing link dialog');
+      await ctx.frame.locator('.lin-modal').getByRole('button', { name: 'Cancel' }).click();
       const afterSubissues = await body.evaluate((el) => {
         const subissues = el.querySelector('.lin-subissues');
         const docs = el.querySelector('.lin-documents');
         return Boolean(subissues && docs && (subissues.compareDocumentPosition(docs) & Node.DOCUMENT_POSITION_FOLLOWING));
       });
-      expect(afterSubissues, 'Documents sits under the sub-issue list');
-      await documents.locator('.lin-document-toggle').click();
+      expect(afterSubissues, 'Resources sits under the sub-issue list');
+      await documents.locator('.lin-document .lin-document-toggle').click();
       const content = documents.locator('.lin-document-content');
       await content.locator('.lin-md').waitFor();
       expect((await content.innerText()).includes('The complete implementation, verification steps, risks, and estimates stay inline in Linear+.'), 'the full document opens inline');
       expect(!(await ctx.log()).some((m) => m.type === 'open-url'), 'expanding the document does not open an external link');
+
+      await pane.locator('.lin-issue-bar button', { hasText: 'Close' }).click();
+      await ctx.frame.locator('[data-issue="ENG-13"]').click();
+      const emptySubissues = pane.locator('.lin-subissues');
+      await emptySubissues.waitFor();
+      expect(await emptySubissues.locator('.lin-subissues-list').count() === 0, 'Sub-issues still shows when the issue has none');
+      await emptySubissues.getByRole('button', { name: 'Add sub-issues', exact: true }).click();
+      const drawer = emptySubissues.locator('.lin-subissue-form');
+      await drawer.locator('input[placeholder="Issue title"]').fill('Add retry metrics');
+      await until(async () => (await drawer.locator('.lin-field-row').nth(1).locator('.oc-sdk-trigger').first().innerText()).includes('Backlog'), 'the sub-issue drawer loads the parent team defaults');
+      const beforeCreate = calls.length;
+      await drawer.getByRole('button', { name: 'Create', exact: true }).click();
+      await until(async () => calls.slice(beforeCreate).some((c) => c.key.includes('mutation IssueCreate') && c.key.includes('"parentId":"i-eng-13"') && c.key.includes('"title":"Add retry metrics"') && c.hit), 'Create makes a linked sub-issue');
+      await until(async () => await drawer.count() === 0, 'the sub-issue drawer closes after creating');
       await ctx.page.context().close();
     },
   },
@@ -298,9 +320,21 @@ const tests: Test[] = [
       const copyProject = ctx.frame.locator('.lin-icon-btn[aria-label="Copy project link"]');
       await copyProject.click();
       await until(async () => (await ctx.log()).some((m) => m.type === 'clipboard-write' && JSON.stringify(m.payload).includes('https://linear.app/acme/project/checkout')), 'the project icon copies its Linear link');
+      const attachProject = ctx.frame.getByRole('button', { name: 'Attach', exact: true });
       const copyBox = await copyProject.boundingBox();
-      const openBox = await ctx.frame.locator('button', { hasText: 'Open in Linear' }).boundingBox();
-      expect(Boolean(copyBox && openBox && copyBox.x < openBox.x), 'the project link icon sits left of Open in Linear');
+      const attachBox = await attachProject.boundingBox();
+      expect(Boolean(copyBox && attachBox && copyBox.x < attachBox.x), 'the project link icon sits left of Attach');
+      await attachProject.click();
+      await until(async () => (await ctx.log()).some((m) => m.type === 'attach' && m.payload?.id === 'project:p-checkout' && m.payload?.text?.includes('Linear project: Checkout')), 'Attach adds the project overview to the message');
+      const more = ctx.frame.getByRole('button', { name: 'More', exact: true });
+      await more.click();
+      const items = ctx.frame.getByRole('menuitem');
+      expect((await items.allInnerTexts()).join(',') === 'Link to this session,Open in Linear', 'the project More menu links the session and opens Linear');
+      await ctx.frame.getByRole('menuitem', { name: 'Link to this session' }).click();
+      await until(async () => (await ctx.log()).some((m) => m.type === 'session-link' && m.payload?.id === 'project:p-checkout'), 'Link to this session links the project');
+      await more.click();
+      await ctx.frame.getByRole('menuitem', { name: 'Open in Linear' }).click();
+      await until(async () => (await ctx.log()).some((m) => m.type === 'open-url' && JSON.stringify(m.payload).includes('https://linear.app/acme/project/checkout-sp-checkout')), 'Open in Linear moved into the project More menu');
       await count.click();
       await ctx.frame.locator('.lin-milestone-scope', { hasText: 'Idempotent payments' }).waitFor();
       await until(async () => (await ctx.frame.locator('[data-issue]').count()) === 3, 'the milestone shows its three issues');
@@ -838,6 +872,46 @@ const tests: Test[] = [
       await ctx.frame.locator('button', { hasText: /^Write Plan$/ }).click();
       await until(async () => calls.slice(before).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('Sort the saved cards by last use') && c.hit), 'Write Plan uses the chosen message');
       await ctx.page.context().close();
+    },
+  },
+  {
+    name: 'block-properties',
+    run: async (browser) => {
+      const card = await open(browser, { page: 'blocks/index.html', block: 'LinearIssue', args: JSON.stringify({ id: 'ENG-13' }) }, 720, 700);
+      await card.frame.locator('.lin-block-card').click({ button: 'right' });
+      const cardMenu = card.frame.locator('.lin-menu[aria-label="ENG-13 actions"]');
+      await cardMenu.waitFor();
+      await until(async () => await cardMenu.locator('[data-menu-item="cycle"]').count() === 1, 'the property menu loads the team settings');
+      const propertyIds = await cardMenu.locator('[data-menu-item]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.menuItem));
+      expect(propertyIds.join(',') === 'status,priority,assignee,due,labels,project,milestone,estimate,cycle', `right click offers only the issue properties (got ${propertyIds.join(',')})`);
+      const beforeStatus = calls.length;
+      await cardMenu.locator('[data-menu-item="status"]').click();
+      const statusMenu = card.frame.locator('.lin-menu--sub[aria-label="Status"]');
+      await statusMenu.waitFor();
+      const sizing = await statusMenu.evaluate((el) => ({ max: parseFloat(getComputedStyle(el).maxHeight), viewport: window.innerHeight, scroll: el.querySelector('.lin-menu-scroll')!.scrollHeight, client: el.querySelector('.lin-menu-scroll')!.clientHeight }));
+      expect(sizing.max === sizing.viewport - 12 && sizing.scroll <= sizing.client, `the status choices fit without a fixed-height scroll (got ${JSON.stringify(sizing)})`);
+      await statusMenu.locator('.lin-menu-scroll').hover();
+      await card.page.mouse.wheel(0, 120);
+      await card.page.waitForTimeout(150);
+      expect(await cardMenu.count() === 1 && await statusMenu.count() === 1, 'scrolling inside a submenu does not close it');
+      await card.frame.locator('.lin-menu--sub [data-menu-item="status:t-eng-progress"]').click();
+      await until(async () => calls.slice(beforeStatus).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"stateId":"t-eng-progress"') && c.hit), 'the issue card saves a status change');
+      await until(async () => (await card.frame.locator('.lin-block-card > .sui-kv').innerText()).includes('In Progress'), 'the issue card shows the saved status');
+      await card.page.context().close();
+
+      const list = await open(browser, { page: 'blocks/index.html', block: 'LinearIssueList', args: JSON.stringify({ title: 'Checkout work', ids: 'ENG-11 ENG-12' }) }, 720, 700);
+      await list.frame.locator('[data-issue="ENG-11"]').click({ button: 'right' });
+      const listMenu = list.frame.locator('.lin-menu[aria-label="ENG-11 actions"]');
+      await listMenu.locator('[data-menu-item="project"]').click();
+      const current = list.frame.locator('.lin-menu--sub [data-menu-item="project:p-checkout"]');
+      expect(await current.getAttribute('aria-checked') === 'true', 'the list row menu starts with the current project');
+      const beforeProject = calls.length;
+      await list.frame.locator('.lin-menu--sub [data-menu-item="project:none"]').click();
+      await until(async () => calls.slice(beforeProject).some((c) => c.key.includes('mutation IssueUpdate') && c.key.includes('"projectId":null') && c.hit), 'a list row saves a project change');
+      await list.frame.locator('[data-issue="ENG-12"]').click({ button: 'right' });
+      await list.frame.locator('.lin-menu[aria-label="ENG-12 actions"]').waitFor();
+      expect(await list.frame.getByRole('button', { name: 'Edit', exact: true }).count() === 0, 'list rows need no separate Edit button');
+      await list.page.context().close();
     },
   },
   {

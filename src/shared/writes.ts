@@ -35,6 +35,19 @@ export const patchIssue = (id: string, patch: IssuePatch): (() => void) =>
       const { description: _description, ...row } = patch;
       return { ...value, issues: value.issues.map((i) => (i.id === id ? { ...i, ...row } : i)) };
     }
+    if (key.startsWith('block:') && value instanceof Map) {
+      let changed = false;
+      const rows = new Map<string, IssueRow>();
+      for (const [identifier, issue] of value as Map<string, IssueRow>) {
+        if (issue.id !== id) rows.set(identifier, issue);
+        else {
+          const { description: _description, ...row } = patch;
+          rows.set(identifier, { ...issue, ...row });
+          changed = true;
+        }
+      }
+      return changed ? rows : value;
+    }
     if (key.startsWith('issue:') && typeof value === 'object' && value !== null && (value as { id?: string }).id === id) {
       // The detail carries its team with the team's states; a row's `team` has only id and key.
       const { team: _team, ...rest } = patch;
@@ -109,6 +122,7 @@ export const createIssue = async (input: IssueInput): Promise<IssueRow> => {
   if (!data.issueCreate.success || !data.issueCreate.issue) throw new LinearError('graphql', 'Linear did not create the issue.');
   invalidate('issues:');
   invalidate('view-issues:');
+  if ('parentId' in input) invalidate('children:');
   return data.issueCreate.issue;
 };
 
